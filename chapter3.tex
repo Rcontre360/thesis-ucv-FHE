@@ -1,0 +1,25 @@
+\chapter{Propuesta de Trabajo Especial de Grado}
+
+%%%%%%%%%%%%%%%
+El esquema de cifrado CKKS es una de las soluciones más eficientes al momento de trabajar con operaciones usando números punto flotante. Sin embargo, pocas son las implementaciones del mismo que aprovechan la GPU. Actualmente, las librerías más prominentes que implementan el esquema CKKS exclusivamente usan la GPU, por esta razón no es trivial crear aplicaciones que tomen ventaja de la privacidad y velocidad del esquema CKKS.
+
+Los modelos de aprendizaje automático basados en redes neuronales que utilizan cifrado homomórfico usualmente usan los esquemas CKKS en CPU o TFHE en la GPU. Usualmente, se aprovecha la privacidad de estas operaciones durante la inferencia, en el entrenamiento también es posible usar cifrado homomórfico; sin embargo, se pueden usar modelos ya entrenados para hacer inferencia con datos cifrados. Los modelos de redes neuronales pueden llegar a tener millones o de millones de parámetros, esto hace costoso el cómputo durante la inferencia y poco viable si se usa solo la CPU. Además, el cifrado homomórfico ya trae un costo mayor para cada operación realizada, dependiendo del esquema utilizado, una simple operación de suma o multiplicación puede ser cientos de veces más costoso que ejecutar la operación sin cifrado homomórfico.
+
+Para implementar redes neuronales que realicen operaciones con datos cifrados existen distintas herramientas. La mayoría de las mismas son librerías que nos permiten usar varios esquemas de cifrado (CKKS, BFV, TFHE), donde se usa la CPU. Existen algunas otras que permiten usar la GPU, como es Concrete (add ref); sin embargo, este esquema tiene un desempeño menor a CKKS para varios tipos de operaciones (add ref). Existen algunas implementaciones recientes del esquema CKKS sobre la GPU, estas implementan las operaciones básicas como suma, multiplicación, rotación, etc (add ref). Sin embargo, no existen herramientas que faciliten el uso de estas librerías en modelos de aprendizaje automático. Por este motivo se propone la creación de una librería que permita usar el esquema de CKKS, aprovechando el performance del GPU, sobre modelos de aprendizaje automático.
+
+
+
+%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%
+\section{Objetivo general}
+
+Desarrollar una librería de código abierto en Python para el cómputo de operaciones tensoriales, utilizando el esquema de cifrado homomórfico CKKS de forma que se aproveche la unidad de procesamiento gráfico (GPU).
+
+\section{Objetivos especificos}
+
+\begin{itemize}
+    \item Implementar una interfaz en Python que permita interactuar con la libreria HEonGPU y usar las operaciones basicas del esquema de cifrado CKKS.
+    \item Implementar clases y modulos que permitan realizar operaciones con tensores y matrices abstrayendo la complejidad del esquema CKKS del usuario.
+    \item Crear casos de uso donde se ejemplifique como usar la libreria para aprovechar el cifrado homomorfico durante la inferencia en modelos de machine learning.
+    \item Comparar el performance de capas de redes neuronales implementadas con otras librerias.
+\end{itemize}
