@@ -1,63 +1,64 @@
-\chapter{Marco Te\'orico}
+\chapter{Cifrado Homomórfico}
 
-%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%
-\section{first}
+El cifrado homomórfico es una forma de cifrado que permite realizar cómputos sobre datos cifrados, generando un resultado cifrado que, al descifrarse, coincide con el resultado de las operaciones como si se hubieran realizado sobre los datos en texto plano. Esta propiedad permite a terceros no confiables procesar datos sensibles sin tener acceso a la información subyacente.
 
-%%%%%%%%%%%%%%%
-\subsection{first-1}
-Esto es un ejemplo de referencia \cite{STRO01}. Esto es un ejemplo de c\'odigo en pseudoformal:
+\section{Orígenes}
 
+La idea de un sistema criptográfico que permitiera la manipulación de datos cifrados fue propuesta por primera vez en 1978 por Rivest, Adleman y Dertouzos \cite{RAD78}. En su trabajo, plantearon la cuestión de si era posible construir un sistema de cifrado que permitiera a un tercero realizar operaciones sobre datos cifrados sin necesidad de descifrarlos primero. Llamaron a este concepto "homomorfismo de privacidad".
 
-\begin{algorithmic}[upquote=true, language=pseudo]
-	\Require $n \geq 0$
-	\Ensure $y = x^n$
-	\State $y \Leftarrow 1$
-	\State $X \Leftarrow x$
-	\State $N \Leftarrow n$
-	\While{$N \neq 0$}
-	\If{$N$ is even}
-	\State $X \Leftarrow X \times X$
-	\State $N \Leftarrow \frac{N}{2} $  \Comment{This is a comment}
-	\ElsIf{$N$ is odd}
-	\State $y \Leftarrow y \times X$
-	\State $N \Leftarrow N - 1$
-	\EndIf
-	\EndWhile
-\end{algorithmic}
-%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%
-\section{second}
+Matemáticamente, un esquema de cifrado es homomórfico si, dado un conjunto de operaciones $\oplus$ sobre el espacio de texto plano $\mathcal{M}$ y un conjunto de operaciones $\otimes$ sobre el espacio de texto cifrado $\mathcal{C}$, se cumple la siguiente propiedad:
+\begin{equation}
+    \text{Dec}(\text{Enc}(m_1) \otimes \text{Enc}(m_2)) = m_1 \oplus m_2
+\end{equation}
+donde $m_1, m_2 \in \mathcal{M}$, y $\text{Enc}$ y $\text{Dec}$ son las funciones de cifrado y descifrado, respectivamente.
 
-Las tablas, se pueden hacer con \url{https://www.tablesgenerator.com} y referenciarlos \ref{lb:table1}.
+Durante décadas, la construcción de un esquema de cifrado que pudiera evaluar un número arbitrario de operaciones de suma y multiplicación, conocido como \textbf{cifrado totalmente homomórfico (FHE)}, fue considerado uno de los mayores desafíos en la criptografía. Antes del primer esquema FHE, se desarrollaron varios \textbf{esquemas parcialmente homomórficos (PHE)}, que solo admitían un tipo de operación (suma o multiplicación) un número ilimitado de veces. Algunos ejemplos notables son:
 
-\begin{table}[htpb!]
-	\centering
-	\begin{tabular}{ll}
-		Value & Description         \\
-		3     & None to say         \\
-		2     & Fill with something
-	\end{tabular}
-	\caption{Irrelevant data}
-	\label{lb:table1}
-\end{table}
+\begin{itemize}
+    \item \textbf{RSA:} El criptosistema RSA \cite{RSA78} es multiplicativamente homomórfico. Dados dos textos cifrados $c_1 = \text{Enc}(m_1) = m_1^e \pmod{N}$ y $c_2 = \text{Enc}(m_2) = m_2^e \pmod{N}$, su producto es:
+    \begin{equation}
+        c_1 \cdot c_2 = (m_1^e \cdot m_2^e) \pmod{N} = (m_1 \cdot m_2)^e \pmod{N} = \text{Enc}(m_1 \cdot m_2)
+    \end{equation}
+    \item \textbf{Paillier:} El criptosistema de Paillier \cite{Paillier99} es aditivamente homomórfico. El producto de dos textos cifrados corresponde a la suma de los textos planos originales:
+    \begin{equation}
+        \text{Dec}(\text{Enc}(m_1) \cdot \text{Enc}(m_2) \pmod{n^2}) = m_1 + m_2 \pmod{n}
+    \end{equation}
+\end{itemize}
 
-%%%%%%%%%%%%%%%
-\subsection{second-1}
-Las referencias tambi\'en pueden hacerse en conjunto \cite{REF_MIC,WEB99}.
+Estos esquemas PHE son útiles en aplicaciones específicas, pero no son suficientes para evaluar funciones complejas como las que se encuentran en los algoritmos de aprendizaje automático, que requieren tanto sumas como multiplicaciones.
 
+\section{Gentry y el Ruido en el Cifrado Homomórfico}
 
+En 2009, cuando Craig Gentry, en su tesis doctoral \cite{Gentry09}, presentó el primer esquema de cifrado totalmente homomórfico. La construcción de Gentry se basó en criptografía sobre retículos (lattices) y superó el principal obstáculo que impedía la creación de esquemas FHE: el \textbf{ruido}.
 
-\noindent Aqu\'i las otras referencias \cite{RAM11}
+En la mayoría de los esquemas homomórficos modernos, un texto cifrado no es solo una función del mensaje, sino también de un error o "ruido" que es fundamental para la seguridad del esquema. Un texto cifrado $c$ de un mensaje $m$ se puede representar conceptualmente como:
+\begin{equation}
+    c \leftarrow m + qk + e
+\end{equation}
+donde $q$ es un módulo grande, $k$ es un entero y $e$ es el término de ruido, que es un valor pequeño. El descifrado funciona eliminando el término $qk$ y recuperando $m$ siempre que el ruido $e$ sea lo suficientemente pequeño como para no "desbordar" el espacio del mensaje.
 
-\subsubsection{second-1-1}
+Cuando se realizan operaciones homomórficas, el ruido de los textos cifrados de entrada se combina y crece en el texto cifrado resultante. Por ejemplo, para la suma de dos textos cifrados $c_1 \leftarrow m_1 + qk_1 + e_1$ y $c_2 \leftarrow m_2 + qk_2 + e_2$:
+\begin{equation}
+    c_{add} = c_1 + c_2 \leftarrow (m_1+m_2) + q(k_1+k_2) + (e_1+e_2)
+\end{equation}
+El nuevo ruido es $e_{add} = e_1 + e_2$. Para la multiplicación, el crecimiento del ruido es mucho más rápido:
+\begin{equation}
+    c_{mult} = c_1 \cdot c_2 \leftarrow (m_1 \cdot m_2) + q(\dots) + (m_1 e_2 + m_2 e_1 + e_1 e_2)
+\end{equation}
+El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado "algo homomórficos" (Somewhat Homomorphic Encryption - SHE).
 
-Para insertar im\'agenes, hay diversos enfoques (incluyendo subfigure) \ref{fig:reloj}.
+\subsection{Bootstrapping: La Solución al Crecimiento del Ruido}
 
-\begin{figure}[htpb!]
-	\centering
-	\includegraphics[width=0.5\columnwidth]{images/reloj.jpg}
-	\label{fig:reloj}
-	\caption{Reloj sin chichero}
-\end{figure}
+La idea clave de Gentry fue el \textbf{bootstrapping}. Este es un procedimiento que toma un texto cifrado ruidoso y, sin descifrarlo, lo "refresca", reduciendo su ruido y permitiendo que se realicen más operaciones sobre él. El proceso consiste en evaluar homomórficamente la propia función de descifrado.
 
+Sea $c$ un texto cifrado ruidoso tal que $\text{Dec}(sk, c) = m$. El objetivo es obtener un nuevo texto cifrado $c'$ que encripte el mismo mensaje $m$ pero con un nivel de ruido bajo. Para ello, se cifra la clave secreta $sk$ con una clave pública diferente, obteniendo $\text{Enc}_{pk'}(sk)$. Luego, se evalúa homomórficamente la función de descifrado $\text{Dec}$ utilizando el texto cifrado ruidoso $c$ y la clave secreta cifrada $\text{Enc}_{pk'}(sk)$ como entradas:
+\begin{equation}
+    c' = \text{Eval}(\text{Dec}, \text{Enc}_{pk'}(sk), c)
+\end{equation}
+El resultado $c'$ es un nuevo texto cifrado que contiene el mensaje $m$, pero su ruido ahora es el ruido inherente a la evaluación homomórfica de la función de descifrado, que es (idealmente) mucho menor que el ruido acumulado en $c$. Al aplicar el bootstrapping periódicamente, se puede realizar un número teóricamente ilimitado de operaciones, transformando un esquema SHE en un esquema FHE.
+
+\section{Hacia los Esquemas Modernos}
+
+Aunque el esquema original de Gentry fue un hito teórico, era demasiado lento para ser práctico. Esto desencadenó una intensa investigación para mejorar su eficiencia y encontrar construcciones más viables. Las generaciones posteriores de esquemas FHE se centraron en dos áreas principales: optimizar la gestión del ruido sin depender siempre del costoso bootstrapping, y basar la seguridad en problemas matemáticos más estructurados y eficientes que los utilizados por Gentry.
+
+Esta búsqueda llevó a la comunidad criptográfica a problemas como el \textbf{Aprendizaje con Errores (LWE)} y su variante más eficiente, el \textbf{Aprendizaje con Errores en Anillos (RLWE)}. Estos problemas, que se explorarán en el siguiente capítulo, forman la base de la mayoría de los esquemas de cifrado homomórfico prácticos y eficientes que existen en la actualidad, ya que permiten una mejor gestión del ruido y un rendimiento computacional significativamente mayor.

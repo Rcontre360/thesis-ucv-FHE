@@ -1,0 +1,35 @@
+\chapter{Fundamentos Criptográficos Modernos: LWE y RLWE}
+
+Aunque el esquema original de Gentry fue un hito teórico, su dependencia de "retículos ideales" y la complejidad del bootstrapping lo hacían demasiado lento para ser práctico. Esto desencadenó una intensa investigación para encontrar bases más eficientes para el cifrado homomórfico. La solución se encontró en problemas computacionales duros relacionados con retículos, específicamente en el problema de \textbf{Aprendizaje con Errores (Learning With Errors - LWE)} y su variante estructurada, \textbf{Aprendizaje con Errores en Anillos (Ring-LWE)}.
+
+\section{El Problema de Aprendizaje con Errores (LWE)}
+
+Introducido por Oded Regev en 2005 \cite{Regev05}, el problema LWE se ha convertido en una de las bases más importantes de la criptografía moderna. Se puede describir como el problema de resolver un sistema de ecuaciones lineales que ha sido perturbado por un "ruido" pequeño.
+
+\textbf{Definición (Decisional LWE):} Dados un módulo entero $q$ y un vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$, el desafío es distinguir entre dos distribuciones:
+\begin{enumerate}
+    \item Una distribución de pares $(\mathbf{a}_i, b_i)$ donde los $\mathbf{a}_i \in \mathbb{Z}_q^n$ son vectores aleatorios uniformes y los $b_i = \langle \mathbf{a}_i, \mathbf{s} \rangle + e_i \pmod{q}$ son el resultado del producto interno de $\mathbf{a}_i$ y $\mathbf{s}$, más un pequeño error $e_i$ muestreado de una distribución de error (ej. Gaussiana discreta).
+    \item Una distribución de pares $(\mathbf{a}_i, u_i)$ donde tanto $\mathbf{a}_i$ como $u_i$ son uniformemente aleatorios en $\mathbb{Z}_q^n$ y $\mathbb{Z}_q$, respectivamente.
+\end{enumerate}
+
+La seguridad de los criptosistemas basados en LWE reside en la supuesta intratabilidad de este problema. Sin el término de error $e_i$, el secreto $\mathbf{s}$ podría recuperarse fácilmente usando eliminación gaussiana. Sin embargo, la adición de ruido hace que el problema sea computacionalmente difícil, con una seguridad que se puede reducir a problemas de retículos en el peor de los casos, como el Shortest Vector Problem (SVP).
+
+\section{El Problema de Aprendizaje con Errores en Anillos (RLWE)}
+
+Aunque LWE proporciona una base segura, su rendimiento es un obstáculo. Las claves públicas en los esquemas basados en LWE pueden ser muy grandes (cuadráticas en el parámetro de seguridad), y las operaciones son costosas. Para solucionar esto, se introdujo el problema \textbf{Ring-LWE} \cite{LPR10}, una variante algebraicamente estructurada de LWE.
+
+En lugar de trabajar con vectores de números enteros, RLWE opera sobre \textbf{polinomios}. Las operaciones se realizan en un anillo de polinomios, típicamente de la forma $R_q = \mathbb{Z}_q[x] / \langle \Phi_n(x) \rangle$, donde $\Phi_n(x)$ es un polinomio ciclotómico (a menudo $x^N+1$ para $N$ una potencia de 2).
+
+\textbf{Definición (Decisional RLWE):} El problema consiste en distinguir entre dos distribuciones:
+\begin{enumerate}
+    \item Pares de la forma $(a_i(x), b_i(x))$, donde $a_i(x)$ es un polinomio uniformemente aleatorio en $R_q$ y $b_i(x) = a_i(x) \cdot s(x) + e_i(x)$, siendo $s(x)$ y $e_i(x)$ polinomios "pequeños" (es decir, con coeficientes pequeños).
+    \item Pares $(a_i(x), u_i(x))$, donde tanto $a_i(x)$ como $u_i(x)$ son polinomios uniformemente aleatorios en $R_q$.
+\end{enumerate}
+
+La estructura de anillo de RLWE ofrece ventajas significativas:
+\begin{itemize}
+    \item \textbf{Eficiencia:} Las operaciones de multiplicación de polinomios son mucho más rápidas que las multiplicaciones de matrices en LWE. Una única muestra de RLWE puede codificar el equivalente a $n$ muestras de LWE, lo que resulta en un rendimiento computacional drásticamente mejorado.
+    \item \textbf{Tamaño de Clave Compacto:} Las claves y los textos cifrados se representan como unos pocos polinomios en lugar de grandes matrices, lo que reduce significativamente el tamaño de los datos.
+\end{itemize}
+
+Gracias a estas mejoras, el problema RLWE se convirtió en la piedra angular de la mayoría de los esquemas FHE prácticos y eficientes, incluyendo BGV \cite{BGV12}, BFV \cite{FV12}, y el esquema CKKS \cite{CKKS17} que es central para este trabajo. En el próximo capítulo, se explorará en detalle el funcionamiento del esquema CKKS, que hereda su seguridad de la dureza del problema RLWE.
