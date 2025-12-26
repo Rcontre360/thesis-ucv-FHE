@@ -1,68 +1,89 @@
-\chapter{Propuesta de Trabajo Especial de Grado}
+\chapter{Redes Neuronales en el Dominio Cifrado}
 
-%%%%%%%%%%%%%%%
-El esquema de cifrado CKKS es una de las soluciones más eficientes al momento de trabajar con operaciones con números de punto flotante (ref). Sin embargo, son pocas las implementaciones del mismo que aprovechan la GPU. Actualmente, las bibliotecas más prominentes que implementan el esquema CKKS usan exclusivamente la CPU; aun así, recientemente se han desarrollado bibliotecas que implementan este esquema de cifrado usando la GPU. Entre estas bibliotecas está HEonGPU (ref), la cual implementa varios esquemas de cifrado homomórfico, incluyendo CKKS con bootstrapping.
+El diseño de redes neuronales que operan sobre datos cifrados mediante FHE presenta desafíos que difieren significativamente del aprendizaje automático convencional. En el dominio cifrado, el costo computacional no depende solo del número de parámetros, sino de la profundidad del circuito y del tipo de operaciones aritméticas permitidas por el esquema criptográfico subyacente.
 
-Los modelos de aprendizaje automático basados en redes neuronales que utilizan cifrado homomórfico usualmente usan los esquemas CKKS en la CPU (ref) o TFHE en la GPU (ref). Usualmente, se aprovecha la privacidad de estas operaciones durante la inferencia. En el entrenamiento también es posible usar cifrado homomórfico; sin embargo, es menos costoso usar modelos ya entrenados y luego aplicar el cifrado durante la inferencia. Los modelos de redes neuronales pueden llegar a tener millones o cientos de millones de parámetros, esto hace costoso el cómputo durante la inferencia y poco viable si se usa solo la CPU. Además, usar cifrado homomórfico ya implica un costo mayor para cada operación realizada. Dependiendo del esquema utilizado, una operación de suma o multiplicación es más costosa que aplicarla sin usar un esquema de cifrado, y este costo es proporcional al nivel de seguridad del cifrado (ref).
+En el contexto de este trabajo, nos centramos en la inferencia homomórfica, donde un cliente envía sus datos cifrados a un servidor que posee el modelo (pesos en texto claro). El servidor realiza el cómputo y devuelve el resultado cifrado. Para que este proceso sea eficiente y factible, es necesario redefinir los componentes básicos de la red —capas lineales y activaciones— para que sean compatibles con la estructura algebraica del esquema CKKS.
 
-Para implementar redes neuronales que realicen operaciones con datos cifrados existen distintas herramientas. La mayoría de ellas son bibliotecas que nos permiten usar varios esquemas de cifrado (CKKS, BFV, TFHE), que usan la CPU (ref). Existen algunas otras que permiten usar la GPU, como Concrete (ref); sin embargo, este esquema tiene un desempeño peor a CKKS para varios tipos de operaciones (ref). Existen algunas implementaciones recientes del esquema CKKS sobre la GPU, estas implementan las operaciones básicas como suma, multiplicación, rotación, etc. (ref). Sin embargo, no existen herramientas que faciliten el uso de estas bibliotecas en modelos de aprendizaje automático. Por este motivo se propone la creación de una biblioteca que permita usar el esquema de CKKS, aprovechando el rendimiento de la GPU, sobre modelos de aprendizaje automático.
+\section{Arquitectura y Propagación hacia Adelante}
 
-%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%
-\section{Objetivo general}
+Desde una perspectiva computacional, una red neuronal artificial puede definirse como un grafo acíclico dirigido compuesto por una secuencia de capas, donde cada capa realiza una transformación específica sobre los datos de entrada. El objetivo fundamental de esta arquitectura es aproximar una función compleja mediante la composición de funciones más simples.
 
-Desarrollar una biblioteca de código abierto en Python para el cómputo de operaciones tensoriales, utilizando el esquema de cifrado homomórfico CKKS de forma que se aproveche la unidad de procesamiento gráfico (GPU).
+\subsection{Definición Operacional y Formalismo Matemático}
 
-\section{Objetivos especificos}
+La arquitectura de una red neuronal de alimentación hacia adelante (feed-forward) consta de una capa de entrada, una o más capas ocultas y una capa de salida. La transición de datos entre una capa $l$ y la siguiente capa $l+1$ se define mediante una combinación de una transformación lineal seguida de una función de activación no lineal.Matemáticamente, si representamos las activaciones de la capa $l$ como un vector $a^{(l)}$, el cálculo de las activaciones en la capa siguiente $a^{(l+1)}$ se expresa mediante la siguiente ecuación:$$ a^{(l+1)} = \sigma(W^{(l)}a^{(l)} + b^{(l)}) $$Donde:
 
 \begin{itemize}
-    \item Diseñar una interfaz en Python que permita interactuar con la biblioteca HEonGPU y usar las operaciones básicas del esquema de cifrado CKKS.
-    \item Implementar las clases y módulos que permitan realizar operaciones con tensores y matrices, abstrayendo la complejidad del esquema CKKS del usuario.
-    \item Crear casos de uso donde se ejemplifique cómo usar la biblioteca para aprovechar el cifrado homomórfico durante la inferencia en modelos de aprendizaje automático.
-    \item Comparar el rendimiento de capas de redes neuronales implementadas con capas que usan otras bibliotecas de cifrado homomórfico.
+    \item $W^{(l)}$ es la \textbf{matriz de pesos} que conecta la capa $l$ con la $l+1$. Cada elemento $w_{ij}$ representa la fuerza de la conexión entre la neurona $j$ de la capa actual y la neurona $i$ de la capa siguiente.
+    \item $b^{(l)}$ es el \textbf{vector de sesgo} (bias), que permite desplazar la función de activación para mejorar la capacidad de ajuste del modelo.
+    \item $\sigma$ es la \textbf{función de activación}, una función no lineal (como ReLU, Sigmoide o un polinomio de aproximación) que permite a la red aprender relaciones complejas que no son simplemente combinaciones lineales.
 \end{itemize}
 
-\section{Tecnologías necesarias}
+\subsection{Propagación hacia Adelante e Inferencia}
 
-La biblioteca HEonGPU se usará como base que implementa el esquema CKKS. La implementación de la biblioteca se realizará usando C++ y Python. Estos serán necesarios para crear los bindings de Python para la biblioteca HEonGPU. Entre las bibliotecas que se utilizarán están Pybind11 para crear los bindings junto a C++ y Matplotlib para la visualización de gráficos.
+El proceso de propagación hacia adelante (forward propagation) es el flujo de datos desde la entrada hasta la salida para generar una predicción. En este proceso, la salida de una capa se convierte en la entrada de la siguiente. Para una red de $L$ capas, la inferencia completa es el resultado de la composición de funciones:$$ \hat{y} = f_L(f_{L-1}(\dots f_1(x) \dots)) $$En el contexto de este trabajo, la inferencia es la operación crítica, ya que es el proceso que se ejecutará sobre los datos cifrados. El servidor, que posee el modelo, recibirá un dato de entrada $x$ cifrado y aplicará sucesivamente estas transformaciones lineales y no lineales sin tener acceso al contenido original.
 
-\section{Planificación de actividades}
+\subsection{Representación mediante Estructura y Pesos}
 
-\begin{table}[h]
-    \centering
-    \begin{tabular}{|p{5.5cm}|p{7cm}|c|}
-        \hline
-        \textbf{Objetivo} & \textbf{Actividad} & \textbf{Días} \\
-        \hline
-        % Spans 2 rows
-        \multirow{2}{=}{Implementar una interfaz en Python para interactuar con HEonGPU}
-            & Investigar la API de HEonGPU. & 5 \\
-        \cline{2-3}
-            & Implementar bindings para funciones relacionadas con el esquema CKKS. & 10 \\
-        \hline
-        % Spans 2 rows
-        \multirow{2}{=}{Implementar clases para operaciones con tensores y matrices}
-            & Diseñar la arquitectura de las clases para tensores y matrices cifradas. & 5 \\
-        \cline{2-3}
-            & Implementar pruebas unitarias para las operaciones con tensores. & 5 \\
-        \hline
-        % Spans 2 rows
-        \multirow{2}{=}{Crear casos de uso en modelos de Machine Learning}
-            & Seleccionar modelos de ML para los casos de uso. & 5 \\
-        \cline{2-3}
-            & Implementar la inferencia de los modelos usando la biblioteca. & 15 \\
-        \hline
-        % Spans 4 rows
-        \multirow{4}{=}{Comparar performance con otras bibliotecas}
-            & Investigar y seleccionar bibliotecas para la comparación. & 5 \\
-        \cline{2-3}
-            & Implementar capas de redes neuronales con las bibliotecas a comparar. & 15 \\
-        \cline{2-3}
-            & Diseñar y ejecutar benchmarks para medir tiempo y uso de memoria. & 10 \\
-        \cline{2-3}
-            & Analizar los resultados. & 5 \\
-        \hline
-    \end{tabular}
-    \caption{Plan de Trabajo}
-    \label{tab:plan_trabajo}
-\end{table}
+Un aspecto clave para el desarrollo de la librería objeto de esta tesis es que, una vez finalizada la fase de entrenamiento, una red neuronal queda representada exclusivamente por dos elementos:
+
+\begin{enumerate}
+    \item \textbf{La Estructura (Topología):} El número de capas, el número de neuronas por capa y el tipo de funciones de activación utilizadas. En términos de programación, esto define el grafo de cómputo y, en consecuencia, la profundidad del circuito homomórfico necesario.
+    \item \textbf{Los Pesos y Sesgos:} Los valores numéricos almacenados en las matrices $W$ y los vectores $b$.
+\end{enumerate}
+
+Desde el punto de vista del desarrollo de software para FHE, el modelo puede ser visto como un objeto estático de datos. La librería debe ser capaz de tomar estos pesos (en texto claro) y la definición de la estructura para construir un circuito que pueda procesar la entrada cifrada. Esta separación entre la "lógica de la red" (estructura) y los "datos del modelo" (pesos) permite que la librería sea modular y facilite la importación de modelos pre-entrenados para su ejecución en entornos que preservan la privacidad.
+
+\section{El Problema de las Funciones de Activación en FHE}
+
+En el diseño de redes neuronales convencionales, las funciones de activación no lineales son esenciales para permitir que el modelo aprenda fronteras de decisión complejas. Sin embargo, en el dominio del cifrado homomórfico, estas funciones representan el principal obstáculo para la ejecución de la inferencia.
+
+\subsection{Limitación Algebraica de los Esquemas de Cifrado}
+
+Los esquemas de cifrado homomórfico basados en el problema RLWE, como CKKS, se basan en estructuras de anillos matemáticos. Esto implica que las únicas operaciones aritméticas soportadas de forma nativa sobre los textos cifrados son la adición y la multiplicación.Desde una perspectiva de circuitos, esto significa que solo es posible evaluar funciones que puedan expresarse como polinomios. Cualquier operación que no sea una suma o un producto (como divisiones, comparaciones lógicas o funciones trascendentes) no puede ejecutarse directamente sobre los datos cifrados.
+
+\subsection{Incompatibilidad de Funciones Clásicas: ReLU y Sigmoide}
+
+Las funciones de activación más utilizadas en la actualidad presentan incompatibilidades críticas con el esquema CKKS:
+
+\begin{itemize}
+    \item \textbf{ReLU (Rectified Linear Unit):} Definida como $f(x) = \max(0, x)$. Esta función es "no suave" debido a la discontinuidad en su derivada en $x=0$. Evaluar un ReLU requiere una comparación lógica (un \textit{if-else}), operación que no existe en el álgebra de anillos de CKKS. A diferencia de esquemas como TFHE, que permiten evaluaciones de puertas lógicas, en CKKS no es eficiente realizar comparaciones de magnitud sobre el ruido del cifrado.
+    \item \textbf{Sigmoide y Softmax:} Estas funciones dependen de operaciones de exponenciación ($e^x$) y división. Al no ser funciones polinomiales de grado finito, no existe una combinación de sumas y multiplicaciones homomórficas que pueda calcularlas con exactitud.
+\end{itemize}
+
+\subsection{Solución: Aproximación Polinomial}
+
+Para superar esta limitación, la estrategia adoptada en esta tesis y en la librería desarrollada consiste en sustituir las funciones de activación no lineales por sus aproximaciones polinomiales. Este proceso transforma una función no compatible en un polinomio de grado $d$ de la forma:$$ \sigma(x) \approx P_d(x) = \sum_{i=0}^{d} c_i x^i $$Existen dos métodos principales para derivar estos polinomios:
+
+\begin{enumerate}
+    \item \textbf{Polinomios de Taylor:} Útiles para aproximaciones locales alrededor de un punto, aunque su error crece rápidamente a medida que $x$ se aleja del centro de expansión.
+    \item \textbf{Polinomios de Chebyshev:} Son la solución preferida en FHE y la implementada en este trabajo. Los polinomios de Chebyshev minimizan el error máximo de aproximación (error minimax) en un intervalo determinado $[-B, B]$. Esto es crucial, ya que permite mantener una precisión uniforme sobre el rango esperado de las activaciones de la red.
+\end{enumerate}
+
+La elección del grado del polinomio $d$ representa un compromiso (trade-off) técnico en la librería: un grado mayor ofrece una mejor aproximación a la función original (mayor precisión del modelo), pero consume más niveles en la jerarquía de módulos del esquema CKKS y aumenta el tiempo de cómputo debido al mayor número de multiplicaciones homomórficas requeridas.
+
+\section{Operaciones Lineales y Empaquetado SIMD}
+
+En el aprendizaje automático convencional, las operaciones de álgebra lineal se ejecutan mediante bibliotecas altamente optimizadas que aprovechan la memoria caché y las unidades de punto flotante de la CPU o GPU. Sin embargo, en el dominio cifrado, el desafío no es solo realizar el cálculo, sino cómo organizar los datos dentro de la estructura de "ranuras" (slots) de los textos cifrados de CKKS para maximizar el paralelismo.
+
+\subsection{Estrategias de Layout y Empaquetado de Datos}
+
+Como se explicó en capítulos anteriores, un texto cifrado de CKKS puede almacenar un vector de $n$ valores. Para una red neuronal, esto significa que debemos decidir cómo mapear las matrices de pesos ($W$) y los vectores de activación ($a$) a estos vectores de slots. Existen tres estrategias principales de disposición (layout):
+
+\begin{itemize}
+    \item \textbf{Layout por Filas/Columnas:} Se almacena cada fila o columna de la matriz en un texto cifrado independiente. Aunque es intuitivo, resulta ineficiente para matrices grandes, ya que consume muchos textos cifrados y aumenta el costo de comunicación.
+    \item \textbf{Layout Diagonal (Método de Halevi-Shoup):} Es la técnica más eficiente para la multiplicación matriz-vector en FHE. Consiste en aplanar las diagonales de la matriz en vectores que luego se cifran. Esta estrategia permite realizar la operación completa utilizando un número mínimo de rotaciones y multiplicaciones, aprovechando al máximo la estructura SIMD.
+\end{itemize}
+
+\subsection{Multiplicación Matriz-Vector Homomórfica}
+
+La operación fundamental de una capa densa, $y = Wx$, requiere una logística compleja en el dominio cifrado. Dado que el vector $x$ está cifrado y la matriz $W$ suele ser conocida por el servidor (texto claro), la multiplicación se realiza mediante un ciclo de Multiplicación, Rotación y Acumulación.Para multiplicar una matriz por un vector cifrado de manera eficiente, el proceso sigue estos pasos técnicos:
+
+\begin{enumerate}
+    \item \textbf{Multiplicación Elemento a Elemento:} Se multiplica el texto cifrado del vector de entrada por los vectores que representan las diagonales de la matriz de pesos (codificados en texto claro).
+    \item \textbf{Rotación Cifrada (Cyclic Shift):} Debido a que los datos están empaquetados en slots, para sumar los componentes correctos es necesario rotar cíclicamente los elementos dentro del texto cifrado. Esta es una operación criptográfica específica que permite mover el valor del slot $i$ al slot $j$ sin descifrar el contenido.
+    \item \textbf{Acumulación:} Se suman los resultados de las rotaciones para obtener el vector de salida cifrado.
+\end{enumerate}
+
+\subsection{El Costo de las Rotaciones}
+
+Un aspecto crítico para el desarrollo de la librería en Python es que, en CKKS, las rotaciones son computacionalmente más costosas que las adiciones y requieren "claves de evaluación" (Galois Keys) adicionales. Por lo tanto, el algoritmo de multiplicación implementado en la librería debe optimizar el número de rotaciones necesarias. Un mal diseño del empaquetado de la matriz puede resultar en un rendimiento órdenes de magnitud más lento.Al automatizar estas estrategias de empaquetado y rotación, la librería desarrollada permite al usuario final definir capas lineales sin tener que gestionar manualmente la compleja lógica de alineación de slots y generación de claves de rotación.

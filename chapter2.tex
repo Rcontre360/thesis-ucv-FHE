@@ -1,6 +1,125 @@
 \chapter{Esquema Cheon-Kim-Kim-Song}
 
-Contenido
+El esquema propuesto por Cheon, Kim, Kim y Song en 2017 \cite{CKKS17}, comúnmente denominado CKKS, marcó un hito en la criptografía homomórfica al introducir el concepto de \textbf{aritmética aproximada}. A diferencia de los esquemas BGV o BFV, que están diseñados para computar de manera exacta sobre campos finitos o anillos de enteros, CKKS permite procesar de forma nativa números reales y complejos. En los esquemas exactos, trabajar con decimales requiere técnicas de cuantización complejas que suelen provocar una explosión en el tamaño de los coeficientes, agotando rápidamente el presupuesto de ruido del sistema. CKKS resuelve este problema tratando el ruido inherente de RLWE no como un obstáculo a eliminar, sino como un error de redondeo controlado, similar al que ocurre en la aritmética de punto flotante de los procesadores convencionales.
 
-\section{Seccion}
+En la mayoría de las aplicaciones de ciencia de datos, la precisión absoluta no es necesaria. Los modelos de redes neuronales, por ejemplo, operan con pesos y activaciones que admiten cierto grado de error sin comprometer la validez del resultado final.En CKKS, un mensaje $m$ se escala por un factor $\Delta$ (usualmente una potencia de 2) antes de ser cifrado. Al realizar una multiplicación homomórfica, el error acumulado se sitúa en los bits menos significativos del texto cifrado. Mediante una operación única de este esquema denominada \textit{Rescaling}, es posible eliminar esos bits de ruido y reajustar el factor de escala, permitiendo que el cómputo continúe con una precisión estable. Esta capacidad de "gestionar el error como precisión" es lo que posiciona a CKKS como la solución estándar para la implementación de modelos de aprendizaje automático preservando la privacidad.
 
+\section{Codificación y Decodificación}
+
+Para procesar datos en CKKS, es necesario transformar los vectores de números reales o complejos en elementos del anillo $R$. Este proceso se denomina Codificacion y su inversa Decodificacion. A diferencia de otros esquemas que simplemente mapean bits a coeficientes, CKKS utiliza una técnica basada en el homomorfismo de anillos para permitir que las operaciones polinomiales se correspondan exactamente con operaciones vectoriales.
+
+\subsection{El Canonical Embedding}
+
+La base matemática del proceso es el Canonical Embedding (Inmersión Canónica). Dado el anillo de cocientes $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$, donde $n$ es una potencia de 2, las raíces del polinomio ciclotómico $\Phi_n(x) = x^n + 1$ son las $n$ raíces complejas $2n$-ésimas de la unidad, denotadas como $\zeta_j = e^{i \frac{2\pi j}{2n}}$ para $j \in \{1, 3, \dots, 2n-1\}$.El mapeo $\sigma: R \to \mathbb{C}^{n}$ evalúa un polinomio $p(x)$ en estas raíces:$$ \sigma(p(x)) = (p(\zeta_1), p(\zeta_3), \dots, p(\zeta_{2n-1})) $$Debido a la simetría de los conjugados complejos, para codificar un vector de $k = n/2$ valores complejos, solo necesitamos considerar la mitad de estas raíces. El proceso de Encoding consiste en tomar un vector $z \in \mathbb{C}^{n/2}$ y aplicar la transformada inversa $\sigma^{-1}$ para encontrar un polinomio cuyos valores de evaluación en las raíces $\zeta_j$ coincidan con los componentes de $z$.
+
+\subsection{Escalado y Discretización}
+
+Dado que los coeficientes de los polinomios en el anillo $R$ deben ser enteros, no podemos mapear directamente un vector de números reales (continuos) a $R$ sin perder la parte decimal. Para solucionar esto, CKKS introduce un factor de escala $\Delta > 0$.El proceso completo para transformar un vector $z$ en un polinomio $m(x) \in R$ es:
+
+\begin{enumerate}
+   \item Escalado: Se multiplica el vector por el factor $\Delta$, transformando $z$ en $\Delta \cdot z$.
+   \item Proyección: Se aplica la inmersión canónica inversa $\sigma^{-1}(\Delta \cdot z)$.
+   \item Discretización (Rounding): Se redondean los coeficientes resultantes al entero más cercano: $m(x) = \lfloor \sigma^{-1}(\Delta \cdot z) \rceil$.
+\end{enumerate}
+
+El factor $\Delta$ determina la precisión del esquema. Por ejemplo, si se desea una precisión de 10 decimales, se suele elegir $\Delta \approx 2^{40}$. Este escalado desplaza la parte decimal hacia la izquierda de la coma binaria, permitiendo que el ruido de RLWE (que reside en los bits menos significativos) no destruya la información útil.
+
+\subsection{Estructura de Slots y SIMD}
+
+El resultado de este proceso es la creación de una estructura de slots (ranuras). Cada texto cifrado en CKKS no representa un único valor, sino un vector de $n/2$ posiciones independientes.Desde una perspectiva de arquitectura de software, esto habilita capacidades SIMD (Single Instruction, Multiple Data):
+
+\begin{itemize}
+\item Suma de vectores: Al sumar dos textos cifrados $ct_1 + ct_2$, se suman los $n/2$ valores de sus slots correspondientes de forma paralela en una sola operación.
+\item Multiplicación elemento a elemento: Al multiplicar $ct_1 \cdot ct_2$, se obtiene el producto de Hadamard de los vectores originales.
+\end{itemize}
+
+Esta estructura es la que permite que CKKS sea extremadamente eficiente para operaciones de álgebra lineal, como el cálculo de distancias o activaciones en Redes de Base Radial, ya que el costo computacional se amortiza entre los miles de slots disponibles en un solo polinomio.
+
+\section{Generación de Claves y Espacio de Parámetros}
+
+La seguridad y funcionalidad del esquema CKKS dependen de la correcta generación de un conjunto de claves y de la selección meticulosa de parámetros algebraicos. A diferencia de la criptografía de clave pública tradicional, en FHE no solo debemos preocuparnos por la seguridad ($\lambda$), sino también por la profundidad del circuito (capacidad de cómputo) que el esquema debe soportar.
+
+\subsection{Definición del Conjunto de Claves}
+
+Para operar en CKKS, se requiere la generación de tres tipos de claves principales. Cada una cumple un rol específico en el ciclo de vida del dato cifrado:
+
+\begin{enumerate}
+   \item \textbf{Clave Secreta ($sk$):} Es un polinomio $s(x) \in R$ cuyos coeficientes se extraen de una distribución "pequeña" (generalmente binaria $\{-1, 0, 1\}$ o ternaria). Es la única clave capaz de descifrar los datos y debe permanecer bajo control exclusivo del propietario de la información.
+   \item \textbf{Clave Pública ($pk$):} Se utiliza para cifrar los mensajes. Se genera como un par $(b, a) \in R_q^2$, donde $a$ es uniforme y $b = -as + e$, siendo $e$ un error pequeño. La seguridad de esta clave reside en la dificultad de resolver el problema RLWE para hallar $s$.
+\item \textbf{Claves de Evaluación ($evk$):} Son claves públicas adicionales necesarias para realizar operaciones complejas sobre textos cifrados sin descifrarlos. Se dividen en dos categorías esenciales:
+   \begin{itemize}
+       \item \textbf{Clave de Relinearización ($rk$):} Tras una multiplicación homomórfica, el texto cifrado resultante deja de ser un par de polinomios y se convierte en una terna. La clave de relinearización permite reducir el tamaño del texto cifrado de nuevo a dos polinomios, permitiendo operaciones subsecuentes.
+       \item \textbf{Claves de Rotación (Galois Keys):} Dado que CKKS utiliza una estructura SIMD, estas claves permiten rotar cíclicamente los elementos dentro de los "slots" de un vector cifrado. Son indispensables para algoritmos que requieren sumas vectoriales o productos punto.
+   \end{itemize}
+\end{enumerate}
+
+\subsection{Selección de Parámetros y Nivel de Seguridad}
+
+El rendimiento y la seguridad de CKKS están determinados por la relación entre tres variables fundamentales: el grado del polinomio $n$, el módulo de nivel máximo $Q$, y la distribución del error $\sigma$.
+
+\begin{itemize}
+   \item \textbf{Grado del Polinomio ($n$):} Típicamente una potencia de 2 ($2^{12} \dots 2^{15}$). Un valor mayor de $n$ permite mayor seguridad y más "slots" para empaquetado SIMD, pero incrementa linealmente el tiempo de cómputo y el tamaño de las claves.
+   \item \textbf{Módulo de Coeficientes ($q$):} En CKKS, el módulo total $Q$ suele ser un producto de varios primos $q_i$. La magnitud de $Q$ determina el "presupuesto de ruido": a mayor $Q$, mayor cantidad de multiplicaciones (profundidad del circuito) se pueden realizar. Sin embargo, aumentar $Q$ sin aumentar $n$ reduce la seguridad del esquema.
+   \item \textbf{Nivel de Seguridad ($\lambda$):} Se mide en bits (siendo 128 bits el estándar industrial). Según el estándar de \textit{Homomorphic Encryption Security}, para un $n$ dado, existe un límite superior para $\log Q$ que garantiza un nivel de seguridad específico. Si el cálculo requiere un $Q$ muy grande para soportar muchas operaciones, el grado $n$ debe aumentarse proporcionalmente para mantener $\lambda$ constante.
+\end{itemize}
+
+Esta interdependencia crea un compromiso (\textit{trade-off}): para ejecutar algoritmos de aprendizaje automático complejos (como una Red de Base Radial profunda), se requieren parámetros más grandes, lo que resulta en un mayor consumo de memoria y tiempo de ejecución por operación.
+
+\section{Operaciones Homomórficas en CKKS}
+
+El esquema CKKS permite realizar cómputos sobre textos cifrados de tal manera que, al descifrar el resultado, este coincida con la operación realizada sobre los datos en claro (dentro de un margen de error controlado). Las operaciones fundamentales se definen sobre el espacio de textos cifrados $\mathcal{C} \in R_q \times R_q$.
+
+\subsection{Adición y Multiplicación Homomórfica}
+
+La adición en CKKS es una operación lineal directa. Dados dos textos cifrados $ct_1 = (c_{1,0}, c_{1,1})$ y $ct_2 = (c_{2,0}, c_{2,1})$, su suma se define como:$$ ct_{add} = (c_{1,0} + c_{2,0}, c_{1,1} + c_{2,1}) \pmod q $$Esta operación tiene un costo computacional mínimo y un impacto insignificante en el crecimiento del ruido.Por el contrario, la multiplicación es más compleja. Al multiplicar dos textos cifrados que representan los mensajes $m_1$ y $m_2$ escalados por $\Delta$, el resultado representa el producto $m_1 \cdot m_2$ pero escalado por $\Delta^2$. Técnicamente, la multiplicación implica un producto tensorial que inicialmente expande el texto cifrado a una terna $(c_0, c_1, c_2)$. Para mantener el tamaño del texto cifrado constante, se aplica un proceso de \textbf{relinealización} utilizando una clave de evaluación especial, devolviendo el resultado a una tupla de dos elementos.
+
+\subsection{Reescalado}
+
+El proceso de \textit{Reescalado} es la innovación técnica más importante de CKKS y lo que permite la aritmética aproximada. Tras una multiplicación, el factor de escala aumenta a $\Delta^2$ y el ruido crece proporcionalmente. Si se realizaran múltiples multiplicaciones sucesivas, el valor de los coeficientes superaría rápidamente el módulo $q$, destruyendo el mensaje.El \textit{Rescaling} permite dividir un texto cifrado por $\Delta$ y, simultáneamente, pasar al siguiente nivel de la cadena de módulos ($q_l \to q_{l-1}$). Matemáticamente:$$ ct_{rescaled} = \lfloor \frac{1}{\Delta} ct \rceil \pmod{q/ \Delta} $$Esta operación descarta los bits menos significativos del texto cifrado, que es precisamente donde se acumula el ruido de la multiplicación. De esta forma, CKKS mantiene el error relativo constante, comportándose de manera idéntica a un redondeo en aritmética de punto flotante.
+
+\subsection{Rotaciones Homomórficas (Estructura SIMD)}
+
+Dado que CKKS utiliza empaquetado SIMD, un texto cifrado no contiene un solo valor, sino un vector de valores $\vec{z} = (z_0, z_1, \dots, z_{\frac{n}{2}-1})$. En muchas aplicaciones de álgebra lineal, como el cálculo de los centros en una Red de Base Radial, es necesario interactuar entre diferentes posiciones del vector.Las rotaciones permiten desplazar los elementos dentro de las ranuras (\textit{slots}) sin necesidad de descifrar. Si un texto cifrado contiene $(z_0, z_1, z_2)$, una rotación a la izquierda por 1 produciría $(z_1, z_2, z_0)$.
+
+\begin{itemize}
+   \item \textbf{Mecánica:} Se basan en automorfismos de Galois sobre el anillo polinomial.
+   \item \textbf{Importancia:} Son esenciales para implementar la suma de todos los elementos de un vector (\textit{sum-reduce}) y para calcular productos punto, operaciones críticas en el entrenamiento y evaluación de redes neuronales.
+\end{itemize}
+
+\section{Gestión del Ruido y Niveles}
+
+A diferencia de los criptosistemas convencionales, donde el descifrado es siempre exacto, en los esquemas basados en RLWE cada texto cifrado contiene una cantidad inherente de "ruido" que crece con cada operación. Si este ruido supera un umbral determinado, la información original se corrompe y el descifrado falla. CKKS gestiona este fenómeno mediante una estructura jerárquica de niveles.
+
+\subsection{Jerarquía de Módulos}
+
+En CKKS, un texto cifrado no se define sobre un único módulo $Q$, sino sobre una cadena descendente de módulos (denominada \textit{modulus chain}). Se selecciona un módulo inicial grande $Q_L$, que es el producto de varios números primos distintos:$$ Q_L = q_L \cdot q_{L-1} \cdot \dots \cdot q_1 \cdot q_0 $$Esta estructura permite que el esquema funcione de manera multinivel. Cuando un texto cifrado se encuentra en el nivel más alto ($L$), tiene un presupuesto de ruido máximo. A medida que se realizan operaciones, especialmente multiplicaciones, el esquema aplica una operación de \textbf{Rescaling}.El \textit{Rescaling} escala el texto cifrado y el ruido simultáneamente, dividiéndolos por el factor actual $q_\ell$. Este proceso consume un nivel de la jerarquía, pasando de un módulo $Q_\ell$ a uno más pequeño $Q_{\ell-1}$. La cadena se puede visualizar como:$$ q_L > q_{L-1} > \dots > q_0 $$Donde cada $q_\ell$ suele ser un primo cercano al factor de escala $\Delta$. Esta técnica es lo que permite que CKKS mantenga la precisión de los números reales: al reducir el módulo, se eliminan los bits menos significativos que han sido contaminados por el ruido de la multiplicación, de forma análoga al redondeo en la aritmética de punto flotante.
+
+\subsection{Profundidad del Circuito}
+
+La profundidad del circuito se refiere al número máximo de multiplicaciones secuenciales (niveles) que se pueden realizar antes de que el texto cifrado llegue al módulo base $q_0$.
+
+\begin{itemize}
+   \item \textbf{Cómputo Leveled (Nivelado):} En la mayoría de las aplicaciones prácticas de aprendizaje automático, se estima de antemano la profundidad del algoritmo (por ejemplo, el número de capas de una red neuronal o el grado de un polinomio de aproximación). Se configuran suficientes niveles $L$ para completar el cálculo sin necesidad de refrescar el ruido.
+   \item \textbf{Agotamiento del Presupuesto:} Una vez que un texto cifrado alcanza el nivel $q_0$, no se pueden realizar más multiplicaciones homomórficas. En este punto, el ruido restante es demasiado grande en comparación con el módulo para permitir un escalado adicional.
+\end{itemize}
+
+Para circuitos de profundidad arbitraria o algoritmos iterativos muy largos, se requeriría la operación de \textbf{Bootstrapping}, la cual permite elevar nuevamente el texto cifrado a un nivel superior de la jerarquía. Sin embargo, debido a su alto costo computacional, la estrategia preferida en CKKS es optimizar la profundidad del circuito para trabajar dentro de una jerarquía de módulos predefinida.
+
+\section{Bootstrapping}
+
+Como se ha discutido en secciones anteriores, CKKS es un esquema de cifrado homomórfico nivelado (leveled). Esto implica que cada texto cifrado nace con un "presupuesto de niveles" determinado por el tamaño del módulo inicial $Q$. Cada operación de multiplicación y su respectivo \textit{rescaling} consumen un nivel, reduciendo el módulo actual. Cuando el módulo alcanza un valor mínimo, el texto cifrado ya no puede soportar más multiplicaciones sin corromper el mensaje subyacente.El \textbf{Bootstrapping} es la operación que permite superar esta limitación, permitiendo computaciones de profundidad arbitraria. En esencia, es el proceso de evaluar homomórficamente la función de descifrado del esquema utilizando la clave secreta cifrada (clave de evaluación).
+
+\subsection{El proceso de refresco de ruido}
+
+En CKKS, el bootstrapping no devuelve un texto cifrado con "cero ruido", sino que transforma un texto cifrado cuyo módulo $q$ es pequeño (casi agotado) en un nuevo texto cifrado que apunta a un módulo $Q$ mucho mayor, recuperando así la capacidad de realizar nuevas multiplicaciones.El procedimiento se divide generalmente en cuatro etapas principales:
+
+\begin{enumerate}
+   \item \textbf{Modulus Raising (Elevación de Módulo):} El texto cifrado con un módulo pequeño $q$ se interpreta como un texto cifrado con un módulo mayor $Q$. Esto no elimina el ruido, pero crea el "espacio" necesario para las operaciones de evaluación homomórfica que vendrán a continuación.
+   \item \textbf{Coeff-to-Slot (Transformación Directa):} Los coeficientes del polinomio se mueven a los \textit{slots} (ranuras) del texto cifrado. Técnicamente, esto implica realizar una Transformada de Fourier Discreta (DFT) de manera homomórfica.
+   \item \textbf{EvalMod (Aproximación Modular):} Esta es la fase crítica. El objetivo es eliminar los múltiplos del módulo original que se han acumulado durante el proceso de cifrado. Dado que la función modular ($x \pmod q$) no es continua, CKKS la aproxima utilizando polinomios de Chebyshev o series de senos para aplicarla de forma homomórfica.
+   \item \textbf{Slot-to-Coeff (Transformación Inversa):} Se realiza la inversa de la DFT homomórfica para devolver los datos desde los \textit{slots} a la representación polinomial original.
+\end{enumerate}
+
+\subsection{Consideraciones de Rendimiento y Precisión}
+
+Es importante notar que el bootstrapping en CKKS es una operación costosa tanto en tiempo de cómputo como en precisión. Al ser una aproximación polinomial de la función modular, se introduce un pequeño error adicional en los bits menos significativos.Para aplicaciones de \textit{Machine Learning}, como las Redes de Base Radial objeto de este estudio, el uso de bootstrapping es vital si el algoritmo requiere muchas iteraciones o una red muy profunda. Sin embargo, debido a su costo, las bibliotecas modernas (como SEAL u OpenFHE) permiten parametrizar el esquema para que el bootstrapping se ejecute solo cuando el presupuesto de niveles esté a punto de agotarse.
