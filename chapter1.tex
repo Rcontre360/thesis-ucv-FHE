@@ -1,6 +1,6 @@
 \chapter{Cifrado Homomórfico}
 
-El cifrado homomórfico es una forma de cifrado que permite realizar cómputos sobre datos cifrados, generando un resultado cifrado que, al descifrarse, coincide con el resultado de las operaciones como si se hubieran realizado sobre los datos en texto plano. Esta propiedad permite a terceros no confiables procesar datos sensibles sin tener acceso a la información subyacente.
+El cifrado homomórfico es una forma de cifrado que permite realizar cómputos sobre datos cifrados, generando un resultado que, al descifrarse, coincide con el resultado de las operaciones como si se hubieran realizado sobre los datos en texto plano. Esta propiedad permite a terceros no confiables procesar datos sensibles sin tener acceso a la información subyacente.
 
 \section{Orígenes}
 
@@ -29,7 +29,7 @@ Estos esquemas PHE son útiles en aplicaciones específicas, pero no son suficie
 
 \section{Ruido en el Cifrado Homomórfico}
 
-En 2009, cuando Craig Gentry, en su tesis doctoral \cite{Gentry09}, presentó el primer esquema de cifrado totalmente homomórfico. La construcción de Gentry se basó en criptografía sobre retículos (lattices) y superó el principal obstáculo que impedía la creación de esquemas FHE: el \textbf{ruido}. El esquema de Gentry permite realizar adicion y multiplicacion sobre texto cifrado, ademas es posible construir circuitos para realizar computo arbitrario.
+En 2009, cuando Craig Gentry, en su tesis doctoral \cite{Gentry09}, presentó el primer esquema de cifrado totalmente homomórfico. La construcción de Gentry se basó en lattices y superó el principal obstáculo que impedía la creación de esquemas FHE, el \textbf{ruido}. El esquema de Gentry permite realizar adicion y multiplicacion sobre texto cifrado, ademas es posible construir circuitos para realizar computo arbitrario.
 
 En la mayoría de los esquemas homomórficos modernos, un texto cifrado no es solo una función del mensaje, sino también de un error o "ruido" que es fundamental para la seguridad del esquema. Un texto cifrado $c$ de un mensaje $m$ se puede representar conceptualmente como:
 \begin{equation}
@@ -45,38 +45,114 @@ El nuevo ruido es $e_{add} = e_1 + e_2$. Para la multiplicación, el crecimiento
 \begin{equation}
     c_{mult} = c_1 \cdot c_2 \leftarrow (m_1 \cdot m_2) + q(\dots) + (m_1 e_2 + m_2 e_1 + e_1 e_2)
 \end{equation}
-El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado algo homomórficos (Somewhat Homomorphic Encryption - SHE).
+El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado algo homomórficos (SHE).
 
 \subsection{Bootstrapping}
 
-La idea clave de Gentry fue el \textbf{bootstrapping}. Este es un procedimiento que toma un texto cifrado ruidoso y, sin descifrarlo, lo "refresca", reduciendo su ruido y permitiendo que se realicen más operaciones sobre él. El proceso consiste en evaluar homomórficamente la propia función de descifrado.
+La idea clave de Gentry fue el \textbf{bootstrapping}. Este es un procedimiento que toma un texto cifrado ruidoso y, sin descifrarlo, lo "refresca", reduciendo su ruido y permitiendo que se realicen más operaciones sobre él. El proceso consiste en evaluar homomórficamente la propia función de descifrado. Para que esto sea posible, un esquema debe ser "bootstrappable" o circularmente seguro, lo que significa que es capaz de evaluar su propio circuito de descifrado.
 
-Sea $c$ un texto cifrado ruidoso tal que $\text{Dec}(sk, c) = m$. El objetivo es obtener un nuevo texto cifrado $c'$ que encripte el mismo mensaje $m$ pero con un nivel de ruido bajo. Para ello, se cifra la clave secreta $sk$ con una clave pública diferente, obteniendo $\text{Enc}_{pk'}(sk)$. Luego, se evalúa homomórficamente la función de descifrado $\text{Dec}$ utilizando el texto cifrado ruidoso $c$ y la clave secreta cifrada $\text{Enc}_{pk'}(sk)$ como entradas:
-\begin{equation}
-    c' = \text{Eval}(\text{Dec}, \text{Enc}_{pk'}(sk), c)
-\end{equation}
-El resultado $c'$ es un nuevo texto cifrado que contiene el mensaje $m$, pero su ruido ahora es el ruido inherente a la evaluación homomórfica de la función de descifrado, que es mucho menor que el ruido acumulado en $c$. Al aplicar el bootstrapping periódicamente, se puede realizar un número teóricamente ilimitado de operaciones, transformando un esquema SHE en un esquema FHE.
+El proceso se puede desglosar en los siguientes pasos:
+
+\begin{enumerate}
+    \item \textbf{Entradas del Proceso:}
+    \begin{itemize}
+        \item Un texto cifrado "ruidoso" $c = \text{Enc}_{pk}(m)$, cuyo nivel de ruido está cerca del umbral máximo que permite un descifrado correcto.
+        \item Un nuevo par de claves $(sk', pk')$ generado para el proceso de bootstrapping.
+        \item La clave secreta original $sk$, pero cifrada con la nueva clave pública $pk'$: $\overline{sk} = (\text{Enc}_{pk'}(sk_1), \dots, \text{Enc}_{pk'}(sk_n))$.
+    \end{itemize}
+
+    \item \textbf{Evaluación Homomórfica del Circuito de Descifrado:}
+    La función de descifrado, $\text{Dec}(sk, c)$, es un algoritmo que puede ser representado como un circuito de compuertas lógicas (sumas y multiplicaciones), al que llamaremos $f_{dec}$. Las entradas de este circuito son los bits de la clave secreta $sk$ y los componentes del texto cifrado $c$.
+
+    El paso fundamental del bootstrapping es ejecutar este circuito de forma homomórfica. Para ello, se utiliza la función $\text{Eval}$ del esquema, que toma como entradas la descripción del circuito $f_{dec}$, la clave secreta cifrada $\overline{sk}$ y el texto cifrado ruidoso $c$ (que para esta evaluación se trata como un dato en texto plano).
+    
+    \begin{equation}
+        c' = \text{Eval}_{pk'}(f_{dec}, \overline{sk}, c)
+    \end{equation}
+    
+    Aquí, $\text{Eval}_{pk'}$ indica que cada operación dentro del circuito $f_{dec}$ se ejecuta de manera homomórfica bajo la nueva clave $pk'$.
+
+    \item \textbf{Resultado: Un Texto Cifrado sin ruido:}
+    El resultado de la evaluación homomórfica es un nuevo texto cifrado, $c'$, que contiene el resultado de la función de descifrado. Dado que $\text{Dec}(sk, c) = m$, el nuevo texto cifrado es:
+    
+    \begin{equation}
+        c' = \text{Enc}_{pk'}(m)
+    \end{equation}
+    
+    Este texto cifrado $c'$ es una nueva encriptación del mensaje original $m$, pero con dos diferencias fundamentales:
+    \begin{itemize}
+        \item Su nivel de ruido es bajo y predecible, correspondiente al ruido generado por la evaluación de $f_{dec}$, independientemente de cuán ruidoso fuera $c$.
+        \item Está cifrado bajo la nueva clave $pk'$. Para poder seguir operando con otros textos cifrados bajo la clave $pk$, se puede emplear una técnica de "cambio de clave" para transformar $c'$ de vuelta a un cifrado bajo $pk$.
+    \end{itemize}
+\end{enumerate}
+
+Este procedimiento transforma cualquier esquema parcialmente homomorfico, capaz de evaluar su propio descifrado, en un esquema completamente homomórfico (FHE).
 
 \section{Aprendizaje con Errores (LWE)}
 
 Aunque el esquema original de Gentry fue un hito teórico, era demasiado lento para ser práctico. Esto desencadenó una intensa investigación para mejorar su eficiencia y encontrar construcciones más viables. Las generaciones posteriores de esquemas FHE se centraron en dos áreas principales: optimizar la gestión del ruido sin depender siempre del costoso bootstrapping, y basar la seguridad en problemas matemáticos más estructurados y eficientes que los utilizados por Gentry.
 
-Los esquemas modernos basan su seguridad en el problema de \textbf{Aprendizaje con Errores (LWE)} y su variante más eficiente, el \textbf{Aprendizaje con Errores en Anillos (RLWE)}. Estos forman la base de la mayoría de los esquemas de cifrado homomórfico que existen en la actualidad, ya que permiten una mejor gestión del ruido y un rendimiento computacional significativamente mayor.
+Los esquemas modernos basan su seguridad en el problema de \textbf{Aprendizaje con Errores (LWE)} y su variante más eficiente, el \textbf{Aprendizaje con Errores en Anillos (RLWE)}. La formulación del problema LWE, introducida por Oded Regev \cite{Regev05}, es la siguiente.
 
-Introducido por Oded Regev en 2005 \cite{Regev05}, el problema LWE se ha convertido en una de las bases más importantes de la criptografía moderna. Se puede describir como el problema de resolver un sistema de ecuaciones lineales que ha sido perturbado por un "ruido" pequeño.
+Denotemos como $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ al grupo aditivo de los números reales módulo uno. Intuitivamente, se puede pensar en el toro como el conjunto de los números reales en el intervalo `[0, 1)`. Por ejemplo, si sumamos $0.7 + 0.5 = 1.2$, en $\mathbb{T}$ el resultado es equivalente a $0.2$..
 
-Dados un módulo entero $q$ y un vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$, el desafío es distinguir entre dos distribuciones:
+\begin{itemize}
+    \item \textbf{Parámetros:}
+    \begin{itemize}
+        \item Un vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$ que se desea proteger.
+        \item Una distribución de probabilidad $\phi$ sobre el toro $\mathbb{T}$ para generar el error.
+    \end{itemize}
+    \item \textbf{Generación de Muestras:} Una muestra de la distribución LWE, denotada como $A_{\mathbf{s},\phi}$, sobre el espacio $\mathbb{Z}_q^n \times \mathbb{T}$ se obtiene siguiendo estos pasos:
+    \begin{enumerate}
+        \item Se elige un vector $\mathbf{a} \in \mathbb{Z}_q^n$ de forma uniforme y aleatoria.
+        \item Se muestrea un error $e \in \mathbb{T}$ según la distribución $\phi$.
+        \item Se calcula el valor $t \in \mathbb{T}$ como:
+        \begin{equation}
+            t = \langle \mathbf{a}, \mathbf{s} \rangle / q + e
+        \end{equation}
+        donde $\langle \mathbf{a}, \mathbf{s} \rangle = \sum_{i=1}^{n} a_i s_i$ es el producto interno estándar en $\mathbb{Z}_q^n$. La operación de división por $q$ es crucial, ya que mapea el resultado del producto interno (un entero en $\mathbb{Z}_q$) a un punto en el toro $\mathbb{T}$. Por ejemplo, si $q=100$ y el producto interno es $57$, la operación $/q$ lo convierte en el número real $0.57 \in \mathbb{T}$. A este valor se le suma el pequeño error $e$ (que también es un número en $\mathbb{T}$), y la suma final se realiza en $\mathbb{T}$.
+        \item La muestra generada es el par $(\mathbf{a}, t)$.
+    \end{enumerate}
+\end{itemize}
 
+El \textbf{problema de Aprendizaje con Errores (LWE)}, en su versión de búsqueda $\mathrm{LWE}_{q,\phi}$, consiste en encontrar el vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$ teniendo acceso a un número polinomial de muestras $(\mathbf{a}_i, t_i)$ de la distribución $A_{\mathbf{s},\phi}$.
+
+\subsection{Cifrado y Descifrado con LWE}
+
+A partir de la dureza del problema LWE, es posible construir un criptosistema de clave pública.
+
+\subsubsection{Generación de Claves}
+\begin{itemize}
+    \item \textbf{Clave Secreta ($sk$):} Se elige un vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$ de forma aleatoria y uniforme.
+    \item \textbf{Clave Pública ($pk$):} Se generan $m$ muestras del problema LWE usando el secreto $\mathbf{s}$. Para ello, se crea una matriz $\mathbf{A} \in \mathbb{Z}_q^{m \times n}$ eligiendo sus elementos de forma aleatoria y uniforme. Luego, se genera un vector de errores $\mathbf{e} \in \mathbb{Z}_q^m$ a partir de la distribución de error $\chi$. Finalmente, se calcula el vector $\mathbf{b} = \mathbf{A}\mathbf{s} + \mathbf{e} \pmod{q}$. La clave pública es el par $(\mathbf{A}, \mathbf{b})$.
+\end{itemize}
+
+\subsubsection{Cifrado}
+Para cifrar un bit de mensaje $\mu \in \{0, 1\}$:
 \begin{enumerate}
-    \item Una distribución de pares $(\mathbf{a}_i, b_i)$ donde los $\mathbf{a}_i \in \mathbb{Z}_q^n$ son vectores aleatorios uniformes y los $b_i = \langle \mathbf{a}_i, \mathbf{s} \rangle + e_i \pmod{q}$ son el resultado del producto interno de $\mathbf{a}_i$ y $\mathbf{s}$, más un pequeño error $e_i$ muestreado de una distribución de error (ej. Gaussiana discreta).
-    \item Una distribución de pares $(\mathbf{a}_i, u_i)$ donde tanto $\mathbf{a}_i$ como $u_i$ son uniformemente aleatorios en $\mathbb{Z}_q^n$ y $\mathbb{Z}_q$, respectivamente.
+    \item Se elige un subconjunto aleatorio de las filas de la matriz $\mathbf{A}$. Denotemos los índices de estas filas por el vector $\mathbf{x} \in \{0, 1\}^m$.
+    \item El texto cifrado es un par $(\mathbf{u}, v) \in \mathbb{Z}_q^n \times \mathbb{Z}_q$, calculado como:
+    \begin{align}
+        \mathbf{u} &= \mathbf{x}^T \mathbf{A} \pmod{q} \\
+        v &= \mathbf{x}^T \mathbf{b} + \mu \cdot \lfloor q/2 \rfloor \pmod{q}
+    \end{align}
 \end{enumerate}
 
-La seguridad de los criptosistemas basados en LWE reside en la supuesta intratabilidad de este problema. Sin el término de error $e_i$, el secreto $\mathbf{s}$ podría recuperarse fácilmente usando eliminación gaussiana. Sin embargo, la adición de ruido hace que el problema sea computacionalmente difícil, con una seguridad que se puede reducir a problemas de retículos en el peor de los casos, como el Shortest Vector Problem (SVP).
+\subsubsection{Descifrado}
+Para descifrar un texto cifrado $(\mathbf{u}, v)$ usando la clave secreta $\mathbf{s}$:
+\begin{enumerate}
+    \item Se calcula la diferencia: $d = v - \langle \mathbf{u}, \mathbf{s} \rangle \pmod{q}$.
+    \item Se comprueba a qué valor está más cercano $d$: a $0$ o a $\lfloor q/2 \rfloor$.
+    \begin{itemize}
+        \item Si $d$ está más cerca de $0$, el mensaje descifrado es $0$.
+        \item Si $d$ está más cerca de $\lfloor q/2 \rfloor$, el mensaje descifrado es $1$.
+    \end{itemize}
+\end{enumerate}
+La corrección del descifrado se basa en que $d = \mu \cdot \lfloor q/2 \rfloor + \mathbf{x}^T\mathbf{e}$. Mientras el término de ruido acumulado $\mathbf{x}^T\mathbf{e}$ sea pequeño (menor que $q/4$), el valor de $d$ estará más cerca del múltiplo de $\lfloor q/2 \rfloor$ correspondiente al mensaje original.
 
 \section{Aprendizaje con Errores en Anillos (RLWE)}
 
-Para mitigar las limitaciones de eficiencia de LWE, se introdujo el problema \textbf{Ring-LWE} \cite{LPR10}. Esta variante traslada el problema desde vectores sobre $\mathbb{Z}_q$ hacia estructuras algebraicas más ricas, permitiendo optimizaciones algorítmicas significativas.
+La variante \textbf{RLWE} \cite{LPR10} traslada el problema desde vectores sobre $\mathbb{Z}_q$ hacia estructuras algebraicas mas flexibles, permitiendo optimizaciones algorítmicas significativas.
 
 \subsection{Anillos Polinomiales}
 
@@ -94,28 +170,28 @@ En $R_q$, los elementos son polinomios de grado máximo $n-1$. La suma se realiz
 
 \subsection{Definición del Problema RLWE}
 
-Sobre la estructura de $R_q$, se define una distribución de error $\chi$ (usualmente una Gaussiana discreta) que genera polinomios con coeficientes pequeños en comparación con $q$. El problema RLWE en su versión de decisión consiste en distinguir entre dos distribuciones en $R_q \times R_q$:
+Sobre la estructura de $R_q$, se define una distribución de error $\chi$ que genera polinomios con coeficientes pequeños en comparación con $q$.
 
-\begin{enumerate}
-\item \textbf{Muestras RLWE:} Pares de la forma $(a_i(x), b_i(x))$, donde $a_i(x)$ se extrae uniformemente al azar de $R_q$ y el segundo componente se calcula como:$$ b_i(x) = a_i(x) \cdot s(x) + e_i(x) \in R_q $$donde $s(x)$ es un secreto persistente y $e_i(x)$ es un polinomio de error fresco muestreado de $\chi$.
-\item \textbf{Muestras Uniformes:} Pares $(a_i(x), u_i(x))$ donde ambos elementos son elegidos de manera uniformemente aleatoria en $R_q$
-.\end{enumerate}
-
-La dureza de RLWE radica en que, a pesar de la estructura algebraica adicional, el problema sigue siendo computacionalmente intratable para atacantes cuánticos, reduciéndose a problemas de retículos (lattices) en el peor de los casos en anillos ideales.
+El \textbf{problema de Búsqueda RLWE} (Search-RLWE) consiste en encontrar el polinomio secreto $s(x) \in R_q$ a partir de un número polinomial de muestras. Cada muestra es un par de polinomios $(a_i(x), b_i(x))$, donde:
+\begin{itemize}
+    \item $a_i(x)$ es un polinomio elegido uniformemente al azar del anillo $R_q$.
+    \item $b_i(x)$ se calcula como $b_i(x) = a_i(x) \cdot s(x) + e_i(x) \pmod{q}$, donde $s(x)$ es el polinomio secreto que se desea encontrar y $e_i(x)$ es un polinomio de error "pequeño" muestreado de la distribución $\chi$.
+\end{itemize}
+La dificultad de este problema radica en que el error $e_i(x)$ oculta el secreto $s(x)$, haciendo que sea computacionalmente inviable recuperarlo sin conocer $s(x)$.
 
 \subsection{Ventajas sobre LWE}
 
-La introducción de la estructura de anillo aporta dos beneficios críticos desde la perspectiva de las ciencias de la computación:
+La introducción de la estructura de anillo aporta dos beneficios:
 
 \begin{itemize}
-    \item \textbf{Eficiencia Algorítmica:} La multiplicación en $R_q$ puede realizarse en tiempo $O(n \log n)$ utilizando la Transformada de Teoría de Números (NTT), a diferencia del costo $O(n^2)$ de las matrices en LWE.
+    \item \textbf{Eficiencia:} La multiplicación en $R_q$ puede realizarse en tiempo $O(n \log n)$ utilizando la Transformada de Teoría de Números (NTT), a diferencia del costo $O(n^2)$ de las matrices en LWE.
     \item \textbf{Compactación de Datos:} Un solo par de polinomios en RLWE equivale a $n$ muestras de LWE. Esto permite que las claves y los textos cifrados sean órdenes de magnitud más pequeños.
-    \item \textbf{Paralelismo SIMD:} La estructura del anillo permite aplicar el Teorema del Resto Chino (CRT) para "empaquetar" múltiples datos en un solo polinomio, permitiendo operaciones paralelas (SIMD) de forma nativa.
+    \item \textbf{Paralelismo SIMD:} La estructura del anillo permite aplicar el Teorema del Resto Chino (CRT) para operar múltiples datos en un solo polinomio, permitiendo operaciones paralelas (SIMD) de forma nativa.
 \end{itemize}
 
 \section{Esquemas modernos de FHE}
 
-La transición al problema RLWE permitió el desarrollo de esquemas de segunda y tercera generación que son la base de las bibliotecas criptográficas modernas como SEAL, HELib y Lattigo. Aunque todos comparten la misma base de seguridad, difieren radicalmente en cómo codifican los datos y gestionan el ruido.
+La transición al problema RLWE permitió el desarrollo de mejores esquemas que son la base de las bibliotecas criptográficas modernas como SEAL, HELib y Lattigo. Aunque todos comparten la misma base de seguridad, difieren radicalmente en cómo codifican los datos y gestionan el ruido.
 
 \subsection{Aritmética Exacta: BGV y BFV}
 
@@ -133,11 +209,11 @@ Ambos esquemas son ideales para aplicaciones que requieren precisión absoluta, 
 
 \subsection{El Esquema TFHE y el Bootstrapping Programable}
 
-El esquema TFHE (Chillotti et al., 2016) \cite{TFHE16} a diferencia de BGV/BFV/CKKS, que se enfocan en aritmética de vectores, se especializa en la evaluación de puertas lógicas (AND, OR, MUX) y funciones arbitrarias mediante una técnica innovadora llamada \textit{Programmable Bootstrapping} (PBS).TFHE opera principalmente sobre el Toro Real ($\mathbb{T} = \mathbb{R}/\mathbb{Z}$), lo que permite una gestión del ruido muy precisa. Su mayor ventaja es que el proceso de \textit{bootstrapping} —que en otros esquemas toma segundos— aquí se realiza en milisegundos y está integrado en cada operación. Esto permite ejecutar circuitos de profundidad infinita sin que el programador deba preocuparse por el crecimiento del ruido.
+El esquema TFHE (Chillotti et al., 2016) \cite{TFHE16} a diferencia de BGV/BFV/CKKS, que se enfocan en aritmética de vectores, se especializa en la evaluación de puertas lógicas (AND, OR, MUX) y funciones arbitrarias mediante una técnica llamada \textit{Programmable Bootstrapping}. TFHE opera principalmente sobre el Toro Real ($\mathbb{T} = \mathbb{R}/\mathbb{Z}$), lo que permite una gestión del ruido muy precisa. Su mayor ventaja es que el proceso de \textit{bootstrapping} aquí se realiza en milisegundos y está integrado en cada operación. Esto permite ejecutar circuitos de profundidad infinita sin que el programador deba preocuparse por el crecimiento del ruido.
 
 \subsection{El Esquema CKKS para Cómputo Aproximado}
 
-Propuesto por Cheon, Kim, Kim y Song en 2017 \cite{CKKS17}, el esquema CKKS representa un cambio de paradigma en FHE. A diferencia de sus predecesores, CKKS permite realizar aritmética sobre números reales y complejos con una precisión controlada.La innovación clave de CKKS es que trata el ruido inherente de RLWE no como un error que debe eliminarse por completo, sino como parte del error de redondeo que ocurre naturalmente en el cálculo numérico de punto flotante. Al permitir que el ruido se acumule en los bits menos significativos del mensaje cifrado, CKKS logra una eficiencia superior para algoritmos iterativos.
+Propuesto por Cheon, Kim, Kim y Song en 2017 \cite{CKKS17}, el esquema CKKS representa un cambio de paradigma en FHE. A diferencia de sus predecesores, CKKS permite realizar aritmética sobre números reales y complejos con una precisión controlada. La innovación clave de CKKS es que trata el ruido inherente de RLWE no como un error que debe eliminarse por completo, sino como parte del error de redondeo que ocurre naturalmente en el cálculo numérico de punto flotante. 
 
 \subsection{Comparativa de Capacidades y Casos de Uso}
 
@@ -161,16 +237,7 @@ En la siguiente tabla se resumen las diferencias técnicas principales entre est
         Unidad de Cómputo & Vectores (SIMD) & Vectores (SIMD) & Puertas Lógicas / LUT \\ 
         \hline
         
-        Aplicación Principal & Bases de Datos & Machine Learning & Control de flujo / Lógica \\ 
-        \hline
-        
         Precisión & Absoluta & Aproximada & Absoluta (Binaria) \\ 
         \hline
     \end{tabular}
 \end{table}
-
-\subsection{Técnica de Empaquetado SIMD (Batching)}
-
-Una de las propiedades más potentes compartida por estos esquemas es la capacidad de procesar múltiples datos simultáneamente mediante una arquitectura \textit{Single Instruction, Multiple Data} (SIMD).Utilizando el Teorema del Resto Chino (CRT), el anillo polinomial $R_q$ se puede ver como un producto de múltiples "slots" o ranuras independientes. Un solo texto cifrado puede almacenar un vector de hasta $n$ valores. Cualquier operación homomórfica (suma o multiplicación) realizada sobre el texto cifrado se aplica a todos los elementos del vector al mismo tiempo sin costo adicional. Esta técnica es el pilar que hace que el entrenamiento e inferencia de modelos de aprendizaje automático sean computacionalmente viables en el dominio cifrado.
-
-
