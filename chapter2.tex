@@ -163,4 +163,20 @@ Para circuitos de profundidad arbitraria o algoritmos iterativos muy largos, se 
 
 \section{Bootstrapping}
 
-[TODO: La descripción detallada del bootstrapping dependerá de la biblioteca de FHE que se utilice como base, ya que las implementaciones y optimizaciones pueden variar]
+El cómputo por niveles tiene una limitación: la profundidad del circuito. El bootstrapping es el proceso que convierte un esquema nivelado en uno totalmente homomórfico, permitiendo un número virtualmente ilimitado de operaciones. En esencia, es un procedimiento para refrescar un texto cifrado cuyo presupuesto de ruido y niveles se ha agotado.
+
+El principal desafío del bootstrapping en CKKS es evaluar homomórficamente su propia función de descifrado. Esta función, $\text{Dec}(c) = [\langle c, sk \rangle]_q$, incluye una operación de reducción modular (mod $q$) que no es un polinomio y, por tanto, no se puede aplicar directamente.
+
+Para solucionar esto se propuso un algoritmo \cite{CKKS17-Boot} que sigue los siguientes pasos:
+
+\begin{enumerate}
+    \item \textbf{Elevación del Módulo:} Se toma el texto cifrado "gastado" (en un módulo pequeño `q`) y se escala para considerarlo como un texto cifrado en un módulo mucho más grande, `Q`. Esto no elimina el ruido, pero crea el "espacio" matemático necesario para las siguientes operaciones.
+
+    \item \textbf{Coeficientes a Ranuras:} Un texto cifrado es un polinomio, pero las operaciones SIMD ocurren en las ranuras (las evaluaciones de dicho polinomio). El bootstrapping necesita aplicar una función (la sinusoide) a cada uno de los \textit{coeficientes} del polinomio cifrado, no a los valores que ya están en las ranuras. El objetivo es, por tanto, mover los coeficientes $(t_0, t_1, \dots)$ a las ranuras para poder usar el paralelismo. Esta transformación es una operación lineal y, como tal, puede ser evaluada homomórficamente aplicando una serie de multiplicaciones y rotaciones. El resultado son nuevos textos cifrados cuyo contenido en las ranuras es el vector de coeficientes original.
+
+    \item \textbf{Evaluación de la Función Modular:} En lugar de calcular la reducción modular directamente, se utiliza una función sinusoidal (`sin(x)`) como una aproximación. Como la función seno sí puede ser aproximada eficientemente por un polinomio, se puede evaluar de forma homomórfica sobre los datos en las ranuras (que ahora contienen los coeficientes). El resultado de esta evaluación es una aproximación del mensaje original, libre del ruido modular.
+
+    \item \textbf{Ranuras a Coeficientes:} Este es el proceso inverso. Una vez que la función sinusoidal ha sido aplicada sobre los coeficientes, el resultado es un vector de valores del mensaje ya "limpios" que residen en las ranuras. El objetivo ahora es tomar estos valores y usarlos para construir el polinomio del texto cifrado final. De nuevo, esta es una transformación lineal que se aplica homomórficamente. Agrupa los valores procesados de las ranuras y los reconstruye como los coeficientes de un único polinomio, completando el "refresco" del texto cifrado.
+\end{enumerate}
+
+El resultado final es un nuevo texto cifrado, en un nivel de módulo alto, que contiene el mismo mensaje original pero con el ruido inicial. Aunque este proceso es computacionalmente costoso, permite realizar cómputos de profundidad arbitraria, algo indispensable para algoritmos iterativos o redes neuronales muy profundas.
