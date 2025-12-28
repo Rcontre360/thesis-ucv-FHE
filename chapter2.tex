@@ -120,44 +120,7 @@ El resultado es un polinomio cuadrático en $s$. Esto se representa como un text
     \item $d_1 = c_{1,0}c_{2,1} + c_{1,1}c_{2,0} \pmod q$
     \item $d_2 = c_{1,1}c_{2,1} \pmod q$
 \end{itemize}
-Este nuevo texto está cifrado bajo la clave $(1, s, s^2)$. Para poder continuar operando, es necesario aplicar dos procedimientos: \textbf{relinearización} y \textbf{reescalado}.
-
-\subsection{Relinearización}
-
-El objetivo de la relinearización es convertir el texto cifrado de tamaño 3, $ct_{mult}$, de vuelta a uno de tamaño 2 que esté cifrado bajo la clave original $(1, s)$. Esto se logra eliminando el término cuadrático $d_2 s^2$ mediante una operación de cambio de clave.
-
-El proceso se basa en la \textbf{clave de relinearización ($rlk$)}, la cual es $s^2$ (escalado por un factor $P$) cifrado bajo la clave original $s$. Es decir:
-$$ rlk = (b, a) \approx \text{Enc}_s(P \cdot s^2) $$
-donde 
-$$b = -as + e + P \cdot s^2 \pmod{Pq}$$
-
-El procedimiento de relinearización sigue estos pasos:
-
-\begin{enumerate}
-    \item Se toma el componente cuadrático $d_2$ del texto cifrado $ct_{mult}$.
-    \item Se multiplica por la clave de relinearización $rlk$. Esto produce un nuevo texto cifrado, $ct_{temp} = (d_2 \cdot b, d_2 \cdot a)$. Este texto cifrado $ct_{temp}$ contiene el valor $d_2 \cdot (P \cdot s^2)$.
-    \item A continuación, se aplica una división por el factor $P$ y un redondeo a los componentes de $ct_{temp}$. Esta operación cancela el factor $P$ introducido por la clave:
-    $$ ct'_{new} = \lfloor P^{-1} \cdot ct_{temp} \rceil \pmod q $$
-    El resultado, $ct'_{new} = (c'_0, c'_1)$, es ahora un texto cifrado de dos componentes que contiene el valor $d_2 s^2$ bajo la clave $s$.
-    \item Finalmente, se suma este nuevo texto cifrado a los dos primeros componentes del texto cifrado multiplicado original:
-    $$ ct_{relin} = (d_0 + c'_0, d_1 + c'_1) \pmod q $$
-\end{enumerate}
-
-El resultado final, $ct_{relin}$, es un texto cifrado de tamaño 2 del mensaje producto $m_1 m_2$ y que puede ser utilizado en operaciones posteriores.
-
-\subsection{Reescalado}
-
-Después de la relinearización, el factor de escala del mensaje se ha vuelto cuadrático ($\Delta^2$) y el ruido ha crecido significativamente. El reescalado es la operación que soluciona ambos problemas simultáneamente. El reescalado realiza dos acciones: una división y un cambio de módulo.
-
-\begin{enumerate}
-    \item \textbf{División y Redondeo:} Se toma un primo $p_l \approx \Delta$ de la cadena de módulos. Se dividen los componentes del texto cifrado $ct_{relin}$ por este primo y se redondea al entero más cercano.
-    $$ ct_{temp} = \lfloor p_l^{-1} \cdot ct_{relin} \rceil $$
-    
-    \item \textbf{Cambio de Módulo:} El nuevo texto cifrado ahora se considera bajo un módulo más pequeño, $q_{l-1} = q_l / p_l$. El texto cifrado final reescalado es:
-    $$ ct_{rescaled} = ct_{temp} \pmod{q_{l-1}} $$
-\end{enumerate}
-
-El nuevo mensaje cifrado es $m_{new} \approx m' / p_l$. Como elegimos $p_l \approx \Delta$, tenemos que $m_{new} \approx (\Delta^2 m_1 m_2) / \Delta = \Delta m_1 m_2$. Con esto, el factor de escala del mensaje vuelve a ser $\Delta$, preparándolo para la siguiente operación. El ruido también se divide, $e_{new} \approx e_{relin} / p_l$. La clave del esquema CKKS es que el ruido introducido por la multiplicación reside principalmente en los bits menos significativos de los coeficientes. Al dividir por $p_l$ y redondear, se eliminan estos bits "ruidosos", manteniendo así la precisión relativa del mensaje.
+Este nuevo texto está cifrado bajo la clave $(1, s, s^2)$. Para poder continuar operando, es necesario aplicar la \textbf{relinearización} para gestionar el tamaño del texto cifrado. Adicionalmente, el ruido y el factor de escala deben ser controlados mediante el \textbf{reescalado}, un proceso que se detalla en la sección \ref{sec:gestion_niveles}.
 
 \subsection{Rotaciones Homomórficas}
 
@@ -166,40 +129,38 @@ Las rotaciones permiten permutar los elementos dentro de los slots de un vector 
 Si aplicamos esto a un texto cifrado $ct = (c_0(x), c_1(x))$, obtenemos un nuevo par $(c_0(x^k), c_1(x^k))$. Sin embargo, este nuevo texto esta cifrado bajo la clave secreta transformada $s(x^k)$. Para devolverlo al formato original, se necesita un proceso de cambio de clave que utiliza las \textbf{Claves de Galois ($galk$)}, una por cada rotación necesaria. Estas claves son, en esencia, cifrados de la clave secreta original $s(x)$ bajo las claves secretas transformadas $s(x^k)$.
 
 
-\section{Gestión del Ruido y Niveles}
+\section{Cifrado por Niveles}\label{sec:gestion_niveles}
 
-A diferencia de los criptosistemas convencionales, donde el descifrado es siempre exacto, en los esquemas basados en RLWE cada texto cifrado contiene una cantidad inherente de "ruido" que crece con cada operación. Si este ruido supera un umbral determinado, la información original se corrompe y el descifrado falla. CKKS gestiona este fenómeno mediante una estructura jerárquica de niveles.
+\subsection{Niveles}
 
-\subsection{Jerarquía de Módulos}
+En CKKS, un texto cifrado no se define sobre un único módulo $Q$, sino sobre una cadena descendente de módulos (denominada \textit{modulus chain}). Se selecciona un módulo inicial grande $Q_L$, que es el producto de varios números primos distintos:$$ Q_L = q_L \cdot q_{L-1} \cdot \dots \cdot q_1 \cdot q_0 $$Esta estructura permite que el esquema funcione de manera multinivel. Cuando un texto cifrado se encuentra en el nivel más alto ($L$), tiene un presupuesto de ruido máximo. A medida que se realizan multiplicaciones, el esquema aplica una operación de \textbf{Rescaling}.El \textit{Rescaling} escala el texto cifrado y el ruido simultáneamente, dividiéndolos por el factor actual $q_\ell$. Este proceso consume un nivel de la jerarquía, pasando de un módulo $Q_\ell$ a uno más pequeño $Q_{\ell-1}$. La cadena se puede visualizar como:$$ q_L > q_{L-1} > \dots > q_0 $$Donde cada $q_\ell$ suele ser un primo cercano al factor de escala $\Delta$. Esta técnica es lo que permite que CKKS mantenga la precisión de los números reales: al reducir el módulo, se eliminan los bits menos significativos que han sido contaminados por el ruido de la multiplicación, de forma análoga al redondeo en la aritmética de punto flotante.
 
-En CKKS, un texto cifrado no se define sobre un único módulo $Q$, sino sobre una cadena descendente de módulos (denominada \textit{modulus chain}). Se selecciona un módulo inicial grande $Q_L$, que es el producto de varios números primos distintos:$$ Q_L = q_L \cdot q_{L-1} \cdot \dots \cdot q_1 \cdot q_0 $$Esta estructura permite que el esquema funcione de manera multinivel. Cuando un texto cifrado se encuentra en el nivel más alto ($L$), tiene un presupuesto de ruido máximo. A medida que se realizan operaciones, especialmente multiplicaciones, el esquema aplica una operación de \textbf{Rescaling}.El \textit{Rescaling} escala el texto cifrado y el ruido simultáneamente, dividiéndolos por el factor actual $q_\ell$. Este proceso consume un nivel de la jerarquía, pasando de un módulo $Q_\ell$ a uno más pequeño $Q_{\ell-1}$. La cadena se puede visualizar como:$$ q_L > q_{L-1} > \dots > q_0 $$Donde cada $q_\ell$ suele ser un primo cercano al factor de escala $\Delta$. Esta técnica es lo que permite que CKKS mantenga la precisión de los números reales: al reducir el módulo, se eliminan los bits menos significativos que han sido contaminados por el ruido de la multiplicación, de forma análoga al redondeo en la aritmética de punto flotante.
+\subsection{Relinearización}
+
+Como se mencionó, el primer paso después de una multiplicación es la relinearización. Su objetivo es convertir el texto cifrado de tamaño 3, $ct_{mult}$, de vuelta a uno de tamaño 2 que esté cifrado bajo la clave original $(1, s)$. Esto se logra mediante una operación de cambio de clave que utiliza la \textbf{clave de relinearización ($rlk$)}.
+
+Esta clave es un cifrado de $s^2$ que fue generada usando el módulo auxiliar $P$. La operación utiliza la clave $rlk$ para transformar el término cuadrático $d_2$ y luego lo divide por $P$ para cancelar el módulo auxiliar. Conceptualmente, el proceso es el siguiente:
+$$ ct_{relin} = (d_0, d_1) + \lfloor P^{-1} \cdot d_2 \cdot rlk \rceil \pmod q $$
+El resultado, $ct_{relin}$, es un texto cifrado de dos componentes que cifra el mismo producto $m_1 \cdot m_2$ (escalado por $\Delta^2$), pero ahora bajo la clave secreta original $s$.
+
+\subsection{Reescalado (Modulus Switching)}
+
+Después de la relinearización, el mensaje sigue teniendo un factor de escala de $\Delta^2$ y un ruido considerable. El reescalado se encarga de ambos problemas. Esta operación se aplica sobre el texto cifrado ya relinearizado, $ct_{relin}$.
+
+El proceso consiste en dividir los coeficientes del texto cifrado por un factor, que es uno de los primos $p_l$ de la cadena de módulos. Al hacer esto, el texto cifrado pasa del nivel $l$ al nivel $l-1$:
+$$ ct_{rescaled} = \lfloor p_l^{-1} \cdot ct_{relin} \rceil \pmod{q_{l-1}} $$
+Esta operación divide tanto el mensaje como el ruido por $p_l$, logrando dos cosas:
+\begin{enumerate}
+    \item Devuelve el factor de escala del mensaje a aproximadamente $\Delta$.
+    \item Elimina los bits menos significativos del ruido, que son los que más crecen durante la multiplicación.
+\end{enumerate}
 
 \subsection{Profundidad del Circuito}
 
 La profundidad del circuito se refiere al número máximo de multiplicaciones secuenciales (niveles) que se pueden realizar antes de que el texto cifrado llegue al módulo base $q_0$.
 
-\begin{itemize}
-   \item \textbf{Cómputo Leveled (Nivelado):} En la mayoría de las aplicaciones prácticas de aprendizaje automático, se estima de antemano la profundidad del algoritmo (por ejemplo, el número de capas de una red neuronal o el grado de un polinomio de aproximación). Se configuran suficientes niveles $L$ para completar el cálculo sin necesidad de refrescar el ruido.
-   \item \textbf{Agotamiento del Presupuesto:} Una vez que un texto cifrado alcanza el nivel $q_0$, no se pueden realizar más multiplicaciones homomórficas. En este punto, el ruido restante es demasiado grande en comparación con el módulo para permitir un escalado adicional.
-\end{itemize}
-
 Para circuitos de profundidad arbitraria o algoritmos iterativos muy largos, se requeriría la operación de \textbf{Bootstrapping}, la cual permite elevar nuevamente el texto cifrado a un nivel superior de la jerarquía. Sin embargo, debido a su alto costo computacional, la estrategia preferida en CKKS es optimizar la profundidad del circuito para trabajar dentro de una jerarquía de módulos predefinida.
 
 \section{Bootstrapping}
 
-Como se ha discutido en secciones anteriores, CKKS es un esquema de cifrado homomórfico nivelado (leveled). Esto implica que cada texto cifrado nace con un "presupuesto de niveles" determinado por el tamaño del módulo inicial $Q$. Cada operación de multiplicación y su respectivo \textit{rescaling} consumen un nivel, reduciendo el módulo actual. Cuando el módulo alcanza un valor mínimo, el texto cifrado ya no puede soportar más multiplicaciones sin corromper el mensaje subyacente.El \textbf{Bootstrapping} es la operación que permite superar esta limitación, permitiendo computaciones de profundidad arbitraria. En esencia, es el proceso de evaluar homomórficamente la función de descifrado del esquema utilizando la clave secreta cifrada (clave de evaluación).
-
-\subsection{El proceso de refresco de ruido}
-
-En CKKS, el bootstrapping no devuelve un texto cifrado con "cero ruido", sino que transforma un texto cifrado cuyo módulo $q$ es pequeño (casi agotado) en un nuevo texto cifrado que apunta a un módulo $Q$ mucho mayor, recuperando así la capacidad de realizar nuevas multiplicaciones.El procedimiento se divide generalmente en cuatro etapas principales:
-
-\begin{enumerate}
-   \item \textbf{Modulus Raising (Elevación de Módulo):} El texto cifrado con un módulo pequeño $q$ se interpreta como un texto cifrado con un módulo mayor $Q$. Esto no elimina el ruido, pero crea el "espacio" necesario para las operaciones de evaluación homomórfica que vendrán a continuación.
-   \item \textbf{Coeff-to-Slot (Transformación Directa):} Los coeficientes del polinomio se mueven a los \textit{slots} (ranuras) del texto cifrado. Técnicamente, esto implica realizar una Transformada de Fourier Discreta (DFT) de manera homomórfica.
-   \item \textbf{EvalMod (Aproximación Modular):} Esta es la fase crítica. El objetivo es eliminar los múltiplos del módulo original que se han acumulado durante el proceso de cifrado. Dado que la función modular ($x \pmod q$) no es continua, CKKS la aproxima utilizando polinomios de Chebyshev o series de senos para aplicarla de forma homomórfica.
-   \item \textbf{Slot-to-Coeff (Transformación Inversa):} Se realiza la inversa de la DFT homomórfica para devolver los datos desde los \textit{slots} a la representación polinomial original.
-\end{enumerate}
-
-\subsection{Consideraciones de Rendimiento y Precisión}
-
-Es importante notar que el bootstrapping en CKKS es una operación costosa tanto en tiempo de cómputo como en precisión. Al ser una aproximación polinomial de la función modular, se introduce un pequeño error adicional en los bits menos significativos.Para aplicaciones de \textit{Machine Learning}, como las Redes de Base Radial objeto de este estudio, el uso de bootstrapping es vital si el algoritmo requiere muchas iteraciones o una red muy profunda. Sin embargo, debido a su costo, las bibliotecas modernas (como SEAL u OpenFHE) permiten parametrizar el esquema para que el bootstrapping se ejecute solo cuando el presupuesto de niveles esté a punto de agotarse.
+[TODO: La descripción detallada del bootstrapping dependerá de la biblioteca de FHE que se utilice como base, ya que las implementaciones y optimizaciones pueden variar]
