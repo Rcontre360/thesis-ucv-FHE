@@ -68,37 +68,41 @@ Esta estructura es la que permite que CKKS sea extremadamente eficiente para ope
 
 \section{Generación de Claves y Espacio de Parámetros}
 
-La seguridad y funcionalidad del esquema CKKS dependen de la correcta generación de un conjunto de claves y de la selección meticulosa de parámetros algebraicos. 
-
-\subsection{Definición del Conjunto de Claves}
-
-Para operar en CKKS, se requiere la generación de tres tipos de claves principales. Cada una cumple un rol específico en el ciclo de vida del dato cifrado:
-
-\begin{enumerate}
-   \item \textbf{Clave Secreta ($sk$):} Es un polinomio $s(x) \in R$ cuyos coeficientes se extraen de una distribución "pequeña" (generalmente binaria $\{-1, 0, 1\}$ o ternaria). Es la única clave capaz de descifrar los datos y debe permanecer bajo control exclusivo del propietario de la información.
-   \item \textbf{Clave Pública ($pk$):} Se utiliza para cifrar los mensajes. Se genera como un par $(b, a) \in R_q^2$, donde $a$ es uniforme y $b = -as + e$, siendo $e$ un error pequeño. La seguridad de esta clave reside en la dificultad de resolver el problema RLWE para hallar $s$.
-\item \textbf{Claves de Evaluación ($evk$):} Son claves públicas adicionales necesarias para realizar operaciones complejas sobre textos cifrados sin descifrarlos. Se dividen en dos categorías esenciales:
-   \begin{itemize}
-       \item \textbf{Clave de Relinearización ($rk$):} Tras una multiplicación homomórfica, el texto cifrado resultante deja de ser un par de polinomios y se convierte en una terna. La clave de relinearización permite reducir el tamaño del texto cifrado de nuevo a dos polinomios, permitiendo operaciones subsecuentes.
-       \item \textbf{Claves de Rotación (Galois Keys):} Dado que CKKS utiliza una estructura SIMD, estas claves permiten rotar cíclicamente los elementos dentro de los "slots" de un vector cifrado. Son indispensables para algoritmos que requieren sumas vectoriales o productos punto.
-   \end{itemize}
-\end{enumerate}
+La seguridad y funcionalidad del esquema CKKS dependen de la correcta generación de un conjunto de claves y de la selección meticulosa de parámetros algebraicos. Estos parámetros deben ser elegidos cuidadosamente para garantizar tanto la seguridad criptográfica como la eficiencia computacional del esquema.
 
 \subsection{Selección de Parámetros y Nivel de Seguridad}
 
-El rendimiento y la seguridad de CKKS están determinados por la relación entre tres variables fundamentales: el grado del polinomio $n$, el módulo de nivel máximo $Q$, y la distribución del error $\sigma$.
+El rendimiento y la seguridad del esquema CKKS están intrínsecamente ligados a la selección de sus parámetros. Las variables fundamentales a considerar son:
 
 \begin{itemize}
-   \item \textbf{Grado del Polinomio ($n$):} Típicamente una potencia de 2 ($2^{12} \dots 2^{15}$). Un valor mayor de $n$ permite mayor seguridad y más "slots" para empaquetado SIMD, pero incrementa linealmente el tiempo de cómputo y el tamaño de las claves.
-   \item \textbf{Módulo de Coeficientes ($q$):} En CKKS, el módulo total $Q$ suele ser un producto de varios primos $q_i$. La magnitud de $Q$ determina el "presupuesto de ruido": a mayor $Q$, mayor cantidad de multiplicaciones (profundidad del circuito) se pueden realizar. Sin embargo, aumentar $Q$ sin aumentar $n$ reduce la seguridad del esquema.
-   \item \textbf{Nivel de Seguridad ($\lambda$):} Se mide en bits (siendo 128 bits el estándar industrial). Según el estándar de \textit{Homomorphic Encryption Security}, para un $n$ dado, existe un límite superior para $\log Q$ que garantiza un nivel de seguridad específico. Si el cálculo requiere un $Q$ muy grande para soportar muchas operaciones, el grado $n$ debe aumentarse proporcionalmente para mantener $\lambda$ constante.
+   \item \textbf{Grado del Polinomio ($N$):} Se refiere al grado del polinomio ciclotómico $\Phi_M(x)$ que define el anillo $R$. Típicamente, $N$ es una potencia de 2 (por ejemplo, $2^{12} \dots 2^{15}$). Un valor mayor de $N$ permite una mayor seguridad y un mayor número de "slots" para el empaquetado SIMD, pero incrementa linealmente el tiempo de cómputo y el tamaño de las claves. Según Cheon et al. \cite{CKKS17}, para garantizar un nivel de seguridad de $\lambda$ bits, el grado del polinomio $N$ debe satisfacer la condición $N \ge \frac{\lambda + 110}{7.2}\log(P \cdot q_L)$.
+   
+   \item \textbf{Módulo de Coeficientes ($q$ y $P$):} En CKKS, el módulo total $q$ suele ser un producto de varios primos. La magnitud de $q$ determina la cantidad de multiplicaciones que se pueden realizar. El parámetro $P$ es un módulo adicional utilizado en la generación de claves de evaluación. El producto $P \cdot q$ representa el módulo más grande en el esquema. A mayor $q$, mayor capacidad de cómputo, pero aumentar $q$ sin aumentar $N$ reduce la seguridad.
+   
+   \item \textbf{Distribución del Error ($\sigma$ y $h$):} La desviación estándar $\sigma$ de la distribución Gaussiana discreta (DG($\sigma^2$)) utilizada para muestrear los errores $e$ y $e'$, y el peso de Hamming $h$ para la clave secreta $s$. Estos valores impactan el nivel de ruido inicial y su crecimiento. En la implementación de Cheon et al. \cite{CKKS17}, se utilizó una desviación estándar $\sigma = 3.2$ y un peso de Hamming $h = 64$.
+   
+   \item \textbf{Nivel de Seguridad ($\lambda$):} Se mide en bits. Este parámetro define la resistencia del esquema a los ataques criptoanalíticos. La selección de $N$, $q_L$ y $\sigma$ debe ser consistente con el nivel de seguridad deseado.
+
 \end{itemize}
 
-Esta interdependencia crea un compromiso (\textit{trade-off}): para ejecutar algoritmos de aprendizaje automático complejos (como una Red de Base Radial profunda), se requieren parámetros más grandes, lo que resulta en un mayor consumo de memoria y tiempo de ejecución por operación.
+\subsection{Definición del Conjunto de Claves}
+
+Para operar en CKKS, se requiere la generación de cuatro tipos de claves, cada una con un rol específico en el ciclo de vida del dato cifrado:
+
+\begin{enumerate}
+   \item \textbf{Clave Secreta ($sk$):} Es un polinomio $s(x) \in R$ cuyos coeficientes se muestrean de una distribución de Hamming de peso $h$. Esto significa que $s(x)$ es un polinomio con un número fijo de coeficientes no nulos (igual a $h$), los cuales son $\{-1, 1\}$. La clave secreta es la única capaz de descifrar los datos y debe permanecer bajo control exclusivo del propietario de la información. En el esquema de Cheon et al. \cite{CKKS17}, la clave secreta se define como $sk \leftarrow (1, s)$.
+   
+   \item \textbf{Clave Pública ($pk$):} Se utiliza para cifrar los mensajes. Se genera como un par de polinomios $(b, a) \in R_q^2$. El polinomio $a$ se muestrea uniformemente al azar del anillo $R_q$, mientras que $b$ se calcula como $b = -as + e \pmod q$, donde $e$ es un polinomio de error muestreado de una distribución DG($\sigma^2$). La seguridad de esta clave reside en la dificultad computacional de resolver el problema de Aprendizaje con Errores en Anillos (RLWE) para hallar $s$.
+   
+   \item \textbf{Clave de Relinearización ($rlk$):} Tras una multiplicación homomórfica, el texto cifrado resultante aumenta su tamaño. Para poder realizar operaciones subsecuentes, es necesario relinearizar el texto cifrado. Para ello se utiliza la clave de relinearización. Esta clave se construye como un par de polinomios $(b', a') \in R_{P \cdot q_L}^2$, donde $a'$ se muestrea, dada una distribucion, de $R_{P \cdot q}$ y $b'$ se calcula como:
+   $$ b' = -a's + e' + P \cdot s^2 \pmod{P \cdot q} $$
+
+   \item \textbf{Claves de Rotación:} Dado que CKKS utiliza una estructura SIMD para empaquetar un vector de datos en un solo texto cifrado, las rotaciones son operaciones cruciales. Estas claves permiten rotar cíclicamente los elementos dentro de los "slots" de un vector cifrado sin necesidad de descifrar. Cada clave de rotación se genera para un desplazamiento específico y se basa en los automorfismos de Galois del anillo ciclotómico.
+\end{enumerate}
 
 \section{Operaciones Homomórficas en CKKS}
 
-El esquema CKKS permite realizar cómputos sobre textos cifrados de tal manera que, al descifrar el resultado, este coincida con la operación realizada sobre los datos en claro (dentro de un margen de error controlado). Las operaciones fundamentales se definen sobre el espacio de textos cifrados $\mathcal{C} \in R_q \times R_q$.
+El esquema CKKS permite realizar cómputos sobre textos cifrados de tal manera que, al descifrar el resultado, este coincida con la operación realizada sobre los datos en claro (dentro de un margen de error controlado).
 
 \subsection{Adición y Multiplicación Homomórfica}
 

@@ -47,6 +47,16 @@ El nuevo ruido es $e_{add} = e_1 + e_2$. Para la multiplicación, el crecimiento
 \end{equation}
 El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado algo homomórficos (SHE).
 
+\subsection{Cifrado Homomórfico por Niveles (Leveled FHE)}
+
+Los esquemas de cifrado que soportan un número limitado de operaciones se conocen como \textbf{Cifrado Algo Homomórfico (SHE)}. Para extender su utilidad, Gentry propuso en su trabajo de 2009 \cite{Gentry09} el concepto de \textbf{Cifrado Homomórfico por Niveles (Leveled FHE)}.
+
+La idea fundamental es que, si conocemos de antemano la complejidad del cómputo que se desea realizar (es decir, la "profundidad" del circuito de operaciones), podemos configurar los parámetros del esquema de cifrado para que soporte exactamente ese número de operaciones sin que el ruido desborde el texto cifrado.
+
+En un esquema \textit{leveled}, los parámetros (como el tamaño del módulo y la distribución del ruido) se eligen en función de una profundidad máxima $L$. El sistema puede entonces evaluar correctamente cualquier circuito de profundidad hasta $L$. Sin embargo, si se intenta realizar una operación más allá de este límite, el ruido acumulado será demasiado grande y el resultado descifrado será incorrecto.
+
+Esta aproximación es muy práctica para muchas aplicaciones donde el algoritmo a ejecutar es conocido y de profundidad fija, como la evaluación de un modelo de machine learning pre-entrenado. La principal ventaja es que se evita el costoso proceso de \textit{bootstrapping} para cada operación, ya que el "presupuesto de ruido" se gestiona de forma global para todo el cómputo.
+
 \subsection{Bootstrapping}
 
 La idea clave de Gentry fue el \textbf{bootstrapping}. Este es un procedimiento que toma un texto cifrado ruidoso y, sin descifrarlo, lo "refresca", reduciendo su ruido y permitiendo que se realicen más operaciones sobre él. El proceso consiste en evaluar homomórficamente la propia función de descifrado. Para que esto sea posible, un esquema debe ser "bootstrappable" o circularmente seguro, lo que significa que es capaz de evaluar su propio circuito de descifrado.
