@@ -27,7 +27,7 @@ La elección de $n$ como potencia de 2 es también fundamental para la eficienci
 La \textbf{Inmersión Canónica} es una funcion biyectiva que va desde los polinomios en el anillo $R$ (se usan para las operaciones homomórficas) y el de los vectores de números complejos (donde residen los datos a procesar). Permiten que las operaciones realizadas sobre polinomios cifrados se traduzcan en operaciones sobre los datos numéricos subyacentes.
 
 \begin{enumerate}
-    \item \textbf{El Anillo de Polinomios $R$:} CKKS opera en un anillo de polinomios $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$. Cada dato encriptado es un polinomio $p(x)$ cuyos coeficientes son enteros.
+    \item \textbf{El Anillo de Polinomios $R$:} CKKS opera en un anillo de polinomios $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$. Cada dato cifrado es un polinomio $p(x)$ cuyos coeficientes son enteros.
     
     \item \textbf{Las Raíces de la Unidad:} El polinomio ciclotómico $\Phi_n(x) = x^n + 1$ tiene un conjunto específico de raíces complejas. Estas son las $n$ raíces $2n$-ésimas de la unidad, denotadas como $\zeta_j = e^{i \frac{2\pi j}{2n}}$ para $j \in \{1, 3, \dots, 2n-1\}$. 
     
@@ -104,22 +104,67 @@ Para operar en CKKS, se requiere la generación de cuatro tipos de claves, cada 
 
 El esquema CKKS permite realizar cómputos sobre textos cifrados de tal manera que, al descifrar el resultado, este coincida con la operación realizada sobre los datos en claro (dentro de un margen de error controlado).
 
-\subsection{Adición y Multiplicación Homomórfica}
+\subsection{Adición}
 
-La adición en CKKS es una operación lineal directa. Dados dos textos cifrados $ct_1 = (c_{1,0}, c_{1,1})$ y $ct_2 = (c_{2,0}, c_{2,1})$, su suma se define como:$$ ct_{add} = (c_{1,0} + c_{2,0}, c_{1,1} + c_{2,1}) \pmod q $$Esta operación tiene un costo computacional mínimo y un impacto insignificante en el crecimiento del ruido.Por el contrario, la multiplicación es más compleja. Al multiplicar dos textos cifrados que representan los mensajes $m_1$ y $m_2$ escalados por $\Delta$, el resultado representa el producto $m_1 \cdot m_2$ pero escalado por $\Delta^2$. Técnicamente, la multiplicación implica un producto tensorial que inicialmente expande el texto cifrado a una terna $(c_0, c_1, c_2)$. Para mantener el tamaño del texto cifrado constante, se aplica un proceso de \textbf{relinealización} utilizando una clave de evaluación especial, devolviendo el resultado a una tupla de dos elementos.
+La adición en CKKS es una operación lineal y directa. Dados dos textos cifrados $ct_1 = (c_{1,0}, c_{1,1})$ y $ct_2 = (c_{2,0}, c_{2,1})$, su suma homomórfica se define como la suma componente a componente:
+$$ ct_{add} = (c_{1,0} + c_{2,0}, c_{1,1} + c_{2,1}) \pmod q $$
+Esta operación tiene un costo computacional mínimo y el ruido del texto cifrado resultante es la suma de los ruidos de los operandos, $e_{add} = e_1 + e_2$.
+
+\subsection{Multiplicación}
+
+La multiplicación es una operación más compleja que involucra varios pasos. Si tenemos dos textos cifrados $ct_1$ y $ct_2$ que descifrados (con la clave secreta $s$) en los mensajes $m_1$ y $m_2$ respectivamente, el producto de los mensajes es:
+$$ m_1 \cdot m_2 = (c_{1,0} + c_{1,1}s) \cdot (c_{2,0} + c_{2,1}s) = c_{1,0}c_{2,0} + (c_{1,0}c_{2,1} + c_{1,1}c_{2,0})s + (c_{1,1}c_{2,1})s^2 $$
+El resultado es un polinomio cuadrático en $s$. Esto se representa como un texto cifrado de tamaño 3, $ct_{mult} = (d_0, d_1, d_2)$, donde:
+\begin{itemize}
+    \item $d_0 = c_{1,0}c_{2,0} \pmod q$
+    \item $d_1 = c_{1,0}c_{2,1} + c_{1,1}c_{2,0} \pmod q$
+    \item $d_2 = c_{1,1}c_{2,1} \pmod q$
+\end{itemize}
+Este nuevo texto está cifrado bajo la clave $(1, s, s^2)$. Para poder continuar operando, es necesario aplicar dos procedimientos: \textbf{relinearización} y \textbf{reescalado}.
+
+\subsection{Relinearización}
+
+El objetivo de la relinearización es convertir el texto cifrado de tamaño 3, $ct_{mult}$, de vuelta a uno de tamaño 2 que esté cifrado bajo la clave original $(1, s)$. Esto se logra eliminando el término cuadrático $d_2 s^2$ mediante una operación de cambio de clave.
+
+El proceso se basa en la \textbf{clave de relinearización ($rlk$)}, la cual es $s^2$ (escalado por un factor $P$) cifrado bajo la clave original $s$. Es decir:
+$$ rlk = (b, a) \approx \text{Enc}_s(P \cdot s^2) $$
+donde 
+$$b = -as + e + P \cdot s^2 \pmod{Pq}$$
+
+El procedimiento de relinearización sigue estos pasos:
+
+\begin{enumerate}
+    \item Se toma el componente cuadrático $d_2$ del texto cifrado $ct_{mult}$.
+    \item Se multiplica por la clave de relinearización $rlk$. Esto produce un nuevo texto cifrado, $ct_{temp} = (d_2 \cdot b, d_2 \cdot a)$. Este texto cifrado $ct_{temp}$ contiene el valor $d_2 \cdot (P \cdot s^2)$.
+    \item A continuación, se aplica una división por el factor $P$ y un redondeo a los componentes de $ct_{temp}$. Esta operación cancela el factor $P$ introducido por la clave:
+    $$ ct'_{new} = \lfloor P^{-1} \cdot ct_{temp} \rceil \pmod q $$
+    El resultado, $ct'_{new} = (c'_0, c'_1)$, es ahora un texto cifrado de dos componentes que contiene el valor $d_2 s^2$ bajo la clave $s$.
+    \item Finalmente, se suma este nuevo texto cifrado a los dos primeros componentes del texto cifrado multiplicado original:
+    $$ ct_{relin} = (d_0 + c'_0, d_1 + c'_1) \pmod q $$
+\end{enumerate}
+
+El resultado final, $ct_{relin}$, es un texto cifrado de tamaño 2 del mensaje producto $m_1 m_2$ y que puede ser utilizado en operaciones posteriores.
 
 \subsection{Reescalado}
 
-El proceso de \textit{Reescalado} es la innovación técnica más importante de CKKS y lo que permite la aritmética aproximada. Tras una multiplicación, el factor de escala aumenta a $\Delta^2$ y el ruido crece proporcionalmente. Si se realizaran múltiples multiplicaciones sucesivas, el valor de los coeficientes superaría rápidamente el módulo $q$, destruyendo el mensaje.El \textit{Rescaling} permite dividir un texto cifrado por $\Delta$ y, simultáneamente, pasar al siguiente nivel de la cadena de módulos ($q_l \to q_{l-1}$). Matemáticamente:$$ ct_{rescaled} = \lfloor \frac{1}{\Delta} ct \rceil \pmod{q/ \Delta} $$Esta operación descarta los bits menos significativos del texto cifrado, que es precisamente donde se acumula el ruido de la multiplicación. De esta forma, CKKS mantiene el error relativo constante, comportándose de manera idéntica a un redondeo en aritmética de punto flotante.
+Después de la relinearización, el factor de escala del mensaje se ha vuelto cuadrático ($\Delta^2$) y el ruido ha crecido significativamente. El reescalado es la operación que soluciona ambos problemas simultáneamente. El reescalado realiza dos acciones: una división y un cambio de módulo.
 
-\subsection{Rotaciones Homomórficas (Estructura SIMD)}
+\begin{enumerate}
+    \item \textbf{División y Redondeo:} Se toma un primo $p_l \approx \Delta$ de la cadena de módulos. Se dividen los componentes del texto cifrado $ct_{relin}$ por este primo y se redondea al entero más cercano.
+    $$ ct_{temp} = \lfloor p_l^{-1} \cdot ct_{relin} \rceil $$
+    
+    \item \textbf{Cambio de Módulo:} El nuevo texto cifrado ahora se considera bajo un módulo más pequeño, $q_{l-1} = q_l / p_l$. El texto cifrado final reescalado es:
+    $$ ct_{rescaled} = ct_{temp} \pmod{q_{l-1}} $$
+\end{enumerate}
 
-Dado que CKKS utiliza empaquetado SIMD, un texto cifrado no contiene un solo valor, sino un vector de valores $\vec{z} = (z_0, z_1, \dots, z_{\frac{n}{2}-1})$. En muchas aplicaciones de álgebra lineal, como el cálculo de los centros en una Red de Base Radial, es necesario interactuar entre diferentes posiciones del vector.Las rotaciones permiten desplazar los elementos dentro de las ranuras (\textit{slots}) sin necesidad de descifrar. Si un texto cifrado contiene $(z_0, z_1, z_2)$, una rotación a la izquierda por 1 produciría $(z_1, z_2, z_0)$.
+El nuevo mensaje cifrado es $m_{new} \approx m' / p_l$. Como elegimos $p_l \approx \Delta$, tenemos que $m_{new} \approx (\Delta^2 m_1 m_2) / \Delta = \Delta m_1 m_2$. Con esto, el factor de escala del mensaje vuelve a ser $\Delta$, preparándolo para la siguiente operación. El ruido también se divide, $e_{new} \approx e_{relin} / p_l$. La clave del esquema CKKS es que el ruido introducido por la multiplicación reside principalmente en los bits menos significativos de los coeficientes. Al dividir por $p_l$ y redondear, se eliminan estos bits "ruidosos", manteniendo así la precisión relativa del mensaje.
 
-\begin{itemize}
-   \item \textbf{Mecánica:} Se basan en automorfismos de Galois sobre el anillo polinomial.
-   \item \textbf{Importancia:} Son esenciales para implementar la suma de todos los elementos de un vector (\textit{sum-reduce}) y para calcular productos punto, operaciones críticas en el entrenamiento y evaluación de redes neuronales.
-\end{itemize}
+\subsection{Rotaciones Homomórficas}
+
+Las rotaciones permiten permutar los elementos dentro de los slots de un vector cifrado. Esta operación se basa en los \textbf{automorfismos de Galois}. Para rotar un vector $k$ posiciones, se aplica el automorfismo $\phi_k: p(x) \mapsto p(x^k)$ al polinomio del texto cifrado.
+
+Si aplicamos esto a un texto cifrado $ct = (c_0(x), c_1(x))$, obtenemos un nuevo par $(c_0(x^k), c_1(x^k))$. Sin embargo, este nuevo texto esta cifrado bajo la clave secreta transformada $s(x^k)$. Para devolverlo al formato original, se necesita un proceso de cambio de clave que utiliza las \textbf{Claves de Galois ($galk$)}, una por cada rotación necesaria. Estas claves son, en esencia, cifrados de la clave secreta original $s(x)$ bajo las claves secretas transformadas $s(x^k)$.
+
 
 \section{Gestión del Ruido y Niveles}
 
