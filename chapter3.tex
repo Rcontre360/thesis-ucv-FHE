@@ -1,89 +1,89 @@
-\chapter{Redes Neuronales en el Dominio Cifrado}
+\chapter{Fundamentos de Redes Neuronales}
 
-El diseño de redes neuronales que operan sobre datos cifrados mediante FHE presenta desafíos que difieren significativamente del aprendizaje automático convencional. En el dominio cifrado, el costo computacional no depende solo del número de parámetros, sino de la profundidad del circuito y del tipo de operaciones aritméticas permitidas por el esquema criptográfico subyacente.
+Las Redes Neuronales Artificiales (RNA) son modelos computacionales inspirados en la estructura y funcionamiento del cerebro humano. Están diseñadas para reconocer patrones y relaciones en los datos a través de un proceso de aprendizaje. Aunque el entrenamiento de estos modelos es un campo de estudio en sí mismo, este capítulo se centra en la arquitectura y los componentes fundamentales que definen una red neuronal, especialmente aquellos relevantes para la inferencia sobre datos cifrados.
 
-En el contexto de este trabajo, nos centramos en la inferencia homomórfica, donde un cliente envía sus datos cifrados a un servidor que posee el modelo (pesos en texto claro). El servidor realiza el cómputo y devuelve el resultado cifrado. Para que este proceso sea eficiente y factible, es necesario redefinir los componentes básicos de la red —capas lineales y activaciones— para que sean compatibles con la estructura algebraica del esquema CKKS.
+\section{Operaciones Lineales Fundamentales}
 
-\section{Arquitectura y Propagación hacia Adelante}
+La base de la mayoría de las arquitecturas de redes neuronales reside en las operaciones de álgebra lineal. Estas operaciones definen cómo se transforma la información a medida que fluye a través de la red.
 
-Desde una perspectiva computacional, una red neuronal artificial puede definirse como un grafo acíclico dirigido compuesto por una secuencia de capas, donde cada capa realiza una transformación específica sobre los datos de entrada. El objetivo fundamental de esta arquitectura es aproximar una función compleja mediante la composición de funciones más simples.
+\subsection{Multiplicación Matriz-Vector}
 
-\subsection{Definición Operacional y Formalismo Matemático}
+La operación más fundamental en una capa de red neuronal es la multiplicación de una matriz por un vector. Dada una capa con una matriz de pesos $W \in \mathbb{R}^{m \times n}$ y un vector de entrada (o activación de la capa anterior) $x \in \mathbb{R}^n$, la transformación lineal se define como:
+\begin{equation}
+    z = Wx + b
+\end{equation}
+Donde:
+\begin{itemize}
+    \item $W$ es la matriz de pesos, donde cada elemento $w_{ij}$ representa la fuerza de la conexión entre la neurona $j$ de la capa anterior y la neurona $i$ de la capa actual.
+    \item $x$ es el vector de entrada.
+    \item $b \in \mathbb{R}^m$ es el vector de sesgo (\textit{bias}), que permite un desplazamiento adicional a la transformación, aumentando la capacidad expresiva del modelo.
+    \item $z \in \mathbb{R}^m$ es el vector resultante, a menudo llamado vector de pre-activación.
+\end{itemize}
+Esta operación forma el núcleo de las capas densas o totalmente conectadas.
 
-La arquitectura de una red neuronal de alimentación hacia adelante (feed-forward) consta de una capa de entrada, una o más capas ocultas y una capa de salida. La transición de datos entre una capa $l$ y la siguiente capa $l+1$ se define mediante una combinación de una transformación lineal seguida de una función de activación no lineal.Matemáticamente, si representamos las activaciones de la capa $l$ como un vector $a^{(l)}$, el cálculo de las activaciones en la capa siguiente $a^{(l+1)}$ se expresa mediante la siguiente ecuación:$$ a^{(l+1)} = \sigma(W^{(l)}a^{(l)} + b^{(l)}) $$Donde:
+\section{Arquitecturas de Redes Neuronales}
+
+Las neuronas artificiales se organizan en capas para formar arquitecturas de red. La forma en que estas capas se conectan y procesan la información define el tipo y la capacidad del modelo.
+
+\subsection{Redes Neuronales Feedforward (FNN)}
+
+También conocidas como Perceptrones Multicapa (MLP), las redes \textit{feedforward} son la arquitectura más básica. En ellas, la información fluye en una única dirección, desde la capa de entrada, a través de una o más capas ocultas, hasta la capa de salida, sin ciclos ni retroalimentación \cite{Goodfellow16}. 
+
+Una FNN con $L$ capas computa una función $f: \mathbb{R}^{n_0} \to \mathbb{R}^{n_L}$ mediante la composición de funciones de capa:
+\begin{equation}
+    f(x) = f^{(L)}(f^{(L-1)}(\dots f^{(1)}(x)\dots))
+\end{equation}
+donde cada función de capa $f^{(l)}$ es una combinación de una transformación lineal y una función de activación no lineal $\sigma$:
+\begin{equation}
+    a^{(l)} = f^{(l)}(a^{(l-1)}) = \sigma(W^{(l)}a^{(l-1)} + b^{(l)})
+\end{equation}
+Aquí, $a^{(l-1)}$ es el vector de activaciones de la capa anterior y $a^{(l)}$ es el de la capa actual. Gracias a su capacidad para aproximar cualquier función continua, se consideran aproximadores universales.
+
+\subsection{Redes Neuronales Convolucionales (CNN)}
+
+Las Redes Neuronales Convolucionales son una clase especializada de redes neuronales diseñadas para procesar datos con una topología de rejilla, como las imágenes \cite{LeCun98}. Su principal ventaja es la capacidad de detectar patrones espaciales locales y jerárquicos mediante el uso de pesos compartidos.
+
+Los componentes clave de una CNN son:
+
+\subsubsection{Capas Convolucionales}
+A diferencia de las capas densas, donde cada neurona de salida se conecta a todas las neuronas de entrada, una capa convolucional aplica un conjunto de filtros (o \textit{kernels}) a la entrada. Un filtro es una pequeña matriz de pesos que se desliza sobre la entrada y calcula productos punto en cada posición. Esta operación, llamada convolución, permite a la red detectar características locales como bordes, texturas o formas.
+
+La operación de convolución 2D discreta para una entrada $I$ y un kernel $K$ se define como:
+\begin{equation}
+    (I * K)(i, j) = \sum_m \sum_n I(i-m, j-n) K(m, n)
+\end{equation}
+El uso de los mismos pesos de filtro en toda la entrada reduce drásticamente el número de parámetros del modelo y lo hace invariante a la traslación de características.
+
+\subsubsection{Capas de Agrupación (Pooling)}
+Las capas de \textit{pooling} se utilizan para reducir la dimensionalidad espacial de los mapas de características, haciendo que la representación sea más robusta a pequeñas variaciones en la posición de las características.
 
 \begin{itemize}
-    \item $W^{(l)}$ es la \textbf{matriz de pesos} que conecta la capa $l$ con la $l+1$. Cada elemento $w_{ij}$ representa la fuerza de la conexión entre la neurona $j$ de la capa actual y la neurona $i$ de la capa siguiente.
-    \item $b^{(l)}$ es el \textbf{vector de sesgo} (bias), que permite desplazar la función de activación para mejorar la capacidad de ajuste del modelo.
-    \item $\sigma$ es la \textbf{función de activación}, una función no lineal (como ReLU, Sigmoide o un polinomio de aproximación) que permite a la red aprender relaciones complejas que no son simplemente combinaciones lineales.
+    \item \textbf{Average Pooling:} Calcula el valor promedio de los elementos en una ventana. Siendo una operación lineal (una suma y una división por una constante), es directamente compatible con esquemas FHE como CKKS.
+    \item \textbf{Max Pooling:} Selecciona el valor máximo en una ventana. Esta operación requiere una comparación, que no es una función polinomial, por lo que no es directamente compatible con CKKS y requiere aproximaciones o esquemas FHE diferentes (como TFHE).
 \end{itemize}
+Debido a que sus operaciones principales (convolución y average pooling) son inherentemente polinomiales, las CNN son una arquitectura muy atractiva para la implementación con cifrado homomórfico.
 
-\subsection{Propagación hacia Adelante e Inferencia}
+\section{Funciones de Activación}
 
-El proceso de propagación hacia adelante (forward propagation) es el flujo de datos desde la entrada hasta la salida para generar una predicción. En este proceso, la salida de una capa se convierte en la entrada de la siguiente. Para una red de $L$ capas, la inferencia completa es el resultado de la composición de funciones:$$ \hat{y} = f_L(f_{L-1}(\dots f_1(x) \dots)) $$En el contexto de este trabajo, la inferencia es la operación crítica, ya que es el proceso que se ejecutará sobre los datos cifrados. El servidor, que posee el modelo, recibirá un dato de entrada $x$ cifrado y aplicará sucesivamente estas transformaciones lineales y no lineales sin tener acceso al contenido original.
+Las funciones de activación introducen no linealidades en el modelo, permitiéndole aprender fronteras de decisión complejas que van más allá de las transformaciones lineales.
 
-\subsection{Representación mediante Estructura y Pesos}
+\subsection{Función Sigmoide}
+Históricamente una de las funciones más utilizadas, la función sigmoide mapea cualquier valor real al intervalo $(0, 1)$:
+\begin{equation}
+    \sigma(x) = \frac{1}{1 + e^{-x}}
+\end{equation}
+Su salida puede interpretarse como una probabilidad, pero sufre del problema del desvanecimiento del gradiente durante el entrenamiento.
 
-Un aspecto clave para el desarrollo de la librería objeto de esta tesis es que, una vez finalizada la fase de entrenamiento, una red neuronal queda representada exclusivamente por dos elementos:
+\subsection{Función Tangente Hiperbólica (Tanh)}
+La función Tanh es una versión reescalada de la sigmoide, con salida en el intervalo $(-1, 1)$:
+\begin{equation}
+    \tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} = 2\sigma(2x) - 1
+\end{equation}
+Al estar centrada en cero, a menudo converge más rápido que la sigmoide en el entrenamiento.
 
-\begin{enumerate}
-    \item \textbf{La Estructura (Topología):} El número de capas, el número de neuronas por capa y el tipo de funciones de activación utilizadas. En términos de programación, esto define el grafo de cómputo y, en consecuencia, la profundidad del circuito homomórfico necesario.
-    \item \textbf{Los Pesos y Sesgos:} Los valores numéricos almacenados en las matrices $W$ y los vectores $b$.
-\end{enumerate}
-
-Desde el punto de vista del desarrollo de software para FHE, el modelo puede ser visto como un objeto estático de datos. La librería debe ser capaz de tomar estos pesos (en texto claro) y la definición de la estructura para construir un circuito que pueda procesar la entrada cifrada. Esta separación entre la "lógica de la red" (estructura) y los "datos del modelo" (pesos) permite que la librería sea modular y facilite la importación de modelos pre-entrenados para su ejecución en entornos que preservan la privacidad.
-
-\section{El Problema de las Funciones de Activación en FHE}
-
-En el diseño de redes neuronales convencionales, las funciones de activación no lineales son esenciales para permitir que el modelo aprenda fronteras de decisión complejas. Sin embargo, en el dominio del cifrado homomórfico, estas funciones representan el principal obstáculo para la ejecución de la inferencia.
-
-\subsection{Limitación Algebraica de los Esquemas de Cifrado}
-
-Los esquemas de cifrado homomórfico basados en el problema RLWE, como CKKS, se basan en estructuras de anillos matemáticos. Esto implica que las únicas operaciones aritméticas soportadas de forma nativa sobre los textos cifrados son la adición y la multiplicación.Desde una perspectiva de circuitos, esto significa que solo es posible evaluar funciones que puedan expresarse como polinomios. Cualquier operación que no sea una suma o un producto (como divisiones, comparaciones lógicas o funciones trascendentes) no puede ejecutarse directamente sobre los datos cifrados.
-
-\subsection{Incompatibilidad de Funciones Clásicas: ReLU y Sigmoide}
-
-Las funciones de activación más utilizadas en la actualidad presentan incompatibilidades críticas con el esquema CKKS:
-
-\begin{itemize}
-    \item \textbf{ReLU (Rectified Linear Unit):} Definida como $f(x) = \max(0, x)$. Esta función es "no suave" debido a la discontinuidad en su derivada en $x=0$. Evaluar un ReLU requiere una comparación lógica (un \textit{if-else}), operación que no existe en el álgebra de anillos de CKKS. A diferencia de esquemas como TFHE, que permiten evaluaciones de puertas lógicas, en CKKS no es eficiente realizar comparaciones de magnitud sobre el ruido del cifrado.
-    \item \textbf{Sigmoide y Softmax:} Estas funciones dependen de operaciones de exponenciación ($e^x$) y división. Al no ser funciones polinomiales de grado finito, no existe una combinación de sumas y multiplicaciones homomórficas que pueda calcularlas con exactitud.
-\end{itemize}
-
-\subsection{Solución: Aproximación Polinomial}
-
-Para superar esta limitación, la estrategia adoptada en esta tesis y en la librería desarrollada consiste en sustituir las funciones de activación no lineales por sus aproximaciones polinomiales. Este proceso transforma una función no compatible en un polinomio de grado $d$ de la forma:$$ \sigma(x) \approx P_d(x) = \sum_{i=0}^{d} c_i x^i $$Existen dos métodos principales para derivar estos polinomios:
-
-\begin{enumerate}
-    \item \textbf{Polinomios de Taylor:} Útiles para aproximaciones locales alrededor de un punto, aunque su error crece rápidamente a medida que $x$ se aleja del centro de expansión.
-    \item \textbf{Polinomios de Chebyshev:} Son la solución preferida en FHE y la implementada en este trabajo. Los polinomios de Chebyshev minimizan el error máximo de aproximación (error minimax) en un intervalo determinado $[-B, B]$. Esto es crucial, ya que permite mantener una precisión uniforme sobre el rango esperado de las activaciones de la red.
-\end{enumerate}
-
-La elección del grado del polinomio $d$ representa un compromiso (trade-off) técnico en la librería: un grado mayor ofrece una mejor aproximación a la función original (mayor precisión del modelo), pero consume más niveles en la jerarquía de módulos del esquema CKKS y aumenta el tiempo de cómputo debido al mayor número de multiplicaciones homomórficas requeridas.
-
-\section{Operaciones Lineales y Empaquetado SIMD}
-
-En el aprendizaje automático convencional, las operaciones de álgebra lineal se ejecutan mediante bibliotecas altamente optimizadas que aprovechan la memoria caché y las unidades de punto flotante de la CPU o GPU. Sin embargo, en el dominio cifrado, el desafío no es solo realizar el cálculo, sino cómo organizar los datos dentro de la estructura de "ranuras" (slots) de los textos cifrados de CKKS para maximizar el paralelismo.
-
-\subsection{Estrategias de Layout y Empaquetado de Datos}
-
-Como se explicó en capítulos anteriores, un texto cifrado de CKKS puede almacenar un vector de $n$ valores. Para una red neuronal, esto significa que debemos decidir cómo mapear las matrices de pesos ($W$) y los vectores de activación ($a$) a estos vectores de slots. Existen tres estrategias principales de disposición (layout):
-
-\begin{itemize}
-    \item \textbf{Layout por Filas/Columnas:} Se almacena cada fila o columna de la matriz en un texto cifrado independiente. Aunque es intuitivo, resulta ineficiente para matrices grandes, ya que consume muchos textos cifrados y aumenta el costo de comunicación.
-    \item \textbf{Layout Diagonal (Método de Halevi-Shoup):} Es la técnica más eficiente para la multiplicación matriz-vector en FHE. Consiste en aplanar las diagonales de la matriz en vectores que luego se cifran. Esta estrategia permite realizar la operación completa utilizando un número mínimo de rotaciones y multiplicaciones, aprovechando al máximo la estructura SIMD.
-\end{itemize}
-
-\subsection{Multiplicación Matriz-Vector Homomórfica}
-
-La operación fundamental de una capa densa, $y = Wx$, requiere una logística compleja en el dominio cifrado. Dado que el vector $x$ está cifrado y la matriz $W$ suele ser conocida por el servidor (texto claro), la multiplicación se realiza mediante un ciclo de Multiplicación, Rotación y Acumulación.Para multiplicar una matriz por un vector cifrado de manera eficiente, el proceso sigue estos pasos técnicos:
-
-\begin{enumerate}
-    \item \textbf{Multiplicación Elemento a Elemento:} Se multiplica el texto cifrado del vector de entrada por los vectores que representan las diagonales de la matriz de pesos (codificados en texto claro).
-    \item \textbf{Rotación Cifrada (Cyclic Shift):} Debido a que los datos están empaquetados en slots, para sumar los componentes correctos es necesario rotar cíclicamente los elementos dentro del texto cifrado. Esta es una operación criptográfica específica que permite mover el valor del slot $i$ al slot $j$ sin descifrar el contenido.
-    \item \textbf{Acumulación:} Se suman los resultados de las rotaciones para obtener el vector de salida cifrado.
-\end{enumerate}
-
-\subsection{El Costo de las Rotaciones}
-
-Un aspecto crítico para el desarrollo de la librería en Python es que, en CKKS, las rotaciones son computacionalmente más costosas que las adiciones y requieren "claves de evaluación" (Galois Keys) adicionales. Por lo tanto, el algoritmo de multiplicación implementado en la librería debe optimizar el número de rotaciones necesarias. Un mal diseño del empaquetado de la matriz puede resultar en un rendimiento órdenes de magnitud más lento.Al automatizar estas estrategias de empaquetado y rotación, la librería desarrollada permite al usuario final definir capas lineales sin tener que gestionar manualmente la compleja lógica de alineación de slots y generación de claves de rotación.
+\subsection{Unidad Lineal Rectificada (ReLU)}
+La función ReLU es la activación más popular en las redes neuronales profundas modernas debido a su simplicidad y eficacia para mitigar el problema del gradiente desvaneciente. Se define como:
+\begin{equation}
+    \text{ReLU}(x) = \max(0, x)
+\end{equation}
+Aunque es computacionalmente muy eficiente, su naturaleza no polinomial (debido a la operación $\max$) la hace incompatible con esquemas FHE basados en aritmética de anillo como CKKS. Su evaluación en FHE requiere el uso de aproximaciones polinomiales.
