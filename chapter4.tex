@@ -1,4 +1,4 @@
-\chapter{Redes Neuronales sobre Cifrado Homomórfico}
+\chapter{Cifrado Homomórfico sobre Redes Neuronales}
 
 \section{Operaciones Lineales en CKKS}
 
@@ -12,56 +12,46 @@ El desafío principal radica en que las operaciones homomórficas aumentan el ru
 
 Consideremos una operación fundamental como la multiplicación matriz-vector $y = Wx$. Si $W$ es una matriz de $m \times n$ y $x$ es un vector de $n$ elementos, el resultado $y$ es un vector de $m$ elementos. La forma en que se empaquetan $W$ y $x$ en los textos cifrados determinará la complejidad de la operación. Un enfoque sencillo de empaquetar cada fila o columna de $W$ en un texto cifrado separado resultaría en un gran número de textos cifrados y una gestión compleja. Por ello, se buscan estrategias que permitan empaquetar la mayor cantidad de información posible en un número reducido de textos cifrados, aprovechando al máximo la capacidad SIMD de CKKS.
 
-\subsection{Técnica de Diagonalización Halevi-Shoup}
+\subsection{Producto Punto}
 
-Para optimizar la multiplicación matriz-vector en el dominio homomórfico, una de las técnicas más eficientes es la diagonalización de la matriz de pesos \cite{Halevi14}, popularizada por Halevi y Shoup. Esta técnica se basa en la observación de que la multiplicación de un vector por una matriz puede expresarse como una suma de productos elemento a elemento (Hadamard) y rotaciones cíclicas.
+El producto punto de dos vectores, $a$ y $b$, se define como la suma de los productos de sus componentes correspondientes: $\sum a_i b_i$. En el contexto del cifrado homomórfico CKKS, esta operación se ejecuta usando rotaciones.
 
-La idea central es transformar la matriz de pesos $W$ en un conjunto de vectores que representan sus diagonales. Específicamente, para una matriz $W$, se extraen sus diagonales y se codifican en textos claros (o cifrados, dependiendo del contexto) que luego se utilizarán en la operación. Cuando se multiplica un vector cifrado $x$ por una matriz $W$, cada elemento del vector resultante $y_i$ es el producto escalar de la $i$-ésima fila de $W$ con el vector $x$.
+El algoritmo para calcular el producto punto homomórfico de dos vectores cifrados $ct_a$ y $ct_b$ se realiza en dos fases principales:
 
-La diagonalización permite que la multiplicación matriz-vector se realice de la siguiente manera:
+\begin{enumerate}
+    \item \textbf{Multiplicación Elemento a Elemento:}
+        Se realiza una multiplicación homomórfica directa entre $ct_a$ y $ct_b$. Dado que CKKS opera sobre vectores empaquetados en slots, esta operación produce un nuevo texto cifrado, $ct_{prod}$, donde cada *slot* contiene el producto $a_i \cdot b_i$ de los elementos correspondientes.
+
+    \item \textbf{Suma de los Elementos:}
+        Una vez obtenidos todos los productos $a_i \cdot b_i$ en los slots de $ct_{prod}$, el siguiente paso es sumarlos para obtener el resultado final del producto punto. El texto cifrado se rota $ct_{prod}$ a la mitad de sus slots y se suma a si mismo, luego se rota el resultado a un cuarto de sus slots y se suma, así sucesivamente, hasta que la suma de todos los elementos se acumule en el primer slot.
+\end{enumerate}
+
+
+\subsection{Multiplicación Matriz Vector}
+
+Para optimizar la multiplicación matriz-vector en el dominio homomórfico, una de las técnicas más eficientes es la diagonalización de la matriz de pesos \cite{Halevi14}, popularizada por Halevi y Shoup. Esta técnica se basa en la observación de que la multiplicación de un vector por una matriz puede expresarse como una suma de productos elemento a elemento \cite{Goodfellow16} con rotaciones cíclicas.
+
+La idea central es transformar la matriz de pesos $W$ en un conjunto de vectores que representan sus diagonales. Específicamente, para una matriz $W$, se extraen sus diagonales y se codifican en textos claros que luego se utilizarán en la operación. Cuando se multiplica un vector cifrado $x$ por una matriz $W$, cada elemento del vector resultante $y_i$ es el producto escalar de la $i$-ésima fila de $W$ con el vector $x$. El proceso seria el siguiente:
+
 \begin{enumerate}
     \item Se codifica el vector de entrada $x$ en un texto cifrado $ct_x$.
-    \item La matriz de pesos $W$ se pre-procesa para extraer sus diagonales. Cada diagonal se codifica en un texto claro.
+    \item La matriz de pesos $W$ se pre-procesa para extraer sus diagonales. Cada diagonal se codifica sin cifrar.
     \item La operación se realiza iterando sobre las diagonales de $W$. Para cada diagonal, se multiplica homomórficamente con una versión rotada de $ct_x$.
     \item Los resultados de estas multiplicaciones y rotaciones se acumulan mediante sumas homomórficas para obtener el texto cifrado del vector resultante $y$.
 \end{enumerate}
 
+Un enfoque simple para la multiplicación matriz-vector, sin la diagonalización, implicaría un número significativamente mayor de rotaciones. Para una matriz $W$ de $m \times n$ y un vector $x$ de $n$ elementos, una implementación directa podría requerir $O(m \times n)$ rotaciones para alinear correctamente cada elemento de $W$ con los de $x$ antes de la multiplicación y suma. En contraste, la técnica de diagonalización reduce drásticamente este costo a solo $n$ rotaciones (una por cada diagonal), $n$ multiplicaciones elemento a elemento y $n$ sumas, lo que representa una mejora de rendimiento considerable.
+
 Esta técnica es particularmente eficiente porque reduce el número de rotaciones necesarias. En lugar de rotar el texto cifrado de entrada para cada elemento de la matriz, se rotan los resultados intermedios o se utilizan rotaciones específicas que se corresponden con las diagonales de la matriz. Esto minimiza el consumo de niveles y el costo computacional, haciendo que la multiplicación matriz-vector sea práctica en CKKS.
 
-\subsection{Algoritmo para Multiplicación Matriz-Vector}
+\subsection{Convoluciones}
 
-La multiplicación matriz-vector homomórfica, $y = Wx$, donde $W$ es una matriz de pesos y $x$ es un vector de entrada cifrado, es una operación fundamental en las capas densas de las redes neuronales. Utilizando la técnica de diagonalización de Halevi-Shoup, el algoritmo se puede detallar en los siguientes pasos:
-
-\begin{enumerate}
-    \item \textbf{Preparación de la Matriz de Pesos ($W$):}
-        *   La matriz $W$ se descompone en sus vectores diagonales. Para una matriz $W$ de tamaño $m \times n$, se extraen $n$ vectores diagonales. Cada vector diagonal $d_k$ contiene los elementos $W_{i, (i+k) \pmod n}$ para un desplazamiento $k$.
-        *   Cada vector diagonal $d_k$ se codifica en un texto claro (o en un texto cifrado si los pesos son privados) utilizando el esquema CKKS, resultando en $pt_{d_k}$. Estos textos claros se pueden pre-calcular y almacenar.
-
-    \item \textbf{Codificación del Vector de Entrada ($x$):}
-        *   El vector de entrada $x$ (que contiene los datos sensibles del cliente) se codifica en un texto cifrado $ct_x$ utilizando el esquema CKKS. Este texto cifrado se empaqueta de manera que cada elemento $x_i$ ocupe un *slot* específico.
-
-    \item \textbf{Cómputo Iterativo:}
-        *   Se inicializa un texto cifrado acumulador $ct_y$ a cero.
-        *   Para cada desplazamiento diagonal $k$ (desde $0$ hasta $n-1$):
-            *   Se rota el texto cifrado de entrada $ct_x$ por $k$ posiciones, obteniendo $ct_{x,rot_k}$. Esta operación utiliza las claves de rotación (Galois Keys) pre-generadas.
-            *   Se realiza una multiplicación homomórfica elemento a elemento (Hadamard product) entre $ct_{x,rot_k}$ y el texto claro de la diagonal correspondiente $pt_{d_k}$. El resultado es un nuevo texto cifrado $ct_{prod_k}$.
-            *   Se suma homomórficamente $ct_{prod_k}$ al acumulador $ct_y$.
-            *   Después de cada multiplicación, se aplica la operación de *rescaling* para controlar el crecimiento del ruido y ajustar el factor de escala, consumiendo un nivel de la jerarquía de módulos.
-
-    \item \textbf{Resultado Final:}
-        *   Una vez completadas todas las iteraciones, $ct_y$ contendrá el resultado cifrado de la multiplicación matriz-vector $y = Wx$. Este texto cifrado puede ser descifrado por el cliente para obtener el resultado en texto plano, o puede pasarse como entrada a la siguiente capa homomórfica.
-\end{enumerate}
-
-Este algoritmo es eficiente porque aprovecha la capacidad SIMD de CKKS para realizar múltiples multiplicaciones en paralelo y minimiza el número de rotaciones, que son las operaciones más costosas. La clave de su rendimiento radica en la pre-computación de los textos claros diagonales y la gestión controlada del ruido mediante el *rescaling*.
-
-\subsection{Algoritmo para Convoluciones}
-
-Las operaciones de convolución son fundamentales en las Redes Neuronales Convolucionales (CNNs) y, al igual que la multiplicación matriz-vector, requieren una adaptación específica para ser ejecutadas en el dominio homomórfico. La estrategia más común y eficiente para realizar convoluciones homomórficas es transformarlas en una multiplicación matriz-vector, una técnica conocida como `im2col` (image to column) \cite{Goodfellow16}.
+Las operaciones de convolución son fundamentales en las Redes Neuronales Convolucionales (CNNs) y, al igual que la multiplicación matriz-vector, requieren una adaptación específica para ser ejecutadas en el dominio homomórfico. La estrategia más común y eficiente para realizar convoluciones homomórficas es transformarlas en una multiplicación matriz-vector, una técnica conocida como `im2col` \cite{Goodfellow16}.
 
 El proceso se descompone en los siguientes pasos:
 
 \begin{enumerate}
-    \item \textbf{Transformación `im2col` del Tensor de Entrada:}
+    \item \textbf{Transformación del Tensor de Entrada:}
         *   El tensor de entrada (imagen o mapa de características) se transforma en una matriz 2D. Cada "parche" de la entrada que sería procesado por el kernel de convolución se "desenrolla" en una columna de esta nueva matriz.
         *   Esta transformación se realiza en texto plano antes de cifrar los datos, o se puede adaptar para operar sobre datos cifrados si la entrada ya está cifrada. Sin embargo, para la inferencia homomórfica, es más eficiente que el cliente realice esta transformación localmente y luego cifre la matriz resultante.
         *   Los parámetros de la convolución, como el tamaño del kernel, el *stride* (paso) y el *padding* (relleno), se incorporan en esta transformación `im2col`. Por ejemplo, el *padding* se aplica añadiendo ceros alrededor de la imagen antes de extraer los parches.
