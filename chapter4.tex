@@ -1,0 +1,94 @@
+\chapter{Cifrado Homomórfico sobre Redes Neuronales}
+
+\section{Operaciones Lineales en CKKS}
+
+La implementación de operaciones lineales, como el producto escalar, la multiplicación matriz-vector y las convoluciones, sobre datos cifrados con el esquema CKKS \cite{CKKS17} presenta desafíos únicos que requieren un diseño cuidadoso. A diferencia de la computación en texto plano, donde las operaciones se realizan directamente sobre los valores numéricos, en el dominio homomórfico debemos trabajar con polinomios cifrados que representan vectores de números complejos. La eficiencia y la viabilidad de estas operaciones dependen en gran medida de cómo se organizan los datos dentro de los textos cifrados y cómo se aprovechan las propiedades del esquema CKKS.
+
+\subsection{El Empaquetado de Datos}
+
+El esquema CKKS permite empaquetar múltiples números en un solo texto cifrado. Esto significa que un único polinomio cifrado puede contener un vector de $N/2$ valores independientes, donde $N$ es el grado del polinomio ciclotómico. La clave para la eficiencia en la inferencia de redes neuronales homomórficas reside en cómo se mapean los tensores (vectores de entrada, matrices de pesos) de la red a los slots de los textos cifrados.
+
+El desafío principal radica en que las operaciones homomórficas aumentan el ruido y consumen niveles de la jerarquía de módulos. Por lo tanto, es crucial minimizar el número de operaciones, en particular las rotaciones, que son computacionalmente costosas y requieren claves de evaluación adicionales (Llaves de Galois). Un algoritmo para operar los datos ineficiente puede llevar a un número excesivo de rotaciones, lo que degrada significativamente el rendimiento.
+
+Consideremos una operación fundamental como la multiplicación matriz-vector $y = Wx$. Si $W$ es una matriz de $m \times n$ y $x$ es un vector de $n$ elementos, el resultado $y$ es un vector de $m$ elementos. La forma en que se empaquetan $W$ y $x$ en los textos cifrados determinará la complejidad de la operación. Un enfoque sencillo de empaquetar cada fila o columna de $W$ en un texto cifrado separado resultaría en un gran número de textos cifrados y una gestión compleja. Por ello, se buscan estrategias que permitan empaquetar la mayor cantidad de información posible en un número reducido de textos cifrados, aprovechando al máximo la capacidad SIMD de CKKS.
+
+\subsection{Producto Punto}
+
+El producto punto de dos vectores, $a$ y $b$, se define como la suma de los productos de sus componentes correspondientes: $\sum a_i b_i$. En el contexto del cifrado homomórfico CKKS, esta operación se ejecuta usando rotaciones.
+
+El algoritmo para calcular el producto punto homomórfico de dos vectores cifrados $ct_a$ y $ct_b$ se realiza en dos fases principales:
+
+\begin{enumerate}
+    \item \textbf{Multiplicación Elemento a Elemento:}
+        Se realiza una multiplicación homomórfica directa entre $ct_a$ y $ct_b$. Dado que CKKS opera sobre vectores empaquetados en slots, esta operación produce un nuevo texto cifrado, $ct_{prod}$, donde cada *slot* contiene el producto $a_i \cdot b_i$ de los elementos correspondientes.
+
+    \item \textbf{Suma de los Elementos:}
+        Una vez obtenidos todos los productos $a_i \cdot b_i$ en los slots de $ct_{prod}$, el siguiente paso es sumarlos para obtener el resultado final del producto punto. El texto cifrado se rota $ct_{prod}$ a la mitad de sus slots y se suma a si mismo, luego se rota el resultado a un cuarto de sus slots y se suma, así sucesivamente, hasta que la suma de todos los elementos se acumule en el primer slot. Estas rotaciones son optimizadas por técnicas como las desarrolladas por Halevi y Shoup \cite{Halevi14}.
+\end{enumerate}
+
+
+\subsection{Multiplicación Matriz Vector}
+
+Para optimizar la multiplicación matriz-vector en el dominio homomórfico, una de las técnicas más eficientes es la diagonalización de la matriz de pesos \cite{Halevi14}, popularizada por Halevi y Shoup. Esta técnica se basa en la observación de que la multiplicación de un vector por una matriz puede expresarse como una suma de productos elemento a elemento \cite{Goodfellow16} con rotaciones cíclicas.
+
+La idea central es transformar la matriz de pesos $W$ en un conjunto de vectores que representan sus diagonales. Específicamente, para una matriz $W$, se extraen sus diagonales y se codifican en textos claros que luego se utilizarán en la operación. Cuando se multiplica un vector cifrado $x$ por una matriz $W$, cada elemento del vector resultante $y_i$ es el producto escalar de la $i$-ésima fila de $W$ con el vector $x$. El proceso seria el siguiente:
+
+\begin{enumerate}
+    \item Se codifica el vector de entrada $x$ en un texto cifrado $ct_x$.
+    \item La matriz de pesos $W$ se pre-procesa para extraer sus diagonales. Cada diagonal se codifica sin cifrar.
+    \item La operación se realiza iterando sobre las diagonales de $W$. Para cada diagonal, se multiplica homomórficamente con una versión rotada de $ct_x$.
+    \item Los resultados de estas multiplicaciones y rotaciones se acumulan mediante sumas homomórficas para obtener el texto cifrado del vector resultante $y$.
+\end{enumerate}
+
+Un enfoque simple para la multiplicación matriz-vector, sin la diagonalización, implicaría un número significativamente mayor de rotaciones. Para una matriz $W$ de $m \times n$ y un vector $x$ de $n$ elementos, una implementación directa podría requerir $O(m \times n)$ rotaciones para alinear correctamente cada elemento de $W$ con los de $x$ antes de la multiplicación y suma. En contraste, la técnica de diagonalización reduce drásticamente este costo a solo $n$ rotaciones (una por cada diagonal), $n$ multiplicaciones elemento a elemento y $n$ sumas, lo que representa una mejora de rendimiento considerable.
+
+Esta técnica es particularmente eficiente porque reduce el número de rotaciones necesarias. En lugar de rotar el texto cifrado de entrada para cada elemento de la matriz, se rotan los resultados intermedios o se utilizan rotaciones específicas que se corresponden con las diagonales de la matriz. Esto minimiza el consumo de niveles y el costo computacional, haciendo que la multiplicación matriz-vector sea práctica en CKKS.
+
+\subsection{Convoluciones}
+
+Las operaciones de convolución son fundamentales en las Redes Neuronales Convolucionales (CNNs) y, al igual que la multiplicación matriz-vector, requieren una adaptación específica para ser ejecutadas en el dominio homomórfico. La estrategia más común y eficiente para realizar convoluciones homomórficas es transformarlas en una multiplicación matriz-vector, una técnica conocida como `im2col` \cite{Goodfellow16}.
+
+El proceso se descompone en los siguientes pasos:
+
+\begin{enumerate}
+    \item \textbf{Transformación del Tensor de Entrada:}
+    \begin{itemize}
+        \item El tensor de entrada se transforma en una matriz 2D. Cada seccion de la entrada que sería procesado por el kernel de convolución se transforma en una columna de esta nueva matriz.
+        \item Esta transformación se realiza en texto plano antes de cifrar los datos, o se puede adaptar para operar sobre datos cifrados si la entrada ya está cifrada.
+        \item Los parámetros de la convolución, como el tamaño del kernel, el stride y el padding, se incorporan en esta transformación `im2col`.
+    \end{itemize}
+
+    \item \textbf{Transformación del Kernel de Convolución:}
+    \begin{itemize}
+        \item El kernel (o filtro) de convolución, que es un tensor pequeño, también se transforma en una matriz 2D. Esta matriz se organiza de manera que cada fila corresponda a un kernel aplanado.
+    \end{itemize}
+
+    \item \textbf{Multiplicación Matriz-Vector Homomórfica:}
+    \begin{itemize}
+        \item Una vez que el tensor de entrada y el kernel se han transformado en matrices 2D, la operación de convolución se convierte en una multiplicación matriz-vector estándar.
+        \item Se aplica el algoritmo para multiplicación Matriz-Vector descrito en la Sección 1.3. La matriz `im2col` de la entrada se trata como el vector de entrada cifrado, y la matriz del kernel se trata como la matriz de pesos.
+        \item El resultado de esta multiplicación es un texto cifrado que representa el mapa de características de salida aplanado.
+    \end{itemize}
+\end{enumerate}
+
+\section{Funciones de Activación}
+
+Uno de los mayores desafíos al implementar redes neuronales sobre cifrado homomórfico es el manejo de las funciones de activación no lineales. El esquema CKKS solo soporta de forma nativa adiciones y multiplicaciones. Funciones como Sigmoide, Tanh o ReLU no pueden ser evaluadas directamente.
+
+La solución a este problema es aproximar estas funciones de activación mediante polinomios. La elección del polinomio de aproximación es un compromiso crítico entre la precisión del modelo y el rendimiento del cómputo homomórfico.
+
+\subsection{Técnicas de Aproximación}
+
+Existen varias estrategias para encontrar una aproximación polinómica adecuada:
+
+\begin{itemize}
+    \item \textbf{Aproximación por Series de Taylor:} Para funciones suaves como la sigmoide o la tangente hiperbólica, se puede utilizar su expansión en series de Taylor alrededor de un punto. Esta es una técnica directa sugerida en los trabajos fundacionales del esquema CKKS \cite{CKKS17}.
+
+    \item \textbf{Uso de Polinomios Simples:} En muchos casos, especialmente para reducir la profundidad del circuito, se reemplaza la función de activación por un polinomio de bajo grado. Una de las aproximaciones más comunes y eficientes es usar la función cuadrática $f(x) = ax^2 + bx + c$. Por ejemplo, la red CryptoNets \cite{GiladBachrach2016CryptoNets} popularizó el uso de la función cuadrada $f(x) = x^2$ como una alternativa a ReLU. Aunque menos precisa, esta aproximación introduce la no linealidad necesaria con un costo computacional mínimo (una sola multiplicación homomórfica).
+\end{itemize}
+
+\subsection{Impacto en la Profundidad del Circuito}
+
+Cada multiplicación homomórfica consume un nivel en el esquema CKKS, reduciendo el presupuesto de ruido y el módulo del texto cifrado. La evaluación de un polinomio de grado $d$ requiere una profundidad multiplicativa de $O(\sqrt d)$, utilizando algoritmos de evaluación paralela como el propuesto por Paterson y Stockmeyer \cite{Paterson1973}. Por lo tanto, un polinomio de aproximación de alto grado, aunque más preciso, aumentará significativamente la profundidad del circuito homomórfico. Esto exige parámetros criptográficos más grandes (mayor tamaño de módulo inicial), lo que a su vez incrementa el costo computacional y el tamaño de las claves.
+
+La elección del polinomio de aproximación es, por tanto, una decisión de diseño fundamental en la inferencia de redes neuronales homomórficas, donde se debe balancear la precisión del modelo con las limitaciones y costos del esquema de cifrado \cite{benaissa2021tenseal}.

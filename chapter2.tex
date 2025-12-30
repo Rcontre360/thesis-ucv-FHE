@@ -1,35 +1,182 @@
-\chapter{Fundamentos Criptográficos Modernos: LWE y RLWE}
+\chapter{Esquema Cheon-Kim-Kim-Song}
 
-Aunque el esquema original de Gentry fue un hito teórico, su dependencia de "retículos ideales" y la complejidad del bootstrapping lo hacían demasiado lento para ser práctico. Esto desencadenó una intensa investigación para encontrar bases más eficientes para el cifrado homomórfico. La solución se encontró en problemas computacionales duros relacionados con retículos, específicamente en el problema de \textbf{Aprendizaje con Errores (Learning With Errors - LWE)} y su variante estructurada, \textbf{Aprendizaje con Errores en Anillos (Ring-LWE)}.
+El esquema propuesto por Cheon, Kim, Kim y Song en 2017 \cite{CKKS17} o CKKS, introdujo el concepto de \textbf{aritmética aproximada}. A diferencia de los esquemas BGV o BFV, que están diseñados para computar de manera exacta sobre campos finitos o anillos de enteros, CKKS permite procesar de forma nativa números reales y complejos. En los esquemas exactos, trabajar con decimales requiere técnicas de cuantización que incrementan el tamaño de los coeficientes en los polinomios, esto agota el presupuesto de ruido del sistema. CKKS resuelve este problema tratando el ruido inherente de RLWE no como un obstáculo a eliminar, sino como un error de redondeo controlado, similar al que ocurre en la aritmética de punto flotante de los procesadores convencionales.
 
-\section{El Problema de Aprendizaje con Errores (LWE)}
+\section{Codificación y Decodificación}
 
-Introducido por Oded Regev en 2005 \cite{Regev05}, el problema LWE se ha convertido en una de las bases más importantes de la criptografía moderna. Se puede describir como el problema de resolver un sistema de ecuaciones lineales que ha sido perturbado por un "ruido" pequeño.
+Para procesar datos en CKKS, es necesario transformar los vectores de números reales o complejos en elementos del anillo $R$. Este proceso se denomina Codificacion y su inversa Decodificacion. A diferencia de otros esquemas que simplemente mapean bits a coeficientes, CKKS utiliza una técnica basada en el homomorfismo de anillos para permitir que las operaciones polinomiales se correspondan exactamente con operaciones vectoriales.
 
-\textbf{Definición (Decisional LWE):} Dados un módulo entero $q$ y un vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$, el desafío es distinguir entre dos distribuciones:
-\begin{enumerate}
-    \item Una distribución de pares $(\mathbf{a}_i, b_i)$ donde los $\mathbf{a}_i \in \mathbb{Z}_q^n$ son vectores aleatorios uniformes y los $b_i = \langle \mathbf{a}_i, \mathbf{s} \rangle + e_i \pmod{q}$ son el resultado del producto interno de $\mathbf{a}_i$ y $\mathbf{s}$, más un pequeño error $e_i$ muestreado de una distribución de error (ej. Gaussiana discreta).
-    \item Una distribución de pares $(\mathbf{a}_i, u_i)$ donde tanto $\mathbf{a}_i$ como $u_i$ son uniformemente aleatorios en $\mathbb{Z}_q^n$ y $\mathbb{Z}_q$, respectivamente.
-\end{enumerate}
+\subsubsection{Polinomios Ciclótomicos y Raíces de la Unidad}
 
-La seguridad de los criptosistemas basados en LWE reside en la supuesta intratabilidad de este problema. Sin el término de error $e_i$, el secreto $\mathbf{s}$ podría recuperarse fácilmente usando eliminación gaussiana. Sin embargo, la adición de ruido hace que el problema sea computacionalmente difícil, con una seguridad que se puede reducir a problemas de retículos en el peor de los casos, como el Shortest Vector Problem (SVP).
+Un \textbf{polinomio ciclotómico} $\Phi_n(x)$ es un tipo especial de polinomio con coeficientes enteros. Su característica más relevante es que sus raíces son las \textbf{raíces primitivas $n$-ésimas de la unidad}. Las \textbf{raíces $n$-ésimas de la unidad} son todos los números complejos $z$ que satisfacen la ecuación $z^n = 1$. Geométricamente, estas raíces se distribuyen uniformemente en el círculo unitario en el plano complejo. Una raíz primitiva $n$-ésima de la unidad es aquella que genera todas las demás raíces $n$-ésimas al ser elevada a diferentes potencias.
 
-\section{El Problema de Aprendizaje con Errores en Anillos (RLWE)}
+En los esquemas de cifrado basados en retículos como CKKS, se utiliza un tipo particular de polinomio ciclotómico: $\Phi_n(x) = x^n + 1$, donde $n$ es una potencia de 2 (por ejemplo, $n=2^k$). Este polinomio es crucial porque define el \textbf{anillo de polinomios} $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$ sobre el cual se realizan todas las operaciones criptográficas. Este anillo es, en esencia, un conjunto de polinomios donde cualquier $x^n$ se reemplaza por $-1$.
 
-Aunque LWE proporciona una base segura, su rendimiento es un obstáculo. Las claves públicas en los esquemas basados en LWE pueden ser muy grandes (cuadráticas en el parámetro de seguridad), y las operaciones son costosas. Para solucionar esto, se introdujo el problema \textbf{Ring-LWE} \cite{LPR10}, una variante algebraicamente estructurada de LWE.
+La elección de $x^n + 1$ como polinomio ciclotómico para definir el anillo $R$ ofrece varias ventajas computacionales clave:
 
-En lugar de trabajar con vectores de números enteros, RLWE opera sobre \textbf{polinomios}. Las operaciones se realizan en un anillo de polinomios, típicamente de la forma $R_q = \mathbb{Z}_q[x] / \langle \Phi_n(x) \rangle$, donde $\Phi_n(x)$ es un polinomio ciclotómico (a menudo $x^N+1$ para $N$ una potencia de 2).
-
-\textbf{Definición (Decisional RLWE):} El problema consiste en distinguir entre dos distribuciones:
-\begin{enumerate}
-    \item Pares de la forma $(a_i(x), b_i(x))$, donde $a_i(x)$ es un polinomio uniformemente aleatorio en $R_q$ y $b_i(x) = a_i(x) \cdot s(x) + e_i(x)$, siendo $s(x)$ y $e_i(x)$ polinomios "pequeños" (es decir, con coeficientes pequeños).
-    \item Pares $(a_i(x), u_i(x))$, donde tanto $a_i(x)$ como $u_i(x)$ son polinomios uniformemente aleatorios en $R_q$.
-\end{enumerate}
-
-La estructura de anillo de RLWE ofrece ventajas significativas:
 \begin{itemize}
-    \item \textbf{Eficiencia:} Las operaciones de multiplicación de polinomios son mucho más rápidas que las multiplicaciones de matrices en LWE. Una única muestra de RLWE puede codificar el equivalente a $n$ muestras de LWE, lo que resulta en un rendimiento computacional drásticamente mejorado.
-    \item \textbf{Tamaño de Clave Compacto:} Las claves y los textos cifrados se representan como unos pocos polinomios en lugar de grandes matrices, lo que reduce significativamente el tamaño de los datos.
+    \item \textbf{Irreducibilidad y Seguridad:} El hecho de que $x^n+1$ sea irreducible sobre los enteros es importante porque garantiza que el anillo $R$ tenga propiedades algebraicas más resistentes a ciertos ataques criptoanalíticos.
+    \item \textbf{Eficiencia en Operaciones Polinomiales:} La reducción de polinomios módulo $x^n + 1$ es extremadamente eficiente. Cuando se multiplican dos polinomios en $R$, cualquier término $x^k$ con $k \ge n$ puede ser simplificado usando la relación $x^n \equiv -1 \pmod{x^n + 1}$. Esto acelera significativamente las multiplicaciones polinomiales, que son la operación más costosa en la criptografía homomórfica.
+    \item \textbf{Base para el Empaquetado de Datos (SIMD):} Las raíces de $x^n+1$ son la clave para el codificado. Esta técnica permite empaquetar múltiples números (reales o complejos) en un solo polinomio. Esto es análogo a las instrucciones SIMD donde una única operación homomórfica sobre un polinomio cifrado puede afectar simultáneamente a múltiples datos subyacentes, esto aumenta el rendimiento.
 \end{itemize}
 
-Gracias a estas mejoras, el problema RLWE se convirtió en la piedra angular de la mayoría de los esquemas FHE prácticos y eficientes, incluyendo BGV \cite{BGV12}, BFV \cite{FV12}, y el esquema CKKS \cite{CKKS17} que es central para este trabajo. En el próximo capítulo, se explorará en detalle el funcionamiento del esquema CKKS, que hereda su seguridad de la dureza del problema RLWE.
+La elección de $n$ como potencia de 2 es también fundamental para la eficiencia de la Transformada de Teoría de Números (NTT), una versión de la Transformada Rápida de Fourier (FFT) adaptada para aritmética modular, que es utilizada para acelerar aún más las multiplicaciones polinomiales en el anillo $R_q$. 
+
+\subsection{Codificación}
+
+La codificación o la inversa de la \textbf{Inmersión Canónica} es una funcion biyectiva que va desde los polinomios en el anillo $R$ (se usan para las operaciones homomórficas) y el de los vectores de números complejos (donde residen los datos a procesar). Permiten que las operaciones realizadas sobre polinomios cifrados se traduzcan en operaciones sobre los datos numéricos subyacentes.
+
+\begin{enumerate}
+    \item \textbf{El Anillo de Polinomios $R$:} CKKS opera en un anillo de polinomios $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$. Cada dato cifrado es un polinomio $p(x)$ cuyos coeficientes son enteros.
+    
+    \item \textbf{Las Raíces de la Unidad:} El polinomio ciclotómico $\Phi_n(x) = x^n + 1$ tiene un conjunto específico de raíces complejas. Estas son las $n$ raíces $2n$-ésimas de la unidad, denotadas como $\zeta_j = e^{i \frac{2\pi j}{2n}}$ para $j \in \{1, 3, \dots, 2n-1\}$. 
+    
+    \item \textbf{El Mapeo Directo ($\sigma$):} La inmersión canónica define un mapeo $\sigma: R \to \mathbb{C}^{n}$ que toma un polinomio $p(x)$ del anillo $R$ y lo transforma en un vector de números complejos. Este vector se obtiene evaluando el polinomio $p(x)$ en cada una de las raíces de la unidad mencionadas:
+    $$ \sigma(p(x)) = (p(\zeta_1), p(\zeta_3), \dots, p(\zeta_{2n-1})) $$
+    Cada componente del vector resultante es un número complejo.
+    
+    \item \textbf{El Mapeo Inverso ($\sigma^{-1}$):} Para la codificación, se utiliza la inversa de la inmersión canónica, $\sigma^{-1}$. Este proceso toma un vector de $n/2$ números complejos (los datos que queremos cifrar) y encuentra un polinomio $p(x) \in R$ tal que, al evaluar $p(x)$ en las raíces de la unidad, se obtenga el vector original. 
+\end{enumerate}
+
+\subsection{Escalado y Discretización}
+
+Dado que los coeficientes de los polinomios en el anillo $R$ deben ser enteros, no podemos mapear directamente un vector de números reales (continuos) a $R$ sin perder la parte decimal. Para solucionar esto, CKKS introduce un factor de escala $\Delta > 0$. El proceso completo para transformar un vector $z$ en un polinomio $m(x) \in R$ es:
+
+\begin{enumerate}
+   \item Escalado: Se multiplica el vector por el factor $\Delta$, transformando $z$ en $\Delta \cdot z$.
+   \item Proyección: Se aplica la inmersión canónica inversa $\sigma^{-1}(\Delta \cdot z)$.
+   \item Discretización (Rounding): Se redondean los coeficientes resultantes al entero más cercano: $m(x) = \lfloor \sigma^{-1}(\Delta \cdot z) \rceil$.
+\end{enumerate}
+
+El factor $\Delta$ determina la precisión del esquema. Este escalado desplaza la parte decimal hacia la izquierda de la coma binaria, permitiendo que el ruido de RLWE (que reside en los bits menos significativos) no destruya la información útil.
+
+\subsection{Decodificación}
+El proceso de decodificación en CKKS es la inversa de la codificación y se apoya fundamentalmente en las propiedades de los polinomios ciclotómicos y la inmersión canónica. Una vez que se ha realizado el descifrado de un texto cifrado, se obtiene un polinomio $m'(x) \in R$. Este polinomio $m'(x)$ es una aproximación del mensaje original $m(x)$ escalado por $\Delta$.
+
+Para recuperar el vector de números complejos original, se aplica la inmersión canónica directa. Esto implica evaluar el polinomio $m'(x)$ en las raíces específicas del polinomio ciclotómico $\Phi_n(x) = x^n + 1$. Es decir, se calcula $\sigma(m'(x)) = (m'(\zeta_1), m'(\zeta_3), \dots, m'(\zeta_{2n-1}))$. Debido a las propiedades de simetría, solo se consideran $n/2$ de estas evaluaciones para reconstruir el vector de datos. Finalmente, para obtener los valores reales o complejos originales, se divide el vector resultante por el factor de escala $\Delta$ y se realiza un redondeo para eliminar el ruido residual. 
+
+\subsection{SIMD}
+
+El resultado de este proceso es la creación de una estructura de slots (ranuras). Cada texto cifrado en CKKS no representa un único valor, sino un vector de $n/2$ posiciones independientes.Desde una perspectiva de arquitectura de software, esto habilita propiedades SIMD:
+
+\begin{itemize}
+\item Suma de vectores: Al sumar dos textos cifrados $ct_1 + ct_2$, se suman los $n/2$ valores de sus slots correspondientes de forma paralela en una sola operación.
+\item Multiplicación elemento a elemento: Al multiplicar $ct_1 \cdot ct_2$, se obtiene el producto de Hadamard de los vectores originales.
+\end{itemize}
+
+Esta estructura es la que permite que CKKS sea extremadamente eficiente para operaciones de álgebra lineal, como multiplicacion de matrices o vectores.
+
+\section{Generación de Claves y Espacio de Parámetros}
+
+La seguridad y funcionalidad del esquema CKKS dependen de la correcta generación de un conjunto de claves y de la selección meticulosa de parámetros algebraicos. Estos parámetros deben ser elegidos cuidadosamente para garantizar tanto la seguridad criptográfica como la eficiencia computacional del esquema.
+
+\subsection{Selección de Parámetros y Nivel de Seguridad}
+
+El rendimiento y la seguridad del esquema CKKS están intrínsecamente ligados a la selección de sus parámetros. Las variables fundamentales a considerar son:
+
+\begin{itemize}
+   \item \textbf{Grado del Polinomio ($N$):} Se refiere al grado del polinomio ciclotómico $\Phi_M(x)$ que define el anillo $R$. Típicamente, $N$ es una potencia de 2 (por ejemplo, $2^{12} \dots 2^{15}$). Un valor mayor de $N$ permite una mayor seguridad y un mayor número de slots para el empaquetado SIMD, pero incrementa linealmente el tiempo de cómputo y el tamaño de las claves. Según Cheon et al. \cite{CKKS17}, para garantizar un nivel de seguridad de $\lambda$ bits, el grado del polinomio $N$ debe satisfacer la condición $N \ge \frac{\lambda + 110}{7.2}\log(P \cdot q_L)$.
+   
+   \item \textbf{Módulo de Coeficientes ($q$ y $P$):} En CKKS, el módulo total $q$ suele ser un producto de varios primos. La magnitud de $q$ determina la cantidad de multiplicaciones que se pueden realizar. El parámetro $P$ es un módulo adicional utilizado en la generación de claves de evaluación. El producto $P \cdot q$ representa el módulo más grande en el esquema. A mayor $q$, mayor capacidad de cómputo, pero aumentar $q$ sin aumentar $N$ reduce la seguridad.
+   
+   \item \textbf{Distribución del Error ($\sigma$ y $h$):} La desviación estándar $\sigma$ de la distribución Gaussiana discreta (DG($\sigma^2$)) utilizada para muestrear los errores $e$ y $e'$, y el peso de Hamming $h$ para la clave secreta $s$. Estos valores impactan el nivel de ruido inicial y su crecimiento. En la implementación de Cheon et al. \cite{CKKS17}, se utilizó una desviación estándar $\sigma = 3.2$ y un peso de Hamming $h = 64$.
+   
+   \item \textbf{Nivel de Seguridad ($\lambda$):} Se mide en bits. Este parámetro define la resistencia del esquema a los ataques criptoanalíticos. La selección de $N$, $q_L$ y $\sigma$ debe ser consistente con el nivel de seguridad deseado.
+
+\end{itemize}
+
+\subsection{Definición del Conjunto de Claves}
+
+Para operar en CKKS, se requiere la generación de cuatro tipos de claves, cada una con un rol específico en el ciclo de vida del dato cifrado:
+
+\begin{enumerate}
+   \item \textbf{Clave Secreta ($sk$):} Es un polinomio $s(x) \in R$ cuyos coeficientes se muestrean de una distribución de Hamming de peso $h$. Esto significa que $s(x)$ es un polinomio con un número fijo de coeficientes no nulos (igual a $h$), los cuales son $\{-1, 1\}$. La clave secreta es la única capaz de descifrar los datos y debe permanecer bajo control exclusivo del propietario de la información. En el esquema de Cheon et al. \cite{CKKS17}, la clave secreta se define como $sk \leftarrow (1, s)$.
+   
+   \item \textbf{Clave Pública ($pk$):} Se utiliza para cifrar los mensajes. Se genera como un par de polinomios $(b, a) \in R_q^2$. El polinomio $a$ se muestrea uniformemente al azar del anillo $R_q$, mientras que $b$ se calcula como $b = -as + e \pmod q$, donde $e$ es un polinomio de error muestreado de una distribución DG($\sigma^2$). La seguridad de esta clave reside en la dificultad computacional de resolver el problema de Aprendizaje con Errores en Anillos (RLWE) para hallar $s$.
+   
+   \item \textbf{Clave de Relinearización ($rlk$):} Tras una multiplicación homomórfica, el texto cifrado resultante aumenta su tamaño. Para poder realizar operaciones subsecuentes, es necesario relinearizar el texto cifrado. Para ello se utiliza la clave de relinearización. Esta clave se construye como un par de polinomios $(b', a') \in R_{P \cdot q_L}^2$, donde $a'$ se muestrea, dada una distribucion, de $R_{P \cdot q}$ y $b'$ se calcula como:
+   $$ b' = -a's + e' + P \cdot s^2 \pmod{P \cdot q} $$
+
+   \item \textbf{Claves de Rotación:} Dado que CKKS utiliza una estructura SIMD para empaquetar un vector de datos en un solo texto cifrado, las rotaciones son operaciones cruciales. Estas claves permiten rotar cíclicamente los elementos dentro de los slots de un vector cifrado sin necesidad de descifrar. Cada clave de rotación se genera para un desplazamiento específico y se basa en los automorfismos de Galois del anillo ciclotómico.
+\end{enumerate}
+
+\section{Operaciones Homomórficas en CKKS}
+
+El esquema CKKS permite realizar cómputos sobre textos cifrados de tal manera que, al descifrar el resultado, este coincida con la operación realizada sobre los datos en claro (dentro de un margen de error controlado).
+
+\subsection{Adición}
+
+La adición en CKKS es una operación lineal y directa. Dados dos textos cifrados $ct_1 = (c_{1,0}, c_{1,1})$ y $ct_2 = (c_{2,0}, c_{2,1})$, su suma homomórfica se define como la suma componente a componente:
+$$ ct_{add} = (c_{1,0} + c_{2,0}, c_{1,1} + c_{2,1}) \pmod q $$
+Esta operación tiene un costo computacional mínimo y el ruido del texto cifrado resultante es la suma de los ruidos de los operandos, $e_{add} = e_1 + e_2$.
+
+\subsection{Multiplicación}
+
+La multiplicación es una operación más compleja que involucra varios pasos. Si tenemos dos textos cifrados $ct_1$ y $ct_2$ que descifrados (con la clave secreta $s$) en los mensajes $m_1$ y $m_2$ respectivamente, el producto de los mensajes es:
+$$ m_1 \cdot m_2 = (c_{1,0} + c_{1,1}s) \cdot (c_{2,0} + c_{2,1}s) = c_{1,0}c_{2,0} + (c_{1,0}c_{2,1} + c_{1,1}c_{2,0})s + (c_{1,1}c_{2,1})s^2 $$
+El resultado es un polinomio cuadrático en $s$. Esto se representa como un texto cifrado de tamaño 3, $ct_{mult} = (d_0, d_1, d_2)$, donde:
+\begin{itemize}
+    \item $d_0 = c_{1,0}c_{2,0} \pmod q$
+    \item $d_1 = c_{1,0}c_{2,1} + c_{1,1}c_{2,0} \pmod q$
+    \item $d_2 = c_{1,1}c_{2,1} \pmod q$
+\end{itemize}
+Este nuevo texto está cifrado bajo la clave $(1, s, s^2)$. Para poder continuar operando, es necesario aplicar la \textbf{relinearización} para gestionar el tamaño del texto cifrado. Adicionalmente, el ruido y el factor de escala deben ser controlados mediante el \textbf{reescalado}, un proceso que se detalla en la sección \ref{sec:gestion_niveles}.
+
+\subsection{Rotaciones Homomórficas}
+
+Las rotaciones permiten permutar los elementos dentro de los slots de un vector cifrado. Esta operación se basa en los \textbf{automorfismos de Galois}. Para rotar un vector $k$ posiciones, se aplica el automorfismo $\phi_k: p(x) \mapsto p(x^k)$ al polinomio del texto cifrado.
+
+Si aplicamos esto a un texto cifrado $ct = (c_0(x), c_1(x))$, obtenemos un nuevo par $(c_0(x^k), c_1(x^k))$. Sin embargo, este nuevo texto esta cifrado bajo la clave secreta transformada $s(x^k)$. Para devolverlo al formato original, se necesita un proceso de cambio de clave que utiliza las \textbf{Claves de Galois ($galk$)}, una por cada rotación necesaria. Estas claves son, en esencia, cifrados de la clave secreta original $s(x)$ bajo las claves secretas transformadas $s(x^k)$.
+
+
+\section{Cifrado por Niveles}\label{sec:gestion_niveles}
+
+\subsection{Niveles}
+
+En CKKS, un texto cifrado no se define sobre un único módulo $Q$, sino sobre una cadena descendente de módulos (denominada \textit{modulus chain}). Se selecciona un módulo inicial grande $Q_L$, que es el producto de varios números primos distintos:$$ Q_L = q_L \cdot q_{L-1} \cdot \dots \cdot q_1 \cdot q_0 $$Esta estructura permite que el esquema funcione de manera multinivel. Cuando un texto cifrado se encuentra en el nivel más alto ($L$), tiene un presupuesto de ruido máximo. A medida que se realizan multiplicaciones, el esquema aplica una operación de \textbf{Rescaling}.El \textit{Rescaling} escala el texto cifrado y el ruido simultáneamente, dividiéndolos por el factor actual $q_\ell$. Este proceso consume un nivel de la jerarquía, pasando de un módulo $Q_\ell$ a uno más pequeño $Q_{\ell-1}$. La cadena se puede visualizar como:$$ q_L > q_{L-1} > \dots > q_0 $$Donde cada $q_\ell$ suele ser un primo cercano al factor de escala $\Delta$. Esta técnica es lo que permite que CKKS mantenga la precisión de los números reales: al reducir el módulo, se eliminan los bits menos significativos que han sido contaminados por el ruido de la multiplicación, de forma análoga al redondeo en la aritmética de punto flotante.
+
+\subsection{Relinearización}
+
+Como se mencionó, el primer paso después de una multiplicación es la relinearización. Su objetivo es convertir el texto cifrado de tamaño 3, $ct_{mult}$, de vuelta a uno de tamaño 2 que esté cifrado bajo la clave original $(1, s)$. Esto se logra mediante una operación de cambio de clave que utiliza la \textbf{clave de relinearización ($rlk$)}.
+
+Esta clave es un cifrado de $s^2$ que fue generada usando el módulo auxiliar $P$. La operación utiliza la clave $rlk$ para transformar el término cuadrático $d_2$ y luego lo divide por $P$ para cancelar el módulo auxiliar. Conceptualmente, el proceso es el siguiente:
+$$ ct_{relin} = (d_0, d_1) + \lfloor P^{-1} \cdot d_2 \cdot rlk \rceil \pmod q $$
+El resultado, $ct_{relin}$, es un texto cifrado de dos componentes que cifra el mismo producto $m_1 \cdot m_2$ (escalado por $\Delta^2$), pero ahora bajo la clave secreta original $s$.
+
+\subsection{Reescalado}
+
+Después de la relinearización, el mensaje sigue teniendo un factor de escala de $\Delta^2$ y un ruido considerable. El reescalado se encarga de ambos problemas. Esta operación se aplica sobre el texto cifrado ya relinearizado, $ct_{relin}$.
+
+El proceso consiste en dividir los coeficientes del texto cifrado por un factor, que es uno de los primos $p_l$ de la cadena de módulos. Al hacer esto, el texto cifrado pasa del nivel $l$ al nivel $l-1$:
+$$ ct_{rescaled} = \lfloor p_l^{-1} \cdot ct_{relin} \rceil \pmod{q_{l-1}} $$
+Esta operación divide tanto el mensaje como el ruido por $p_l$, logrando dos cosas:
+\begin{enumerate}
+    \item Devuelve el factor de escala del mensaje a aproximadamente $\Delta$.
+    \item Elimina los bits menos significativos del ruido, que son los que más crecen durante la multiplicación.
+\end{enumerate}
+
+\subsection{Profundidad del Circuito}
+
+La profundidad del circuito se refiere al número máximo de multiplicaciones secuenciales (niveles) que se pueden realizar antes de que el texto cifrado llegue al módulo base $q_0$.
+
+Para circuitos de profundidad arbitraria o algoritmos iterativos muy largos, se requeriría la operación de \textbf{Bootstrapping}, la cual permite elevar nuevamente el texto cifrado a un nivel superior de la jerarquía. Sin embargo, debido a su alto costo computacional, la estrategia preferida en CKKS es optimizar la profundidad del circuito para trabajar dentro de una jerarquía de módulos predefinida.
+
+\section{Bootstrapping}
+
+El cómputo por niveles tiene una limitación: la profundidad del circuito. El bootstrapping es el proceso que convierte un esquema nivelado en uno totalmente homomórfico, permitiendo un número virtualmente ilimitado de operaciones. En esencia, es un procedimiento para refrescar un texto cifrado cuyo presupuesto de ruido y niveles se ha agotado.
+
+El principal desafío del bootstrapping en CKKS es evaluar homomórficamente su propia función de descifrado. Esta función, $\text{Dec}(c) = [\langle c, sk \rangle]_q$, incluye una operación de reducción modular (mod $q$) que no es un polinomio y, por tanto, no se puede aplicar directamente.
+
+Para solucionar esto se propuso un algoritmo \cite{CKKS17-Boot} que sigue los siguientes pasos:
+
+\begin{enumerate}
+    \item \textbf{Elevación del Módulo:} Se toma el texto cifrado gastado (en un módulo pequeño `q`) y se escala para considerarlo como un texto cifrado en un módulo mucho más grande, `Q`. Esto no elimina el ruido, pero crea el espacio matemático necesario para las siguientes operaciones.
+
+    \item \textbf{Coeficientes a Ranuras:} Un texto cifrado es un polinomio, pero las operaciones SIMD ocurren en las ranuras (las evaluaciones de dicho polinomio). El bootstrapping necesita aplicar una función (la sinusoide) a cada uno de los \textit{coeficientes} del polinomio cifrado, no a los valores que ya están en las ranuras. El objetivo es, por tanto, mover los coeficientes $(t_0, t_1, \dots)$ a las ranuras para poder usar el paralelismo. Esta transformación es una operación lineal y, como tal, puede ser evaluada homomórficamente aplicando una serie de multiplicaciones y rotaciones. El resultado son nuevos textos cifrados cuyo contenido en las ranuras es el vector de coeficientes original.
+
+    \item \textbf{Evaluación de la Función Modular:} En lugar de calcular la reducción modular directamente, se utiliza una función sinusoidal (`sin(x)`) como una aproximación. Como la función seno sí puede ser aproximada eficientemente por un polinomio, se puede evaluar de forma homomórfica sobre los datos en las ranuras (que ahora contienen los coeficientes). El resultado de esta evaluación es una aproximación del mensaje original, libre del ruido modular.
+
+    \item \textbf{Ranuras a Coeficientes:} Este es el proceso inverso. Una vez que la función sinusoidal ha sido aplicada sobre los coeficientes, el resultado es un vector de valores del mensaje ya limpios que residen en las ranuras. El objetivo ahora es tomar estos valores y usarlos para construir el polinomio del texto cifrado final. De nuevo, esta es una transformación lineal que se aplica homomórficamente. Agrupa los valores procesados de las ranuras y los reconstruye como los coeficientes de un único polinomio, completando el refresco del texto cifrado.
+\end{enumerate}
+
+El resultado final es un nuevo texto cifrado, en un nivel de módulo alto, que contiene el mismo mensaje original pero con el ruido inicial. Aunque este proceso es computacionalmente costoso, permite realizar cómputos de profundidad arbitraria, algo indispensable para algoritmos iterativos o redes neuronales muy profundas.
