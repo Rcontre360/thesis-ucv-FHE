@@ -23,7 +23,7 @@ El algoritmo para calcular el producto punto homomórfico de dos vectores cifrad
         Se realiza una multiplicación homomórfica directa entre $ct_a$ y $ct_b$. Dado que CKKS opera sobre vectores empaquetados en slots, esta operación produce un nuevo texto cifrado, $ct_{prod}$, donde cada *slot* contiene el producto $a_i \cdot b_i$ de los elementos correspondientes.
 
     \item \textbf{Suma de los Elementos:}
-        Una vez obtenidos todos los productos $a_i \cdot b_i$ en los slots de $ct_{prod}$, el siguiente paso es sumarlos para obtener el resultado final del producto punto. El texto cifrado se rota $ct_{prod}$ a la mitad de sus slots y se suma a si mismo, luego se rota el resultado a un cuarto de sus slots y se suma, así sucesivamente, hasta que la suma de todos los elementos se acumule en el primer slot.
+        Una vez obtenidos todos los productos $a_i \cdot b_i$ en los slots de $ct_{prod}$, el siguiente paso es sumarlos para obtener el resultado final del producto punto. El texto cifrado se rota $ct_{prod}$ a la mitad de sus slots y se suma a si mismo, luego se rota el resultado a un cuarto de sus slots y se suma, así sucesivamente, hasta que la suma de todos los elementos se acumule en el primer slot. Estas rotaciones son optimizadas por técnicas como las desarrolladas por Halevi y Shoup \cite{Halevi14}.
 \end{enumerate}
 
 
@@ -52,20 +52,43 @@ El proceso se descompone en los siguientes pasos:
 
 \begin{enumerate}
     \item \textbf{Transformación del Tensor de Entrada:}
-        *   El tensor de entrada (imagen o mapa de características) se transforma en una matriz 2D. Cada "parche" de la entrada que sería procesado por el kernel de convolución se "desenrolla" en una columna de esta nueva matriz.
-        *   Esta transformación se realiza en texto plano antes de cifrar los datos, o se puede adaptar para operar sobre datos cifrados si la entrada ya está cifrada. Sin embargo, para la inferencia homomórfica, es más eficiente que el cliente realice esta transformación localmente y luego cifre la matriz resultante.
-        *   Los parámetros de la convolución, como el tamaño del kernel, el *stride* (paso) y el *padding* (relleno), se incorporan en esta transformación `im2col`. Por ejemplo, el *padding* se aplica añadiendo ceros alrededor de la imagen antes de extraer los parches.
+    \begin{itemize}
+        \item El tensor de entrada se transforma en una matriz 2D. Cada seccion de la entrada que sería procesado por el kernel de convolución se transforma en una columna de esta nueva matriz.
+        \item Esta transformación se realiza en texto plano antes de cifrar los datos, o se puede adaptar para operar sobre datos cifrados si la entrada ya está cifrada.
+        \item Los parámetros de la convolución, como el tamaño del kernel, el stride y el padding, se incorporan en esta transformación `im2col`.
+    \end{itemize}
 
     \item \textbf{Transformación del Kernel de Convolución:}
-        *   El kernel (o filtro) de convolución, que es un tensor pequeño, también se transforma en una matriz 2D. Esta matriz se organiza de manera que cada fila corresponda a un kernel aplanado.
+    \begin{itemize}
+        \item El kernel (o filtro) de convolución, que es un tensor pequeño, también se transforma en una matriz 2D. Esta matriz se organiza de manera que cada fila corresponda a un kernel aplanado.
+    \end{itemize}
 
     \item \textbf{Multiplicación Matriz-Vector Homomórfica:}
-        *   Una vez que el tensor de entrada y el kernel se han transformado en matrices 2D, la operación de convolución se convierte en una multiplicación matriz-vector estándar.
-        *   Se aplica el **Algoritmo para Multiplicación Matriz-Vector** descrito en la Sección 1.3. La matriz `im2col` de la entrada se trata como el vector de entrada cifrado, y la matriz del kernel se trata como la matriz de pesos.
-        *   El resultado de esta multiplicación es un texto cifrado que representa el mapa de características de salida aplanado.
-
-    \item \textbf{Re-transformación `col2im` (Opcional):}
-        *   Si es necesario, el resultado aplanado se puede re-transformar en un tensor (mapa de características) con las dimensiones originales de la salida de una convolución. Esta operación también se puede realizar en texto plano después del descifrado o, si es necesario, adaptarla para el dominio cifrado.
+    \begin{itemize}
+        \item Una vez que el tensor de entrada y el kernel se han transformado en matrices 2D, la operación de convolución se convierte en una multiplicación matriz-vector estándar.
+        \item Se aplica el algoritmo para multiplicación Matriz-Vector descrito en la Sección 1.3. La matriz `im2col` de la entrada se trata como el vector de entrada cifrado, y la matriz del kernel se trata como la matriz de pesos.
+        \item El resultado de esta multiplicación es un texto cifrado que representa el mapa de características de salida aplanado.
+    \end{itemize}
 \end{enumerate}
 
-Esta estrategia permite reutilizar el algoritmo optimizado de multiplicación matriz-vector para realizar convoluciones, lo que simplifica la implementación y aprovecha las optimizaciones ya desarrolladas. El manejo de los parámetros de *stride* y *padding* se integra directamente en la fase de `im2col`, asegurando que la operación homomórfica refleje fielmente la convolución en texto plano. La eficiencia se mantiene al minimizar las rotaciones y gestionar el ruido de manera efectiva.
+\section{Funciones de Activación}
+
+Uno de los mayores desafíos al implementar redes neuronales sobre cifrado homomórfico es el manejo de las funciones de activación no lineales. El esquema CKKS solo soporta de forma nativa adiciones y multiplicaciones. Funciones como Sigmoide, Tanh o ReLU no pueden ser evaluadas directamente.
+
+La solución a este problema es aproximar estas funciones de activación mediante polinomios. La elección del polinomio de aproximación es un compromiso crítico entre la precisión del modelo y el rendimiento del cómputo homomórfico.
+
+\subsection{Técnicas de Aproximación}
+
+Existen varias estrategias para encontrar una aproximación polinómica adecuada:
+
+\begin{itemize}
+    \item \textbf{Aproximación por Series de Taylor:} Para funciones suaves como la sigmoide o la tangente hiperbólica, se puede utilizar su expansión en series de Taylor alrededor de un punto. Esta es una técnica directa sugerida en los trabajos fundacionales del esquema CKKS \cite{CKKS17}.
+
+    \item \textbf{Uso de Polinomios Simples:} En muchos casos, especialmente para reducir la profundidad del circuito, se reemplaza la función de activación por un polinomio de bajo grado. Una de las aproximaciones más comunes y eficientes es usar la función cuadrática $f(x) = ax^2 + bx + c$. Por ejemplo, la red CryptoNets \cite{GiladBachrach2016CryptoNets} popularizó el uso de la función cuadrada $f(x) = x^2$ como una alternativa a ReLU. Aunque menos precisa, esta aproximación introduce la no linealidad necesaria con un costo computacional mínimo (una sola multiplicación homomórfica).
+\end{itemize}
+
+\subsection{Impacto en la Profundidad del Circuito}
+
+Cada multiplicación homomórfica consume un nivel en el esquema CKKS, reduciendo el presupuesto de ruido y el módulo del texto cifrado. La evaluación de un polinomio de grado $d$ requiere una profundidad multiplicativa de $O(\sqrt d)$, utilizando algoritmos de evaluación paralela como el propuesto por Paterson y Stockmeyer \cite{Paterson1973}. Por lo tanto, un polinomio de aproximación de alto grado, aunque más preciso, aumentará significativamente la profundidad del circuito homomórfico. Esto exige parámetros criptográficos más grandes (mayor tamaño de módulo inicial), lo que a su vez incrementa el costo computacional y el tamaño de las claves.
+
+La elección del polinomio de aproximación es, por tanto, una decisión de diseño fundamental en la inferencia de redes neuronales homomórficas, donde se debe balancear la precisión del modelo con las limitaciones y costos del esquema de cifrado \cite{benaissa2021tenseal}.
