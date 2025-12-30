@@ -1,6 +1,6 @@
 \chapter{Cifrado Homomórfico}
 
-El cifrado homomórfico es una forma de cifrado que permite realizar cómputos sobre datos cifrados, generando un resultado que, al descifrarse, coincide con el resultado de las operaciones como si se hubieran realizado sobre los datos en texto plano. Esta propiedad permite a terceros no confiables procesar datos sensibles sin tener acceso a la información subyacente.
+El cifrado homomórfico es una forma de cifrado que permite realizar cómputos sobre datos cifrados, generando un resultado que, al descifrarse, coincide con el resultado de las operaciones como si se hubieran realizado sobre los datos en texto plano. Esta propiedad permite a terceros procesar datos sensibles sin tener acceso a la información subyacente.
 
 \section{Orígenes}
 
@@ -15,11 +15,11 @@ donde $m_1, m_2 \in \mathcal{M}$, y $\text{Enc}$ y $\text{Dec}$ son las funcione
 Durante décadas, la construcción de un esquema de cifrado que pudiera evaluar un número arbitrario de operaciones de suma y multiplicación, conocido como \textbf{cifrado totalmente homomórfico (FHE)}, fue considerado uno de los mayores desafíos en la criptografía. Antes del primer esquema FHE, se desarrollaron varios \textbf{esquemas parcialmente homomórficos (PHE)}, que solo admitían un tipo de operación (suma o multiplicación) un número ilimitado de veces. Algunos ejemplos notables son:
 
 \begin{itemize}
-    \item \textbf{RSA:} El criptosistema RSA \cite{RSA78} es multiplicativamente homomórfico. Dados dos textos cifrados $c_1 = \text{Enc}(m_1) = m_1^e \pmod{N}$ y $c_2 = \text{Enc}(m_2) = m_2^e \pmod{N}$, su producto es:
+    \item \textbf{RSA:} RSA \cite{RSA78} es multiplicativamente homomórfico. Dados dos textos cifrados $c_1 = \text{Enc}(m_1) = m_1^e \pmod{N}$ y $c_2 = \text{Enc}(m_2) = m_2^e \pmod{N}$, su producto es:
     \begin{equation}
         c_1 \cdot c_2 = (m_1^e \cdot m_2^e) \pmod{N} = (m_1 \cdot m_2)^e \pmod{N} = \text{Enc}(m_1 \cdot m_2)
     \end{equation}
-    \item \textbf{Paillier:} El criptosistema de Paillier \cite{Paillier99} es aditivamente homomórfico. El producto de dos textos cifrados corresponde a la suma de los textos planos originales:
+    \item \textbf{Paillier:} Paillier \cite{Paillier99} es aditivamente homomórfico. El producto de dos textos cifrados corresponde a la suma de los textos planos originales:
     \begin{equation}
         \text{Dec}(\text{Enc}(m_1) \cdot \text{Enc}(m_2) \pmod{n^2}) = m_1 + m_2 \pmod{n}
     \end{equation}
@@ -35,7 +35,7 @@ En la mayoría de los esquemas homomórficos modernos, un texto cifrado no es so
 \begin{equation}
     c \leftarrow m + qk + e
 \end{equation}
-donde $q$ es un módulo grande, $k$ es un entero y $e$ es el término de ruido, que es un valor pequeño. El descifrado funciona eliminando el término $qk$ y recuperando $m$ siempre que el ruido $e$ sea lo suficientemente pequeño como para no "desbordar" el espacio del mensaje.
+donde $q$ es un módulo grande, $k$ es un entero y $e$ es el término de ruido, que es un valor pequeño. El descifrado funciona eliminando el término $qk$ y recuperando $m$ siempre que el ruido $e$ sea lo suficientemente pequeño como para no desbordar el espacio del mensaje.
 
 Cuando se realizan operaciones homomórficas, el ruido de los textos cifrados de entrada se combina y crece en el texto cifrado resultante. Por ejemplo, para la suma de dos textos cifrados $c_1 \leftarrow m_1 + qk_1 + e_1$ y $c_2 \leftarrow m_2 + qk_2 + e_2$:
 \begin{equation}
@@ -47,26 +47,26 @@ El nuevo ruido es $e_{add} = e_1 + e_2$. Para la multiplicación, el crecimiento
 \end{equation}
 El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado algo homomórficos (SHE).
 
-\subsection{Cifrado Homomórfico por Niveles (Leveled FHE)}
+\subsection{Cifrado Homomórfico por Niveles}
 
-Los esquemas de cifrado que soportan un número limitado de operaciones se conocen como \textbf{Cifrado Algo Homomórfico (SHE)}. Para extender su utilidad, Gentry propuso en su trabajo de 2009 \cite{Gentry09} el concepto de \textbf{Cifrado Homomórfico por Niveles (Leveled FHE)}.
+Los esquemas de cifrado que soportan un número limitado de operaciones se conocen como \textbf{Cifrado Algo Homomórfico (SHE)}. Para extender su utilidad, Gentry propuso en su trabajo de 2009 \cite{Gentry09} el concepto de \textbf{Cifrado Homomórfico por Niveles}.
 
 La idea fundamental es que, si conocemos de antemano la complejidad del cómputo que se desea realizar (es decir, la "profundidad" del circuito de operaciones), podemos configurar los parámetros del esquema de cifrado para que soporte exactamente ese número de operaciones sin que el ruido desborde el texto cifrado.
 
 En un esquema \textit{leveled}, los parámetros (como el tamaño del módulo y la distribución del ruido) se eligen en función de una profundidad máxima $L$. El sistema puede entonces evaluar correctamente cualquier circuito de profundidad hasta $L$. Sin embargo, si se intenta realizar una operación más allá de este límite, el ruido acumulado será demasiado grande y el resultado descifrado será incorrecto.
 
-Esta aproximación es muy práctica para muchas aplicaciones donde el algoritmo a ejecutar es conocido y de profundidad fija, como la evaluación de un modelo de machine learning pre-entrenado. La principal ventaja es que se evita el costoso proceso de \textit{bootstrapping} para cada operación, ya que el "presupuesto de ruido" se gestiona de forma global para todo el cómputo.
+Esta aproximación es muy práctica para muchas aplicaciones donde el algoritmo a ejecutar es conocido y de profundidad fija. La principal ventaja es que se evita el costoso proceso de \textit{bootstrapping} para cada operación, ya que el "presupuesto de ruido" se gestiona de forma global para todo el cómputo.
 
 \subsection{Bootstrapping}
 
-La idea clave de Gentry fue el \textbf{bootstrapping}. Este es un procedimiento que toma un texto cifrado ruidoso y, sin descifrarlo, lo "refresca", reduciendo su ruido y permitiendo que se realicen más operaciones sobre él. El proceso consiste en evaluar homomórficamente la propia función de descifrado. Para que esto sea posible, un esquema debe ser "bootstrappable" o circularmente seguro, lo que significa que es capaz de evaluar su propio circuito de descifrado.
+La idea clave de Gentry fue el \textbf{bootstrapping}. Este es un procedimiento que toma un texto cifrado ruidoso y, sin descifrarlo, lo refresca, reduciendo su ruido y permitiendo que se realicen más operaciones sobre él. El proceso consiste en evaluar homomórficamente la propia función de descifrado. Para que esto sea posible, un esquema debe ser circularmente seguro, lo que significa que es capaz de evaluar su propio circuito de descifrado.
 
 El proceso se puede desglosar en los siguientes pasos:
 
 \begin{enumerate}
     \item \textbf{Entradas del Proceso:}
     \begin{itemize}
-        \item Un texto cifrado "ruidoso" $c = \text{Enc}_{pk}(m)$, cuyo nivel de ruido está cerca del umbral máximo que permite un descifrado correcto.
+        \item Un texto cifrado ruidoso $c = \text{Enc}_{pk}(m)$, cuyo nivel de ruido está cerca del umbral máximo que permite un descifrado correcto.
         \item Un nuevo par de claves $(sk', pk')$ generado para el proceso de bootstrapping.
         \item La clave secreta original $sk$, pero cifrada con la nueva clave pública $pk'$: $\overline{sk} = (\text{Enc}_{pk'}(sk_1), \dots, \text{Enc}_{pk'}(sk_n))$.
     \end{itemize}

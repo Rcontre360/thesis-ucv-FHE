@@ -14,7 +14,6 @@ Formalmente, la operación se define como:
 \begin{equation}
     y_i = \sum_{j=1}^{n} w_{ij}x_j \quad \text{para } i = 1, \dots, m
 \end{equation}
-donde $y_i$ es el i-ésimo elemento del vector de salida $y$, $w_{ij}$ es el elemento en la i-ésima fila y j-ésima columna de la matriz $W$, y $x_j$ es el j-ésimo elemento del vector de entrada $x$.
 
 \subsection{Suma de Vectores}
 Dados dos vectores $y, b \in \mathbb{R}^m$, su suma $z = y + b$ es un vector $z \in \mathbb{R}^m$ que se obtiene sumando los elementos correspondientes de los vectores de entrada.
@@ -23,7 +22,6 @@ La operación se define componente a componente como:
 \begin{equation}
     z_i = y_i + b_i \quad \text{para } i = 1, \dots, m
 \end{equation}
-donde $z_i$, $y_i$ y $b_i$ son los i-ésimos elementos de los vectores $z$, $y$ y $b$, respectivamente.
 
 \subsection{Funciones sobre Vectores}
 Dada una función escalar $\sigma: \mathbb{R} \to \mathbb{R}$ y un vector $z \in \mathbb{R}^m$, es posible aplicar la función a cada elemento del vector de forma independiente. El resultado es un nuevo vector $a \in \mathbb{R}^m$.
@@ -32,7 +30,6 @@ Esta operación se define como:
 \begin{equation}
     a_i = \sigma(z_i) \quad \text{para } i = 1, \dots, m
 \end{equation}
-donde $a_i$ y $z_i$ son los i-ésimos elementos de los vectores $a$ y $z$.
 
 \section{Funciones de Activación}
 
@@ -75,7 +72,7 @@ Debido a su estructura, las capas totalmente conectadas son de propósito genera
 Las Redes Neuronales Convolucionales son una clase especializada de redes neuronales diseñadas para procesar datos con una topología de rejilla, como las imágenes \cite{LeCun98}. Su principal ventaja es la capacidad de detectar patrones espaciales locales y jerárquicos mediante el uso de pesos compartidos.
 
 \subsubsection{Capas Convolucionales}
-El componente central de una CNN es la capa convolucional. Esta capa aplica un conjunto de filtros (o \textit{kernels}) a los datos de entrada. Un filtro es una pequeña matriz de pesos que se desliza sobre la entrada para calcular productos punto, generando un "mapa de características" que resalta la presencia de un patrón específico. Los parámetros clave de esta operación son \cite{Goodfellow16}:
+El componente central de una CNN es la capa convolucional. Esta capa aplica un conjunto de filtros a los datos de entrada. Un filtro es una pequeña matriz de pesos que se desliza sobre la entrada para calcular productos punto, generando un "mapa de características" que resalta la presencia de un patrón específico. Los parámetros clave de esta operación son \cite{Goodfellow16}:
 \begin{itemize}
     \item \textbf{Tamaño del Kernel (Kernel Size):} Define las dimensiones del filtro. Un kernel pequeño detectará patrones muy locales, mientras que uno más grande capturará características más amplias.
     \item \textbf{Stride:} Especifica el número de píxeles que el filtro se desplaza en cada paso sobre la entrada. Un stride de 1 mueve el filtro un píxel a la vez, mientras que un stride mayor produce mapas de características de menor tamaño.

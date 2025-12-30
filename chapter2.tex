@@ -15,16 +15,16 @@ En los esquemas de cifrado basados en retículos como CKKS, se utiliza un tipo p
 La elección de $x^n + 1$ como polinomio ciclotómico para definir el anillo $R$ ofrece varias ventajas computacionales clave:
 
 \begin{itemize}
-    \item \textbf{Irreducibilidad y Seguridad:} Aunque su demostración es matemática, el hecho de que $x^n+1$ sea irreducible sobre los enteros es importante porque garantiza que el anillo $R$ tenga propiedades algebraicas más resistentes a ciertos ataques criptoanalíticos.
+    \item \textbf{Irreducibilidad y Seguridad:} El hecho de que $x^n+1$ sea irreducible sobre los enteros es importante porque garantiza que el anillo $R$ tenga propiedades algebraicas más resistentes a ciertos ataques criptoanalíticos.
     \item \textbf{Eficiencia en Operaciones Polinomiales:} La reducción de polinomios módulo $x^n + 1$ es extremadamente eficiente. Cuando se multiplican dos polinomios en $R$, cualquier término $x^k$ con $k \ge n$ puede ser simplificado usando la relación $x^n \equiv -1 \pmod{x^n + 1}$. Esto acelera significativamente las multiplicaciones polinomiales, que son la operación más costosa en la criptografía homomórfica.
-    \item \textbf{Base para el Empaquetado de Datos (SIMD):} Las raíces de $x^n+1$ (que son las $2n$-ésimas raíces primitivas de la unidad) son la clave para el codificado. Esta técnica permite empaquetar múltiples números (reales o complejos) en un solo polinomio. Esto es análogo a las instrucciones SIMD donde una única operación homomórfica sobre un polinomio cifrado puede afectar simultáneamente a múltiples datos subyacentes, esto aumenta el rendimiento.
+    \item \textbf{Base para el Empaquetado de Datos (SIMD):} Las raíces de $x^n+1$ son la clave para el codificado. Esta técnica permite empaquetar múltiples números (reales o complejos) en un solo polinomio. Esto es análogo a las instrucciones SIMD donde una única operación homomórfica sobre un polinomio cifrado puede afectar simultáneamente a múltiples datos subyacentes, esto aumenta el rendimiento.
 \end{itemize}
 
 La elección de $n$ como potencia de 2 es también fundamental para la eficiencia de la Transformada de Teoría de Números (NTT), una versión de la Transformada Rápida de Fourier (FFT) adaptada para aritmética modular, que es utilizada para acelerar aún más las multiplicaciones polinomiales en el anillo $R_q$. 
 
-\subsection{La Inmersión Canónica}
+\subsection{Codificación}
 
-La \textbf{Inmersión Canónica} es una funcion biyectiva que va desde los polinomios en el anillo $R$ (se usan para las operaciones homomórficas) y el de los vectores de números complejos (donde residen los datos a procesar). Permiten que las operaciones realizadas sobre polinomios cifrados se traduzcan en operaciones sobre los datos numéricos subyacentes.
+La codificación o la inversa de la \textbf{Inmersión Canónica} es una funcion biyectiva que va desde los polinomios en el anillo $R$ (se usan para las operaciones homomórficas) y el de los vectores de números complejos (donde residen los datos a procesar). Permiten que las operaciones realizadas sobre polinomios cifrados se traduzcan en operaciones sobre los datos numéricos subyacentes.
 
 \begin{enumerate}
     \item \textbf{El Anillo de Polinomios $R$:} CKKS opera en un anillo de polinomios $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$. Cada dato cifrado es un polinomio $p(x)$ cuyos coeficientes son enteros.
@@ -75,7 +75,7 @@ La seguridad y funcionalidad del esquema CKKS dependen de la correcta generació
 El rendimiento y la seguridad del esquema CKKS están intrínsecamente ligados a la selección de sus parámetros. Las variables fundamentales a considerar son:
 
 \begin{itemize}
-   \item \textbf{Grado del Polinomio ($N$):} Se refiere al grado del polinomio ciclotómico $\Phi_M(x)$ que define el anillo $R$. Típicamente, $N$ es una potencia de 2 (por ejemplo, $2^{12} \dots 2^{15}$). Un valor mayor de $N$ permite una mayor seguridad y un mayor número de "slots" para el empaquetado SIMD, pero incrementa linealmente el tiempo de cómputo y el tamaño de las claves. Según Cheon et al. \cite{CKKS17}, para garantizar un nivel de seguridad de $\lambda$ bits, el grado del polinomio $N$ debe satisfacer la condición $N \ge \frac{\lambda + 110}{7.2}\log(P \cdot q_L)$.
+   \item \textbf{Grado del Polinomio ($N$):} Se refiere al grado del polinomio ciclotómico $\Phi_M(x)$ que define el anillo $R$. Típicamente, $N$ es una potencia de 2 (por ejemplo, $2^{12} \dots 2^{15}$). Un valor mayor de $N$ permite una mayor seguridad y un mayor número de slots para el empaquetado SIMD, pero incrementa linealmente el tiempo de cómputo y el tamaño de las claves. Según Cheon et al. \cite{CKKS17}, para garantizar un nivel de seguridad de $\lambda$ bits, el grado del polinomio $N$ debe satisfacer la condición $N \ge \frac{\lambda + 110}{7.2}\log(P \cdot q_L)$.
    
    \item \textbf{Módulo de Coeficientes ($q$ y $P$):} En CKKS, el módulo total $q$ suele ser un producto de varios primos. La magnitud de $q$ determina la cantidad de multiplicaciones que se pueden realizar. El parámetro $P$ es un módulo adicional utilizado en la generación de claves de evaluación. El producto $P \cdot q$ representa el módulo más grande en el esquema. A mayor $q$, mayor capacidad de cómputo, pero aumentar $q$ sin aumentar $N$ reduce la seguridad.
    
@@ -97,7 +97,7 @@ Para operar en CKKS, se requiere la generación de cuatro tipos de claves, cada 
    \item \textbf{Clave de Relinearización ($rlk$):} Tras una multiplicación homomórfica, el texto cifrado resultante aumenta su tamaño. Para poder realizar operaciones subsecuentes, es necesario relinearizar el texto cifrado. Para ello se utiliza la clave de relinearización. Esta clave se construye como un par de polinomios $(b', a') \in R_{P \cdot q_L}^2$, donde $a'$ se muestrea, dada una distribucion, de $R_{P \cdot q}$ y $b'$ se calcula como:
    $$ b' = -a's + e' + P \cdot s^2 \pmod{P \cdot q} $$
 
-   \item \textbf{Claves de Rotación:} Dado que CKKS utiliza una estructura SIMD para empaquetar un vector de datos en un solo texto cifrado, las rotaciones son operaciones cruciales. Estas claves permiten rotar cíclicamente los elementos dentro de los "slots" de un vector cifrado sin necesidad de descifrar. Cada clave de rotación se genera para un desplazamiento específico y se basa en los automorfismos de Galois del anillo ciclotómico.
+   \item \textbf{Claves de Rotación:} Dado que CKKS utiliza una estructura SIMD para empaquetar un vector de datos en un solo texto cifrado, las rotaciones son operaciones cruciales. Estas claves permiten rotar cíclicamente los elementos dentro de los slots de un vector cifrado sin necesidad de descifrar. Cada clave de rotación se genera para un desplazamiento específico y se basa en los automorfismos de Galois del anillo ciclotómico.
 \end{enumerate}
 
 \section{Operaciones Homomórficas en CKKS}
@@ -143,7 +143,7 @@ Esta clave es un cifrado de $s^2$ que fue generada usando el módulo auxiliar $P
 $$ ct_{relin} = (d_0, d_1) + \lfloor P^{-1} \cdot d_2 \cdot rlk \rceil \pmod q $$
 El resultado, $ct_{relin}$, es un texto cifrado de dos componentes que cifra el mismo producto $m_1 \cdot m_2$ (escalado por $\Delta^2$), pero ahora bajo la clave secreta original $s$.
 
-\subsection{Reescalado (Modulus Switching)}
+\subsection{Reescalado}
 
 Después de la relinearización, el mensaje sigue teniendo un factor de escala de $\Delta^2$ y un ruido considerable. El reescalado se encarga de ambos problemas. Esta operación se aplica sobre el texto cifrado ya relinearizado, $ct_{relin}$.
 
@@ -170,13 +170,13 @@ El principal desafío del bootstrapping en CKKS es evaluar homomórficamente su 
 Para solucionar esto se propuso un algoritmo \cite{CKKS17-Boot} que sigue los siguientes pasos:
 
 \begin{enumerate}
-    \item \textbf{Elevación del Módulo:} Se toma el texto cifrado "gastado" (en un módulo pequeño `q`) y se escala para considerarlo como un texto cifrado en un módulo mucho más grande, `Q`. Esto no elimina el ruido, pero crea el "espacio" matemático necesario para las siguientes operaciones.
+    \item \textbf{Elevación del Módulo:} Se toma el texto cifrado gastado (en un módulo pequeño `q`) y se escala para considerarlo como un texto cifrado en un módulo mucho más grande, `Q`. Esto no elimina el ruido, pero crea el espacio matemático necesario para las siguientes operaciones.
 
     \item \textbf{Coeficientes a Ranuras:} Un texto cifrado es un polinomio, pero las operaciones SIMD ocurren en las ranuras (las evaluaciones de dicho polinomio). El bootstrapping necesita aplicar una función (la sinusoide) a cada uno de los \textit{coeficientes} del polinomio cifrado, no a los valores que ya están en las ranuras. El objetivo es, por tanto, mover los coeficientes $(t_0, t_1, \dots)$ a las ranuras para poder usar el paralelismo. Esta transformación es una operación lineal y, como tal, puede ser evaluada homomórficamente aplicando una serie de multiplicaciones y rotaciones. El resultado son nuevos textos cifrados cuyo contenido en las ranuras es el vector de coeficientes original.
 
     \item \textbf{Evaluación de la Función Modular:} En lugar de calcular la reducción modular directamente, se utiliza una función sinusoidal (`sin(x)`) como una aproximación. Como la función seno sí puede ser aproximada eficientemente por un polinomio, se puede evaluar de forma homomórfica sobre los datos en las ranuras (que ahora contienen los coeficientes). El resultado de esta evaluación es una aproximación del mensaje original, libre del ruido modular.
 
-    \item \textbf{Ranuras a Coeficientes:} Este es el proceso inverso. Una vez que la función sinusoidal ha sido aplicada sobre los coeficientes, el resultado es un vector de valores del mensaje ya "limpios" que residen en las ranuras. El objetivo ahora es tomar estos valores y usarlos para construir el polinomio del texto cifrado final. De nuevo, esta es una transformación lineal que se aplica homomórficamente. Agrupa los valores procesados de las ranuras y los reconstruye como los coeficientes de un único polinomio, completando el "refresco" del texto cifrado.
+    \item \textbf{Ranuras a Coeficientes:} Este es el proceso inverso. Una vez que la función sinusoidal ha sido aplicada sobre los coeficientes, el resultado es un vector de valores del mensaje ya limpios que residen en las ranuras. El objetivo ahora es tomar estos valores y usarlos para construir el polinomio del texto cifrado final. De nuevo, esta es una transformación lineal que se aplica homomórficamente. Agrupa los valores procesados de las ranuras y los reconstruye como los coeficientes de un único polinomio, completando el refresco del texto cifrado.
 \end{enumerate}
 
 El resultado final es un nuevo texto cifrado, en un nivel de módulo alto, que contiene el mismo mensaje original pero con el ruido inicial. Aunque este proceso es computacionalmente costoso, permite realizar cómputos de profundidad arbitraria, algo indispensable para algoritmos iterativos o redes neuronales muy profundas.
