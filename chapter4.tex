@@ -1,78 +1,81 @@
-\chapter{Redes Neuronales y FHE}
+\chapter{Redes Neuronales sobre Cifrado Homomórfico}
 
-En el contexto de este trabajo, nos centramos en la inferencia homomórfica, donde un cliente envía sus datos cifrados a un servidor que posee el modelo (pesos sin cifrar). El servidor realiza el cómputo y devuelve el resultado cifrado. Para que este proceso es necesario redefinir las capas lineales y activaciones para que sean compatibles con la estructura algebraica del esquema CKKS.
+\section{Operaciones Lineales en CKKS}
 
-\section{Arquitectura}
+La implementación de operaciones lineales, como el producto escalar, la multiplicación matriz-vector y las convoluciones, sobre datos cifrados con el esquema CKKS \cite{CKKS17} presenta desafíos únicos que requieren un diseño cuidadoso. A diferencia de la computación en texto plano, donde las operaciones se realizan directamente sobre los valores numéricos, en el dominio homomórfico debemos trabajar con polinomios cifrados que representan vectores de números complejos. La eficiencia y la viabilidad de estas operaciones dependen en gran medida de cómo se organizan los datos dentro de los textos cifrados y cómo se aprovechan las propiedades del esquema CKKS.
 
-Una red neuronal puede definirse como un grafo acíclico dirigido compuesto por una secuencia de capas, donde cada capa realiza una transformación específica sobre los datos de entrada. El objetivo fundamental de esta arquitectura es aproximar una función mediante la composición de funciones más simples.
+\subsection{El Desafío del Layout de Datos}
 
-La arquitectura de una red neuronal consta de una capa de entrada, una o más capas ocultas y una capa de salida. La transición de datos entre una capa $l$ y la siguiente capa $l+1$ se define mediante una combinación de una transformación lineal seguida de una función de activación no lineal. Si representamos las activaciones de la capa $l$ como un vector $a^{l}$, el cálculo de las activaciones en la capa siguiente $a^{l+1}$ se expresa mediante la siguiente ecuación:$ a^{l+1} = \sigma(W^{l}a^{l} + b^{l}) $
-Donde:
+El esquema CKKS permite empaquetar múltiples números en un solo texto cifrado. Esto significa que un único polinomio cifrado puede contener un vector de $N/2$ valores independientes, donde $N$ es el grado del polinomio ciclotómico. La clave para la eficiencia en la inferencia de redes neuronales homomórficas reside en cómo se mapean los tensores (vectores de entrada, matrices de pesos) de la red a los "slots" de los textos cifrados.
 
-\begin{itemize}
-    \item $W^{l}$ es la \textbf{matriz de pesos} de la capa $l$.
-    \item $b^{l}$ es el \textbf{sesgo}, que permite desplazar la función de activación para mejorar la capacidad de ajuste del modelo.
-    \item $\sigma$ es la \textbf{función de activación}, una función no lineal (ReLU, Sigmoide, etc).
-\end{itemize}
+El desafío principal radica en que las operaciones homomórficas aumentan el ruido y consumen niveles de la jerarquía de módulos. Por lo tanto, es crucial minimizar el número de operaciones, en particular las rotaciones, que son computacionalmente costosas y requieren claves de evaluación adicionales (Galois Keys). Un algoritmo para operar los datos ineficiente puede llevar a un número excesivo de rotaciones, lo que degrada significativamente el rendimiento.
 
-\subsection{Propagación hacia Adelante}
+Consideremos una operación fundamental como la multiplicación matriz-vector $y = Wx$. Si $W$ es una matriz de $m \times n$ y $x$ es un vector de $n$ elementos, el resultado $y$ es un vector de $m$ elementos. La forma en que se empaquetan $W$ y $x$ en los textos cifrados determinará la complejidad de la operación. Un enfoque sencillo de empaquetar cada fila o columna de $W$ en un texto cifrado separado resultaría en un gran número de textos cifrados y una gestión compleja. Por ello, se buscan estrategias que permitan empaquetar la mayor cantidad de información posible en un número reducido de textos cifrados, aprovechando al máximo la capacidad SIMD de CKKS.
 
-El proceso de propagación hacia adelante es el flujo de datos desde la entrada hasta la salida para generar una predicción. En este proceso, la salida de una capa se convierte en la entrada de la siguiente. Para una red de $L$ capas, la inferencia completa es el resultado de la composición de funciones:
+\subsection{Técnica de Diagonalización Halevi-Shoup}
 
-$$ \hat{y} = f_L(f_{L-1}(\dots f_1(x) \dots)) $
+Para optimizar la multiplicación matriz-vector en el dominio homomórfico, una de las técnicas más eficientes es la diagonalización de la matriz de pesos \cite{Halevi14}, popularizada por Halevi y Shoup. Esta técnica se basa en la observación de que la multiplicación de un vector por una matriz puede expresarse como una suma de productos elemento a elemento (Hadamard) y rotaciones cíclicas.
 
-\section{El Problema de las Funciones de Activación en FHE}
+La idea central es transformar la matriz de pesos $W$ en un conjunto de vectores que representan sus diagonales. Específicamente, para una matriz $W$, se extraen sus diagonales y se codifican en textos claros (o cifrados, dependiendo del contexto) que luego se utilizarán en la operación. Cuando se multiplica un vector cifrado $x$ por una matriz $W$, cada elemento del vector resultante $y_i$ es el producto escalar de la $i$-ésima fila de $W$ con el vector $x$.
 
-En el diseño de redes neuronales convencionales, las funciones de activación no lineales son esenciales para permitir que el modelo aprenda fronteras de decisión complejas. Sin embargo, en el dominio del cifrado homomórfico, estas funciones representan el principal obstáculo para la ejecución de la inferencia.
-
-\subsection{Limitación Algebraica de los Esquemas de Cifrado}
-
-Los esquemas de cifrado homomórfico basados en el problema RLWE, como CKKS, se basan en estructuras de anillos matemáticos. Esto implica que las únicas operaciones aritméticas soportadas de forma nativa sobre los textos cifrados son la adición y la multiplicación.Desde una perspectiva de circuitos, esto significa que solo es posible evaluar funciones que puedan expresarse como polinomios. Cualquier operación que no sea una suma o un producto (como divisiones, comparaciones lógicas o funciones trascendentes) no puede ejecutarse directamente sobre los datos cifrados.
-
-\subsection{Incompatibilidad de Funciones Clásicas: ReLU y Sigmoide}
-
-Las funciones de activación más utilizadas en la actualidad presentan incompatibilidades críticas con el esquema CKKS:
-
-\begin{itemize}
-    \item \textbf{ReLU (Rectified Linear Unit):} Definida como $f(x) = \max(0, x)$. Esta función es "no suave" debido a la discontinuidad en su derivada en $x=0$. Evaluar un ReLU requiere una comparación lógica (un \textit{if-else}), operación que no existe en el álgebra de anillos de CKKS. A diferencia de esquemas como TFHE, que permiten evaluaciones de puertas lógicas, en CKKS no es eficiente realizar comparaciones de magnitud sobre el ruido del cifrado.
-    \item \textbf{Sigmoide y Softmax:} Estas funciones dependen de operaciones de exponenciación ($e^x$) y división. Al no ser funciones polinomiales de grado finito, no existe una combinación de sumas y multiplicaciones homomórficas que pueda calcularlas con exactitud.
-\end{itemize}
-
-\subsection{Solución: Aproximación Polinomial}
-
-Para superar esta limitación, la estrategia adoptada en esta tesis y en la librería desarrollada consiste en sustituir las funciones de activación no lineales por sus aproximaciones polinomiales. Este proceso transforma una función no compatible en un polinomio de grado $d$ de la forma:$ \sigma(x) \approx P_d(x) = \sum_{i=0}^{d} c_i x^i $
-Existen dos métodos principales para derivar estos polinomios:
-
+La diagonalización permite que la multiplicación matriz-vector se realice de la siguiente manera:
 \begin{enumerate}
-    \item \textbf{Polinomios de Taylor:} Útiles para aproximaciones locales alrededor de un punto, aunque su error crece rápidamente a medida que $x$ se aleja del centro de expansión.
-    \item \textbf{Polinomios de Chebyshev:} Son la solución preferida en FHE y la implementada en este trabajo. Los polinomios de Chebyshev minimizan el error máximo de aproximación (error minimax) en un intervalo determinado $[-B, B]$. Esto es crucial, ya que permite mantener una precisión uniforme sobre el rango esperado de las activaciones de la red.
+    \item Se codifica el vector de entrada $x$ en un texto cifrado $ct_x$.
+    \item La matriz de pesos $W$ se pre-procesa para extraer sus diagonales. Cada diagonal se codifica en un texto claro.
+    \item La operación se realiza iterando sobre las diagonales de $W$. Para cada diagonal, se multiplica homomórficamente con una versión rotada de $ct_x$.
+    \item Los resultados de estas multiplicaciones y rotaciones se acumulan mediante sumas homomórficas para obtener el texto cifrado del vector resultante $y$.
 \end{enumerate}
 
-La elección del grado del polinomio $d$ representa un compromiso (trade-off) técnico en la librería: un grado mayor ofrece una mejor aproximación a la función original (mayor precisión del modelo), pero consume más niveles en la jerarquía de módulos del esquema CKKS y aumenta el tiempo de cómputo debido al mayor número de multiplicaciones homomórficas requeridas.
+Esta técnica es particularmente eficiente porque reduce el número de rotaciones necesarias. En lugar de rotar el texto cifrado de entrada para cada elemento de la matriz, se rotan los resultados intermedios o se utilizan rotaciones específicas que se corresponden con las diagonales de la matriz. Esto minimiza el consumo de niveles y el costo computacional, haciendo que la multiplicación matriz-vector sea práctica en CKKS.
 
-\section{Operaciones Lineales y Empaquetado SIMD}
+\subsection{Algoritmo para Multiplicación Matriz-Vector}
 
-En el aprendizaje automático convencional, las operaciones de álgebra lineal se ejecutan mediante bibliotecas altamente optimizadas que aprovechan la memoria caché y las unidades de punto flotante de la CPU o GPU. Sin embargo, en el dominio cifrado, el desafío no es solo realizar el cálculo, sino cómo organizar los datos dentro de la estructura de "ranuras" (slots) de los textos cifrados de CKKS para maximizar el paralelismo.
-
-\subsection{Estrategias de Layout y Empaquetado de Datos}
-
-Como se explicó en capítulos anteriores, un texto cifrado de CKKS puede almacenar un vector de $n$ valores. Para una red neuronal, esto significa que debemos decidir cómo mapear las matrices de pesos ($W$) y los vectores de activación ($a$) a estos vectores de slots. Existen tres estrategias principales de disposición (layout):
-
-\begin{itemize}
-    \item \textbf{Layout por Filas/Columnas:} Se almacena cada fila o columna de la matriz en un texto cifrado independiente. Aunque es intuitivo, resulta ineficiente para matrices grandes, ya que consume muchos textos cifrados y aumenta el costo de comunicación.
-    \item \textbf{Layout Diagonal (Método de Halevi-Shoup):} Es la técnica más eficiente para la multiplicación matriz-vector en FHE. Consiste en aplanar las diagonales de la matriz en vectores que luego se cifran. Esta estrategia permite realizar la operación completa utilizando un número mínimo de rotaciones y multiplicaciones, aprovechando al máximo la estructura SIMD.
-\end{itemize}
-
-\subsection{Multiplicación Matriz-Vector Homomórfica}
-
-La operación fundamental de una capa densa, $y = Wx$, requiere una logística compleja en el dominio cifrado. Dado que el vector $x$ está cifrado y la matriz $W$ suele ser conocida por el servidor (texto claro), la multiplicación se realiza mediante un ciclo de Multiplicación, Rotación y Acumulación.Para multiplicar una matriz por un vector cifrado de manera eficiente, el proceso sigue estos pasos técnicos:
+La multiplicación matriz-vector homomórfica, $y = Wx$, donde $W$ es una matriz de pesos y $x$ es un vector de entrada cifrado, es una operación fundamental en las capas densas de las redes neuronales. Utilizando la técnica de diagonalización de Halevi-Shoup, el algoritmo se puede detallar en los siguientes pasos:
 
 \begin{enumerate}
-    \item \textbf{Multiplicación Elemento a Elemento:} Se multiplica el texto cifrado del vector de entrada por los vectores que representan las diagonales de la matriz de pesos (codificados en texto claro).
-    \item \textbf{Rotación Cifrada (Cyclic Shift):} Debido a que los datos están empaquetados en slots, para sumar los componentes correctos es necesario rotar cíclicamente los elementos dentro del texto cifrado. Esta es una operación criptográfica específica que permite mover el valor del slot $i$ al slot $j$ sin descifrar el contenido.
-    \item \textbf{Acumulación:} Se suman los resultados de las rotaciones para obtener el vector de salida cifrado.
+    \item \textbf{Preparación de la Matriz de Pesos ($W$):}
+        *   La matriz $W$ se descompone en sus vectores diagonales. Para una matriz $W$ de tamaño $m \times n$, se extraen $n$ vectores diagonales. Cada vector diagonal $d_k$ contiene los elementos $W_{i, (i+k) \pmod n}$ para un desplazamiento $k$.
+        *   Cada vector diagonal $d_k$ se codifica en un texto claro (o en un texto cifrado si los pesos son privados) utilizando el esquema CKKS, resultando en $pt_{d_k}$. Estos textos claros se pueden pre-calcular y almacenar.
+
+    \item \textbf{Codificación del Vector de Entrada ($x$):}
+        *   El vector de entrada $x$ (que contiene los datos sensibles del cliente) se codifica en un texto cifrado $ct_x$ utilizando el esquema CKKS. Este texto cifrado se empaqueta de manera que cada elemento $x_i$ ocupe un *slot* específico.
+
+    \item \textbf{Cómputo Iterativo:}
+        *   Se inicializa un texto cifrado acumulador $ct_y$ a cero.
+        *   Para cada desplazamiento diagonal $k$ (desde $0$ hasta $n-1$):
+            *   Se rota el texto cifrado de entrada $ct_x$ por $k$ posiciones, obteniendo $ct_{x,rot_k}$. Esta operación utiliza las claves de rotación (Galois Keys) pre-generadas.
+            *   Se realiza una multiplicación homomórfica elemento a elemento (Hadamard product) entre $ct_{x,rot_k}$ y el texto claro de la diagonal correspondiente $pt_{d_k}$. El resultado es un nuevo texto cifrado $ct_{prod_k}$.
+            *   Se suma homomórficamente $ct_{prod_k}$ al acumulador $ct_y$.
+            *   Después de cada multiplicación, se aplica la operación de *rescaling* para controlar el crecimiento del ruido y ajustar el factor de escala, consumiendo un nivel de la jerarquía de módulos.
+
+    \item \textbf{Resultado Final:}
+        *   Una vez completadas todas las iteraciones, $ct_y$ contendrá el resultado cifrado de la multiplicación matriz-vector $y = Wx$. Este texto cifrado puede ser descifrado por el cliente para obtener el resultado en texto plano, o puede pasarse como entrada a la siguiente capa homomórfica.
 \end{enumerate}
 
-\subsection{El Costo de las Rotaciones}
+Este algoritmo es eficiente porque aprovecha la capacidad SIMD de CKKS para realizar múltiples multiplicaciones en paralelo y minimiza el número de rotaciones, que son las operaciones más costosas. La clave de su rendimiento radica en la pre-computación de los textos claros diagonales y la gestión controlada del ruido mediante el *rescaling*.
 
-Un aspecto crítico para el desarrollo de la librería en Python es que, en CKKS, las rotaciones son computacionalmente más costosas que las adiciones y requieren "claves de evaluación" (Galois Keys) adicionales. Por lo tanto, el algoritmo de multiplicación implementado en la librería debe optimizar el número de rotaciones necesarias. Un mal diseño del empaquetado de la matriz puede resultar en un rendimiento órdenes de magnitud más lento.Al automatizar estas estrategias de empaquetado y rotación, la librería desarrollada permite al usuario final definir capas lineales sin tener que gestionar manualmente la compleja lógica de alineación de slots y generación de claves de rotación.
+\subsection{Algoritmo para Convoluciones}
+
+Las operaciones de convolución son fundamentales en las Redes Neuronales Convolucionales (CNNs) y, al igual que la multiplicación matriz-vector, requieren una adaptación específica para ser ejecutadas en el dominio homomórfico. La estrategia más común y eficiente para realizar convoluciones homomórficas es transformarlas en una multiplicación matriz-vector, una técnica conocida como `im2col` (image to column) \cite{Goodfellow16}.
+
+El proceso se descompone en los siguientes pasos:
+
+\begin{enumerate}
+    \item \textbf{Transformación `im2col` del Tensor de Entrada:}
+        *   El tensor de entrada (imagen o mapa de características) se transforma en una matriz 2D. Cada "parche" de la entrada que sería procesado por el kernel de convolución se "desenrolla" en una columna de esta nueva matriz.
+        *   Esta transformación se realiza en texto plano antes de cifrar los datos, o se puede adaptar para operar sobre datos cifrados si la entrada ya está cifrada. Sin embargo, para la inferencia homomórfica, es más eficiente que el cliente realice esta transformación localmente y luego cifre la matriz resultante.
+        *   Los parámetros de la convolución, como el tamaño del kernel, el *stride* (paso) y el *padding* (relleno), se incorporan en esta transformación `im2col`. Por ejemplo, el *padding* se aplica añadiendo ceros alrededor de la imagen antes de extraer los parches.
+
+    \item \textbf{Transformación del Kernel de Convolución:}
+        *   El kernel (o filtro) de convolución, que es un tensor pequeño, también se transforma en una matriz 2D. Esta matriz se organiza de manera que cada fila corresponda a un kernel aplanado.
+
+    \item \textbf{Multiplicación Matriz-Vector Homomórfica:}
+        *   Una vez que el tensor de entrada y el kernel se han transformado en matrices 2D, la operación de convolución se convierte en una multiplicación matriz-vector estándar.
+        *   Se aplica el **Algoritmo para Multiplicación Matriz-Vector** descrito en la Sección 1.3. La matriz `im2col` de la entrada se trata como el vector de entrada cifrado, y la matriz del kernel se trata como la matriz de pesos.
+        *   El resultado de esta multiplicación es un texto cifrado que representa el mapa de características de salida aplanado.
+
+    \item \textbf{Re-transformación `col2im` (Opcional):}
+        *   Si es necesario, el resultado aplanado se puede re-transformar en un tensor (mapa de características) con las dimensiones originales de la salida de una convolución. Esta operación también se puede realizar en texto plano después del descifrado o, si es necesario, adaptarla para el dominio cifrado.
+\end{enumerate}
+
+Esta estrategia permite reutilizar el algoritmo optimizado de multiplicación matriz-vector para realizar convoluciones, lo que simplifica la implementación y aprovecha las optimizaciones ya desarrolladas. El manejo de los parámetros de *stride* y *padding* se integra directamente en la fase de `im2col`, asegurando que la operación homomórfica refleje fielmente la convolución en texto plano. La eficiencia se mantiene al minimizar las rotaciones y gestionar el ruido de manera efectiva.
