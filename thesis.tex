@@ -54,6 +54,9 @@
 
 %Inicio de documento
 \begin{document}
+\makeatletter
+\renewcommand{\@seccntformat}[1]{\csname the#1\endcsname\quad}
+\makeatother
 \hyphenation{pa-la-bra}
 
 \renewcommand{\contentsname}{Tabla de Contenidos}
