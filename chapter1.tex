@@ -4,7 +4,7 @@ El cifrado homomórfico es una forma de cifrado que permite realizar cómputos s
 
 \section{Orígenes}
 
-La idea de un sistema criptográfico que permitiera la manipulación de datos cifrados fue propuesta por primera vez en 1978 por Rivest, Adleman y Dertouzos \cite{RAD78}. En su trabajo, plantearon la cuestión de si era posible construir un sistema de cifrado que permitiera a un tercero realizar operaciones sobre datos cifrados sin necesidad de descifrarlos primero. Llamaron a este concepto "homomorfismo de privacidad".
+La idea de un sistema criptográfico que permitiera la manipulación de datos cifrados fue propuesta por primera vez en 1978 por Rivest, Adleman y Dertouzos \cite{RAD78}. En su trabajo, plantearon la cuestión de si era posible construir un sistema de cifrado que permitiera a un tercero realizar operaciones sobre datos cifrados sin necesidad de descifrarlos primero. Llamaron a este concepto ``homomorfismo de privacidad``
 
 Matemáticamente, un esquema de cifrado es homomórfico si, dado un conjunto de operaciones $\oplus$ sobre el espacio de texto plano $\mathcal{M}$ y un conjunto de operaciones $\otimes$ sobre el espacio de texto cifrado $\mathcal{C}$, se cumple la siguiente propiedad:
 \begin{equation}
@@ -12,7 +12,7 @@ Matemáticamente, un esquema de cifrado es homomórfico si, dado un conjunto de 
 \end{equation}
 donde $m_1, m_2 \in \mathcal{M}$, y $\text{Enc}$ y $\text{Dec}$ son las funciones de cifrado y descifrado, respectivamente.
 
-Durante décadas, la construcción de un esquema de cifrado que pudiera evaluar un número arbitrario de operaciones de suma y multiplicación, conocido como \textbf{cifrado totalmente homomórfico (FHE)}, fue considerado uno de los mayores desafíos en la criptografía. Antes del primer esquema FHE, se desarrollaron varios \textbf{esquemas parcialmente homomórficos (PHE)}, que solo admitían un tipo de operación (suma o multiplicación) un número ilimitado de veces. Algunos ejemplos notables son:
+Durante décadas, la construcción de un esquema de cifrado que pudiera evaluar un número arbitrario de operaciones de suma y multiplicación, conocido como \textbf{cifrado totalmente homomórfico (FHE, Fully Homomorphic Encryption)}, fue considerado uno de los mayores desafíos en la criptografía. Antes del primer esquema FHE, se desarrollaron varios \textbf{esquemas parcialmente homomórficos (PHE)}, que solo admitían un tipo de operación (suma o multiplicación) un número ilimitado de veces. Algunos ejemplos notables son:
 
 \begin{itemize}
     \item \textbf{RSA:} RSA \cite{RSA78} es multiplicativamente homomórfico. Dados dos textos cifrados $c_1 = \text{Enc}(m_1) = m_1^e \pmod{N}$ y $c_2 = \text{Enc}(m_2) = m_2^e \pmod{N}$, su producto es:
@@ -31,7 +31,7 @@ Estos esquemas PHE son útiles en aplicaciones específicas, pero no son suficie
 
 En 2009, cuando Craig Gentry, en su tesis doctoral \cite{Gentry09}, presentó el primer esquema de cifrado totalmente homomórfico. La construcción de Gentry se basó en retículos y superó el principal obstáculo que impedía la creación de esquemas FHE, el \textbf{ruido}. El esquema de Gentry permite realizar adicion y multiplicacion sobre texto cifrado, ademas es posible construir circuitos para realizar computo arbitrario.
 
-En la mayoría de los esquemas homomórficos modernos, un texto cifrado no es solo una función del mensaje, sino también de un error o "ruido" que es fundamental para la seguridad del esquema. Un texto cifrado $c$ de un mensaje $m$ se puede representar conceptualmente como:
+En la mayoría de los esquemas homomórficos modernos, un texto cifrado no es solo una función del mensaje, sino también de un error o ``ruido`` que es fundamental para la seguridad del esquema. Un texto cifrado $c$ de un mensaje $m$ se puede representar conceptualmente como:
 \begin{equation}
     c \leftarrow m + qk + e
 \end{equation}
@@ -45,17 +45,17 @@ El nuevo ruido es $e_{add} = e_1 + e_2$. Para la multiplicación, el crecimiento
 \begin{equation}
     c_{mult} = c_1 \cdot c_2 \leftarrow (m_1 \cdot m_2) + q(\dots) + (m_1 e_2 + m_2 e_1 + e_1 e_2)
 \end{equation}
-El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado algo homomórficos (SHE).
+El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado algo homomórficos.
 
 \subsection{Cifrado Homomórfico por Niveles}
 
-Los esquemas de cifrado que soportan un número limitado de operaciones se conocen como \textbf{Cifrado Algo Homomórfico (SHE)}. Para extender su utilidad, Gentry propuso en su trabajo de 2009 \cite{Gentry09} el concepto de \textbf{Cifrado Homomórfico por Niveles}.
+Los esquemas de cifrado que soportan un número limitado de operaciones se conocen como \textbf{Cifrado Algo Homomórfico}. Para extender su utilidad, Gentry propuso en su trabajo de 2009 \cite{Gentry09} el concepto de \textbf{Cifrado Homomórfico por Niveles}.
 
-La idea fundamental es que, si conocemos de antemano la complejidad del cómputo que se desea realizar (es decir, la "profundidad" del circuito de operaciones), podemos configurar los parámetros del esquema de cifrado para que soporte exactamente ese número de operaciones sin que el ruido desborde el texto cifrado.
+La idea fundamental es que, si conocemos de antemano la complejidad del cómputo que se desea realizar (es decir, la ``profundidad'' del circuito de operaciones), podemos configurar los parámetros del esquema de cifrado para que soporte exactamente ese número de operaciones sin que el ruido desborde el texto cifrado.
 
 En un esquema \textit{leveled}, los parámetros (como el tamaño del módulo y la distribución del ruido) se eligen en función de una profundidad máxima $L$. El sistema puede entonces evaluar correctamente cualquier circuito de profundidad hasta $L$. Sin embargo, si se intenta realizar una operación más allá de este límite, el ruido acumulado será demasiado grande y el resultado descifrado será incorrecto.
 
-Esta aproximación es muy práctica para muchas aplicaciones donde el algoritmo a ejecutar es conocido y de profundidad fija. La principal ventaja es que se evita el costoso proceso de \textit{bootstrapping} para cada operación, ya que el "presupuesto de ruido" se gestiona de forma global para todo el cómputo.
+Esta aproximación es muy práctica para muchas aplicaciones donde el algoritmo a ejecutar es conocido y de profundidad fija. La principal ventaja es que se evita el costoso proceso de \textit{bootstrapping} para cada operación, ya que el ``presupuesto de ruido`` se gestiona de forma global para todo el cómputo.
 
 \subsection{Bootstrapping}
 
@@ -92,7 +92,7 @@ El proceso se puede desglosar en los siguientes pasos:
     Este texto cifrado $c'$ es una nueva encriptación del mensaje original $m$, pero con dos diferencias fundamentales:
     \begin{itemize}
         \item Su nivel de ruido es bajo y predecible, correspondiente al ruido generado por la evaluación de $f_{dec}$, independientemente de cuán ruidoso fuera $c$.
-        \item Está cifrado bajo la nueva clave $pk'$. Para poder seguir operando con otros textos cifrados bajo la clave $pk$, se puede emplear una técnica de "cambio de clave" para transformar $c'$ de vuelta a un cifrado bajo $pk$.
+        \item Está cifrado bajo la nueva clave $pk'$. Para poder seguir operando con otros textos cifrados bajo la clave $pk$, se puede emplear una técnica de ``cambio de clave`` para transformar $c'$ de vuelta a un cifrado bajo $pk$.
     \end{itemize}
 \end{enumerate}
 
@@ -104,7 +104,7 @@ Aunque el esquema original de Gentry fue un hito teórico, era demasiado lento p
 
 Los esquemas modernos basan su seguridad en el problema de \textbf{Aprendizaje con Errores (LWE)} y su variante más eficiente, el \textbf{Aprendizaje con Errores en Anillos (RLWE)}. La formulación del problema LWE, introducida por Oded Regev \cite{Regev05}, es la siguiente.
 
-Denotemos como $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ al grupo aditivo de los números reales módulo uno. Intuitivamente, se puede pensar en el toro como el conjunto de los números reales en el intervalo `[0, 1)`. Por ejemplo, si sumamos $0.7 + 0.5 = 1.2$, en $\mathbb{T}$ el resultado es equivalente a $0.2$..
+Denotemos como $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ al grupo aditivo de los números reales módulo uno. Intuitivamente, se puede pensar en el toro como el conjunto de los números reales en el intervalo `[0, 1)`. Por ejemplo, si sumamos $0.7 + 0.5 = 1.2$, en $\mathbb{T}$ el resultado es equivalente a $0.2$.
 
 \begin{itemize}
     \item \textbf{Parámetros:}
@@ -185,7 +185,7 @@ Sobre la estructura de $R_q$, se define una distribución de error $\chi$ que ge
 El \textbf{problema de Búsqueda RLWE} (Search-RLWE) consiste en encontrar el polinomio secreto $s(x) \in R_q$ a partir de un número polinomial de muestras. Cada muestra es un par de polinomios $(a_i(x), b_i(x))$, donde:
 \begin{itemize}
     \item $a_i(x)$ es un polinomio elegido uniformemente al azar del anillo $R_q$.
-    \item $b_i(x)$ se calcula como $b_i(x) = a_i(x) \cdot s(x) + e_i(x) \pmod{q}$, donde $s(x)$ es el polinomio secreto que se desea encontrar y $e_i(x)$ es un polinomio de error "pequeño" muestreado de la distribución $\chi$.
+    \item $b_i(x)$ se calcula como $b_i(x) = a_i(x) \cdot s(x) + e_i(x) \pmod{q}$, donde $s(x)$ es el polinomio secreto que se desea encontrar y $e_i(x)$ es un polinomio de error ``pequeño`` muestreado de la distribución $\chi$.
 \end{itemize}
 La dificultad de este problema radica en que el error $e_i(x)$ oculta el secreto $s(x)$, haciendo que sea computacionalmente inviable recuperarlo sin conocer $s(x)$.
 
@@ -195,7 +195,7 @@ La introducción de la estructura de anillo aporta dos beneficios:
 
 \begin{itemize}
     \item \textbf{Eficiencia:} La multiplicación en $R_q$ puede realizarse en tiempo $O(n \log n)$ utilizando la Transformada de Teoría de Números (NTT), a diferencia del costo $O(n^2)$ de las matrices en LWE.
-    \item \textbf{Compactación de Datos:} Un solo par de polinomios en RLWE equivale a $n$ muestras de LWE. Esto permite que las claves y los textos cifrados sean órdenes de magnitud más pequeños.
+    \item \textbf{Compactación de datos:} Un solo par de polinomios en RLWE equivale a $n$ muestras de LWE. Esto permite que las claves y los textos cifrados sean órdenes de magnitud más pequeños.
     \item \textbf{Paralelismo SIMD:} La estructura del anillo permite aplicar el Teorema del Resto Chino (CRT) para operar múltiples datos en un solo polinomio, permitiendo operaciones paralelas (SIMD) de forma nativa.
 \end{itemize}
 
@@ -217,7 +217,7 @@ Los esquemas BGV (Brakerski-Gentry-Vaikuntanathan) \cite{BGV12} y BFV (Brakerski
 
 Ambos esquemas son ideales para aplicaciones que requieren precisión absoluta, como consultas en bases de datos o sistemas de votación electrónica.
 
-\subsection{El Esquema TFHE y el Bootstrapping Programable}
+\subsection{Esquema TFHE y Bootstrapping Programable}
 
 El esquema TFHE (Chillotti et al., 2016) \cite{TFHE16} a diferencia de BGV/BFV/CKKS, que se enfocan en aritmética de vectores, se especializa en la evaluación de puertas lógicas (AND, OR, MUX) y funciones arbitrarias mediante una técnica llamada \textit{Programmable Bootstrapping}. TFHE opera principalmente sobre el Toro Real ($\mathbb{T} = \mathbb{R}/\mathbb{Z}$), lo que permite una gestión del ruido muy precisa. Su mayor ventaja es que el proceso de \textit{bootstrapping} aquí se realiza en milisegundos y está integrado en cada operación. Esto permite ejecutar circuitos de profundidad infinita sin que el programador deba preocuparse por el crecimiento del ruido.
 
@@ -225,13 +225,13 @@ El esquema TFHE (Chillotti et al., 2016) \cite{TFHE16} a diferencia de BGV/BFV/C
 
 Propuesto por Cheon, Kim, Kim y Song en 2017 \cite{CKKS17}, el esquema CKKS representa un cambio de paradigma en FHE. A diferencia de sus predecesores, CKKS permite realizar aritmética sobre números reales y complejos con una precisión controlada. La innovación clave de CKKS es que trata el ruido inherente de RLWE no como un error que debe eliminarse por completo, sino como parte del error de redondeo que ocurre naturalmente en el cálculo numérico de punto flotante. 
 
-\subsection{Comparativa de Capacidades y Casos de Uso}
+\subsection{Comparativa de capacidades}
 
-En la siguiente tabla se resumen las diferencias técnicas principales entre estos esquemas:
+En la \hyperref[tab:fhe_comparativa]{Tabla~\ref{tab:fhe_comparativa}} se resumen las diferencias técnicas principales entre estos esquemas:
 
 \begin{table}[h]
     \centering
-    \caption{Comparativa de esquemas FHE modernos basados en RLWE/LWE.}
+    \caption{Comparativa de esquemas FHE modernos basados en RLWE/LWE.}\label{tab:fhe_comparativa}
     \vspace{0.5em}
     \begin{tabular}{| l | l | l | l | l |}
         \hline
@@ -241,7 +241,7 @@ En la siguiente tabla se resumen las diferencias técnicas principales entre est
         Tipo de Dato & Enteros exactos & Reales / Complejos & Bits / Enteros cortos \\ 
         \hline
         
-        Gestión de Ruido & Modulus/Scale switching & Rescaling & Bootstrapping rápido \\ 
+        Gestión de Ruido & Modulus/Scale switching & Reescalado & Bootstrapping rápido \\ 
         \hline
         
         Unidad de Cómputo & Vectores (SIMD) & Vectores (SIMD) & Puertas Lógicas / LUT \\ 
@@ -251,3 +251,5 @@ En la siguiente tabla se resumen las diferencias técnicas principales entre est
         \hline
     \end{tabular}
 \end{table}
+
+Cada uno de estos esquemas homomórficos posee características distintivas que los hacen más adecuados para ciertos tipos de problemas. TFHE, con su capacidad de evaluar compuertas lógicas y funciones no lineales mediante \textit{bootstrapping} programable. Sin embargo, para operaciones con números de punto flotante, CKKS es una opción más efectiva. Su aproximación controlada se alinea con la naturaleza de los cálculos en aprendizaje automático y procesamiento de señales, donde pequeñas imprecisiones son aceptables y, a cambio, se obtiene una mayor eficiencia en el manejo de números reales y complejos.

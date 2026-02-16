@@ -72,7 +72,7 @@ Debido a su estructura, las capas totalmente conectadas son de propósito genera
 Las Redes Neuronales Convolucionales son una clase especializada de redes neuronales diseñadas para procesar datos con una topología de rejilla, como las imágenes \cite{LeCun98}. Su principal ventaja es la capacidad de detectar patrones espaciales locales y jerárquicos mediante el uso de pesos compartidos.
 
 \subsubsection{Capas Convolucionales}
-El componente central de una CNN es la capa convolucional. Esta capa aplica un conjunto de filtros a los datos de entrada. Un filtro es una pequeña matriz de pesos que se desliza sobre la entrada para calcular productos punto, generando un "mapa de características" que resalta la presencia de un patrón específico. Los parámetros clave de esta operación son \cite{Goodfellow16}:
+El componente central de una CNN es la capa convolucional. Esta capa aplica un conjunto de filtros a los datos de entrada. Un filtro es una pequeña matriz de pesos que se desliza sobre la entrada para calcular productos punto, generando un ``mapa de características`` que resalta la presencia de un patrón específico. Los parámetros clave de esta operación son \cite{Goodfellow16}:
 \begin{itemize}
     \item \textbf{Tamaño del Kernel (Kernel Size):} Define las dimensiones del filtro. Un kernel pequeño detectará patrones muy locales, mientras que uno más grande capturará características más amplias.
     \item \textbf{Stride:} Especifica el número de píxeles que el filtro se desplaza en cada paso sobre la entrada. Un stride de 1 mueve el filtro un píxel a la vez, mientras que un stride mayor produce mapas de características de menor tamaño.
