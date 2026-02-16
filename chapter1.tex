@@ -29,7 +29,7 @@ Estos esquemas PHE son útiles en aplicaciones específicas, pero no son suficie
 
 \section{Ruido en el Cifrado Homomórfico}
 
-En 2009, cuando Craig Gentry, en su tesis doctoral \cite{Gentry09}, presentó el primer esquema de cifrado totalmente homomórfico. La construcción de Gentry se basó en lattices y superó el principal obstáculo que impedía la creación de esquemas FHE, el \textbf{ruido}. El esquema de Gentry permite realizar adicion y multiplicacion sobre texto cifrado, ademas es posible construir circuitos para realizar computo arbitrario.
+En 2009, cuando Craig Gentry, en su tesis doctoral \cite{Gentry09}, presentó el primer esquema de cifrado totalmente homomórfico. La construcción de Gentry se basó en retículos y superó el principal obstáculo que impedía la creación de esquemas FHE, el \textbf{ruido}. El esquema de Gentry permite realizar adicion y multiplicacion sobre texto cifrado, ademas es posible construir circuitos para realizar computo arbitrario.
 
 En la mayoría de los esquemas homomórficos modernos, un texto cifrado no es solo una función del mensaje, sino también de un error o "ruido" que es fundamental para la seguridad del esquema. Un texto cifrado $c$ de un mensaje $m$ se puede representar conceptualmente como:
 \begin{equation}
@@ -67,14 +67,14 @@ El proceso se puede desglosar en los siguientes pasos:
     \item \textbf{Entradas del Proceso:}
     \begin{itemize}
         \item Un texto cifrado ruidoso $c = \text{Enc}_{pk}(m)$, cuyo nivel de ruido está cerca del umbral máximo que permite un descifrado correcto.
-        \item Un nuevo par de claves $(sk', pk')$ generado para el proceso de bootstrapping.
+        \item Un nuevo par de claves $(sk', pk')$ generado para el proceso de \textit{bootstrapping}.
         \item La clave secreta original $sk$, pero cifrada con la nueva clave pública $pk'$: $\overline{sk} = (\text{Enc}_{pk'}(sk_1), \dots, \text{Enc}_{pk'}(sk_n))$.
     \end{itemize}
 
     \item \textbf{Evaluación Homomórfica del Circuito de Descifrado:}
     La función de descifrado, $\text{Dec}(sk, c)$, es un algoritmo que puede ser representado como un circuito de compuertas lógicas (sumas y multiplicaciones), al que llamaremos $f_{dec}$. Las entradas de este circuito son los bits de la clave secreta $sk$ y los componentes del texto cifrado $c$.
 
-    El paso fundamental del bootstrapping es ejecutar este circuito de forma homomórfica. Para ello, se utiliza la función $\text{Eval}$ del esquema, que toma como entradas la descripción del circuito $f_{dec}$, la clave secreta cifrada $\overline{sk}$ y el texto cifrado ruidoso $c$ (que para esta evaluación se trata como un dato en texto plano).
+    El paso fundamental del \textit{bootstrapping} es ejecutar este circuito de forma homomórfica. Para ello, se utiliza la función $\text{Eval}$ del esquema, que toma como entradas la descripción del circuito $f_{dec}$, la clave secreta cifrada $\overline{sk}$ y el texto cifrado ruidoso $c$ (que para esta evaluación se trata como un dato en texto plano).
     
     \begin{equation}
         c' = \text{Eval}_{pk'}(f_{dec}, \overline{sk}, c)
@@ -100,7 +100,7 @@ Este procedimiento transforma cualquier esquema parcialmente homomorfico, capaz 
 
 \section{Aprendizaje con Errores (LWE)}
 
-Aunque el esquema original de Gentry fue un hito teórico, era demasiado lento para ser práctico. Esto desencadenó una intensa investigación para mejorar su eficiencia y encontrar construcciones más viables. Las generaciones posteriores de esquemas FHE se centraron en dos áreas principales: optimizar la gestión del ruido sin depender siempre del costoso bootstrapping, y basar la seguridad en problemas matemáticos más estructurados y eficientes que los utilizados por Gentry.
+Aunque el esquema original de Gentry fue un hito teórico, era demasiado lento para ser práctico. Esto desencadenó una intensa investigación para mejorar su eficiencia y encontrar construcciones más viables. Las generaciones posteriores de esquemas FHE se centraron en dos áreas principales: optimizar la gestión del ruido sin depender siempre del costoso \textit{bootstrapping}, y basar la seguridad en problemas matemáticos más estructurados y eficientes que los utilizados por Gentry.
 
 Los esquemas modernos basan su seguridad en el problema de \textbf{Aprendizaje con Errores (LWE)} y su variante más eficiente, el \textbf{Aprendizaje con Errores en Anillos (RLWE)}. La formulación del problema LWE, introducida por Oded Regev \cite{Regev05}, es la siguiente.
 
@@ -120,7 +120,7 @@ Denotemos como $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ al grupo aditivo de los núm
         \begin{equation}
             t = \langle \mathbf{a}, \mathbf{s} \rangle / q + e
         \end{equation}
-        donde $\langle \mathbf{a}, \mathbf{s} \rangle = \sum_{i=1}^{n} a_i s_i$ es el producto interno estándar en $\mathbb{Z}_q^n$. La operación de división por $q$ es crucial, ya que mapea el resultado del producto interno (un entero en $\mathbb{Z}_q$) a un punto en el toro $\mathbb{T}$. Por ejemplo, si $q=100$ y el producto interno es $57$, la operación $/q$ lo convierte en el número real $0.57 \in \mathbb{T}$. A este valor se le suma el pequeño error $e$ (que también es un número en $\mathbb{T}$), y la suma final se realiza en $\mathbb{T}$.
+        donde $\langle \mathbf{a}, \mathbf{s} \rangle = \sum_{i=1}^{n} a_i s_i$ es el producto interno estándar en $\mathbb{Z}_q^n$. La operación de división por $q$ es crucial, ya que convierte el resultado del producto interno (un entero en $\mathbb{Z}_q$) a un punto en el toro $\mathbb{T}$. Por ejemplo, si $q=100$ y el producto interno es $57$, la operación $/q$ lo convierte en el número real $0.57 \in \mathbb{T}$. A este valor se le suma el pequeño error $e$ (que también es un número en $\mathbb{T}$), y la suma final se realiza en $\mathbb{T}$.
         \item La muestra generada es el par $(\mathbf{a}, t)$.
     \end{enumerate}
 \end{itemize}
