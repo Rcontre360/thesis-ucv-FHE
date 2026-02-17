@@ -1,105 +1,112 @@
 \chapter{Cifrado Homomórfico sobre Redes Neuronales}
 
-\section{Fundamentos de Redes Neuronales}
+Las redes neuronales artificiales (RNA) han impulsando avances sin precedentes en campos tan diversos como la visión por computadora, el procesamiento del lenguaje natural, la medicina y las finanzas. Su capacidad para aprender patrones complejos directamente de los datos les permite abordar problemas que sin ellas son intratables. Este éxito masivo ha llevado a una proliferación de aplicaciones donde las RNA procesan volúmenes crecientes de información personal y sensible.
 
-Las Redes Neuronales están diseñadas para reconocer patrones y relaciones en los datos a través de un proceso de aprendizaje. Aunque el entrenamiento de estos modelos es un campo de estudio en sí mismo, este capítulo se centra en la arquitectura y los componentes fundamentales que definen una red neuronal.
+Sin embargo, las RNA plantean serios desafíos en materia de privacidad. El procesamiento de datos confidenciales por RNAs, especialmente en entornos de terceros o servicios en la nube, genera problemas sobre la exposición de información sensible. En este contexto el cifrado homomórfico emerge como una solución. Al permitir realizar cómputos directamente sobre datos cifrados, FHE ofrece un mecanismo robusto para preservar la privacidad en las operaciones de las RNA. La aplicación de FHE a las redes neuronales posibilita la ejecución de inferencias sobre datos sensibles manteniendo la confidencialidad.
 
-\subsection{Álgebra Lineal}
+En este capítulo, nos centraremos en la adaptación de arquitecturas de RNA comunes, concretamente redes neuronales profundas (DNNs) y redes neuronales convolucionales (CNNs), para operar eficientemente bajo esquemas de cifrado homomórfico.
 
-Las transformaciones de datos en las redes neuronales se construyen a partir de operaciones fundamentales del álgebra lineal.
+\section{Redes Neuronales Superficiales}
 
-\subsubsection{Multiplicación Matriz-Vector}
+Las RNA son modelos computacionales cuyo propósito principal es aprender patrones y relaciones complejas a partir de datos, permitiéndoles realizar tareas como clasificación, regresión etc. Dentro de este vasto campo, las redes neuronales superficiales representan una categoría caracterizada por tener una capa oculta entre su capa de entrada y su capa de salida.
 
-Dados una matriz $W \in \mathbb{R}^{m \times n}$ y un vector $x \in \mathbb{R}^n$, el producto matriz-vector $y = Wx$ resulta en un vector $y \in \mathbb{R}^m$. Cada componente $y_i$ del vector resultante se calcula como el producto punto de la i-ésima fila de la matriz $W$ y el vector $x$.
+\subsection{Definición Formal y Estructura General}\label{sec:shallow_general_case}
+Hemos descrito redes superficiales de ejemplo para desarrollar la intuición sobre su funcionamiento. Ahora, definimos una ecuación general para una red neuronal superficial $y = f[x, \phi]$ que mapea una entrada multi-dimensional $x \in \mathbb{R}^{D_i}$ a una salida multi-dimensional $y \in \mathbb{R}^{D_o}$ utilizando $D$ unidades ocultas.
 
-Formalmente, la operación se define como:
+Cada unidad oculta $h_d$ se calcula como:
 \begin{equation}
-    y_i = \sum_{j=1}^{n} w_{ij}x_j \quad \text{para } i = 1, \dots, m
+h_d = a\left[\theta_{d0} + \sum_{i=1}^{D_i} \theta_{di}x_i\right],
+\label{eq:hidden_unit}
 \end{equation}
 
-\subsubsection{Suma de Vectores}
-Dados dos vectores $y, b \in \mathbb{R}^m$, su suma $z = y + b$ es un vector $z \in \mathbb{R}^m$ que se obtiene sumando los elementos correspondientes de los vectores de entrada.
-
-La operación se define componente a componente como:
+y estas se combinan linealmente para crear la salida:
 \begin{equation}
-    z_i = y_i + b_i \quad \text{para } i = 1, \dots, m
+y_j = \phi_{j0} + \sum_{d=1}^{D} \phi_{jd}h_d,
+\label{eq:output_unit}
 \end{equation}
 
-\subsubsection{Funciones sobre Vectores}
-Dada una función escalar $\sigma: \mathbb{R} \to \mathbb{R}$ y un vector $z \in \mathbb{R}^m$, es posible aplicar la función a cada elemento del vector de forma independiente. El resultado es un nuevo vector $a \in \mathbb{R}^m$.
+donde $a[\cdot]$ es una función de activación no lineal. El modelo posee parámetros $\phi = \{\theta_{\bullet\bullet}, \phi_{\bullet\bullet}\}$.
 
-Esta operación se define como:
+Para ilustrar este caso general, consideremos el ejemplo de una red que mapea una entrada escalar $x$ a una salida escalar $y$, y que posee diez parámetros $\phi = \{\phi_0, \phi_1, \phi_2, \phi_3, \theta_{10}, \theta_{11}, \theta_{20}, \theta_{21}, \theta_{30}, \theta_{31}\}$:
 \begin{equation}
-    a_i = \sigma(z_i) \quad \text{para } i = 1, \dots, m
+y = f[x, \phi] = \phi_0 + \phi_1 a[\theta_{10} + \theta_{11}x] + \phi_2 a[\theta_{20} + \theta_{21}x] + \phi_3 a[\theta_{30} + \theta_{31}x].
+\label{eq:shallow_nn_example}
 \end{equation}
 
-\subsection{Funciones de Activación}
+Este cálculo puede desglosarse en tres partes: primero, se computan tres funciones lineales de los datos de entrada ($\theta_{10} + \theta_{11}x$, $\theta_{20} + \theta_{21}x$, y $\theta_{30} + \theta_{31}x$). Segundo, los tres resultados se pasan a través de una función de activación $a[\cdot]$. Finalmente, las tres activaciones resultantes se ponderan con $\phi_1, \phi_2$, y $\phi_3$, se suman, y se añade un sesgo $\phi_0$.
 
-Las funciones de activación introducen no linealidades en el modelo, permitiéndole aprender funciones complejas que van más allá de las transformaciones lineales \cite{Goodfellow16}.
-
-\subsubsection{Función Sigmoide}
-Una de las funciones más utilizadas, la función sigmoide transforma cualquier valor real al intervalo $(0, 1)$:
+La función de activación permite al modelo describir relaciones no lineales entre la entrada y la salida; como tal, debe ser no lineal. Con una función de activación nula o lineal, el mapeo general de la entrada a la salida estaría restringido a ser lineal. Se han probado muchas funciones de activación diferentes, pero la elección más común es la unidad lineal rectificada o ReLU:
 \begin{equation}
-    \sigma(x) = \frac{1}{1 + e^{-x}}
+a[z] = \text{ReLU}[z] = 
+\begin{cases} 
+0 & z < 0 \\
+z & z \geq 0 
+\end{cases}
+\label{eq:relu_definition}
 \end{equation}
 
-\subsubsection{Función Tangente Hiperbólica (Tanh)}
-La función Tanh es una versión reescalada de la sigmoide, con salida en el intervalo $(-1, 1)$:
-\begin{equation}
-    \tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} = 2\sigma(2x) - 1
-\end{equation}
+Esta función devuelve la entrada cuando es positiva y cero en caso contrario. Con activaciones ReLU, la red divide el espacio de entrada en politopos convexos definidos por las intersecciones de hiperplanos calculados por las "articulaciones" en las funciones ReLU. Cada politopo convexo contiene una función lineal diferente. Los politopos son los mismos para cada salida, pero las funciones lineales que contienen pueden diferir.
 
-\subsubsection{Unidad Lineal Rectificada (ReLU)}
-La función ReLU es la activación más popular en las redes neuronales profundas modernas debido a su simplicidad y eficacia para mitigar el problema del gradiente desvaneciente. Se define como:
-\begin{equation}
-    \text{ReLU}(x) = \max(0, x)
-\end{equation}
+\subsection{Entradas y Salidas Multivariadas}
 
-\subsection{Arquitecturas de Redes Neuronales}
+En el ejemplo anterior, la red tenía una única entrada escalar $x$ y una única salida escalar $y$. Sin embargo, el teorema de aproximación universal también es válido para el caso más general en el que la red mapea entradas multivariadas $x = [x_1, x_2, \dots, x_{D_i}]^T$ a predicciones de salida multivariadas $y = [y_1, y_2, \dots, y_{D_o}]^T$.
 
-Las redes neuronales se organizan en capas para formar arquitecturas de red. La forma en que estas capas se conectan y procesan la información define el tipo y la capacidad del modelo.
+Para extender el modelo y predecir salidas multivariadas $y$, simplemente utilizamos una función lineal diferente de las unidades ocultas para cada salida. Por ejemplo, una red con una entrada escalar $x$, cuatro unidades ocultas $h_1, h_2, h_3, h_4$, y una salida multivariada 2D $y = [y_1, y_2]^T$ se definiría como:
+\begin{align*}
+    h_1 &= a[\theta_{10} + \theta_{11}x] \\
+    h_2 &= a[\theta_{20} + \theta_{21}x] \\
+    h_3 &= a[\theta_{30} + \theta_{31}x] \\
+    h_4 &= a[\theta_{40} + \theta_{41}x],
+    \tag{\ref{eq:hidden_units_multivariate}}
+\end{align*}
+y las salidas serían:
+\begin{align*}
+    y_1 &= \phi_{10} + \phi_{11}h_1 + \phi_{12}h_2 + \phi_{13}h_3 + \phi_{14}h_4 \\
+    y_2 &= \phi_{20} + \phi_{21}h_1 + \phi_{22}h_2 + \phi_{23}h_3 + \phi_{24}h_4.
+    \tag{\ref{eq:outputs_multivariate}}
+\end{align*}
+Las dos salidas son funciones lineales diferentes de las mismas unidades ocultas.
 
-\subsubsection{Capas Totalmente Conectadas}
+Como se observa, los "puntos de inflexión" en las funciones por partes dependen de dónde las funciones lineales iniciales $\theta_{\bullet0} + \theta_{\bullet1}x$ son "recortadas" por las funciones ReLU $a[\cdot]$ en las unidades ocultas. Dado que ambas salidas $y_1$ e $y_2$ son funciones lineales diferentes de las mismas cuatro unidades ocultas, los cuatro "puntos de inflexión" en cada una deben estar en los mismos lugares. Sin embargo, las pendientes de las regiones lineales y el desplazamiento vertical general pueden diferir.
 
-Una capa totalmente conectada, también conocida como capa densa o capa lineal, es uno de los bloques de construcción más comunes en las redes neuronales \cite{Goodfellow16}. Su característica principal es que cada neurona en la capa está conectada a cada una de las activaciones de la capa anterior.
+\subsection{Terminología}
+\subsubsection{Neurona o Unidad de Procesamiento}
 
-La operación que realiza esta capa es una transformación afín, definida por la multiplicación de la matriz de pesos de la capa, $W$, por el vector de entrada, $a^{(l-1)}$, seguida de la suma de un vector de sesgo, $b$.
-\begin{equation}
-    z^{(l)} = W^{(l)}a^{(l-1)} + b^{(l)}
-\end{equation}
-Debido a su estructura, las capas totalmente conectadas son de propósito general. A menudo se utilizan al final de arquitecturas más complejas, como las Redes Neuronales Convolucionales, para actuar como un clasificador.
+Una neurona artificial, o unidad de procesamiento, es el componente fundamental de una red neuronal. Recibe una o más entradas, realiza una operación (generalmente una suma ponderada de sus entradas más un sesgo), y luego aplica una función de activación no lineal al resultado para producir una salida.
 
-\subsubsection{Redes Neuronales Convolucionales (CNN)}
-
-Las Redes Neuronales Convolucionales son una clase especializada de redes neuronales diseñadas para procesar datos con una topología de rejilla, como las imágenes \cite{LeCun98}. Su principal ventaja es la capacidad de detectar patrones espaciales locales y jerárquicos mediante el uso de pesos compartidos.
-
-\subsubsubsection{Capas Convolucionales}
-El componente central de una CNN es la capa convolucional. Esta capa aplica un conjunto de filtros a los datos de entrada. Un filtro es una pequeña matriz de pesos que se desliza sobre la entrada para calcular productos punto, generando un ``mapa de características`` que resalta la presencia de un patrón específico. Los parámetros clave de esta operación son \cite{Goodfellow16}:
+\subsubsection{Capas: Entrada, Oculta y Salida}
+Las neuronas en una red neuronal se organizan en capas.
 \begin{itemize}
-    \item Tamaño del Kernel (Kernel Size): Define las dimensiones del filtro. Un kernel pequeño detectará patrones muy locales, mientras que uno más grande capturará características más amplias.
-    \item Stride: Especifica el número de píxeles que el filtro se desplaza en cada paso sobre la entrada. Un stride de 1 mueve el filtro un píxel a la vez, mientras que un stride mayor produce mapas de características de menor tamaño.
-    \item Padding: Consiste en añadir un borde de ceros alrededor de la entrada. El padding permite controlar las dimensiones del mapa de características de salida y asegura que los píxeles en los bordes de la imagen sean procesados por el filtro el mismo número de veces que los píxeles centrales.
+    \item \textbf{Capa de Entrada:} Recibe los datos iniciales o características del problema.
+    \item \textbf{Capa Oculta:} Son capas intermedias entre la entrada y la salida.
+    \item \textbf{Capa de Salida:} Produce el resultado final de la red.
 \end{itemize}
-La operación de convolución 2D discreta para una entrada $I$ y un kernel $K$ se define como:
-\begin{equation}
-    (I * K)(i, j) = \sum_m \sum_n I(i-m, j-n) K(m, n)
-\end{equation}
 
-\subsection{Propagación Hacia Adelante}
+\subsubsection{Pesos y Sesgos}
+\begin{itemize}
+    \item \textbf{Pesos ($W$):} Son parámetros ajustables que representan la fuerza de la conexión entre las neuronas de capas adyacentes.
+    \item \textbf{Sesgos ($b$):} Son parámetros ajustables que permiten a una neurona activar su función de activación incluso si todas sus entradas son cero.
+\end{itemize}
 
-El proceso de inferencia, consiste en el flujo de datos a través de la red para generar una predicción \cite{Goodfellow16}. Partiendo de un vector de entrada $x$, este atraviesa secuencialmente cada capa del modelo hasta producir un resultado en la capa de salida.
+\subsubsection{Función de Activación}
+Una función de activación introduce no linealidad en la salida de una neurona. Es crucial para permitir que la red aprenda relaciones complejas y no lineales en los datos. Sin una función de activación no lineal, una red neuronal, independientemente de su profundidad, se comportaría como un modelo lineal. Ejemplos comunes incluyen ReLU, Sigmoide y Tanh.
 
-Para una red de $L$ capas, el proceso se puede describir como una secuencia de transformaciones. Si denotamos la activación de la capa $l$ como $a^{(l)}$ (con $a^{(0)} = x$), la activación de la capa siguiente $a^{(l+1)}$ se calcula como:
-\begin{equation}
-    z^{(l+1)} = W^{(l+1)}a^{(l)} + b^{(l+1)}
-\end{equation}
-\begin{equation}
-    a^{(l+1)} = \sigma(z^{(l+1)})
-\end{equation}
-Este proceso se repite desde $l=0$ hasta $L-1$. La salida final de la red, $\hat{y}$, es el vector de activación de la última capa, $a^{(L)}$. La inferencia es, por tanto, la composición de todas las funciones de capa:
-\begin{equation}
-    \hat{y} = f(x) = f^{(L)}(f^{(L-1)}(\dots f^{(1)}(x)\dots))
-\end{equation}
+\section{Redes Neuronales Profundas}
+    \subsection{Composición de Redes Neuronales}
+    \subsection{De la Composición a las Redes Profundas}
+    \subsection{Notación Matricial}
+
+\section{Redes Neuronales Convolucionales}
+    \subsection{Introducción a las CNNs y su Motivación}
+    \subsection{Capas Convolucionales}
+        \subsubsection{Filtros (Kernels), Stride y Padding}
+        \subsubsection{Operación de Convolución}
+        \subsubsection{Compartición de Pesos y Conectividad Local}
+    \subsection{Capas de Agrupamiento (Pooling Layers)}
+        \subsubsection{Max Pooling}
+        \subsubsection{Average Pooling}
+    \subsection{Arquitectura Típica de una CNN}
+    \subsection{Ventajas y Aplicaciones de las CNNs}
 
 
 \section{Operaciones Lineales en CKKS}
