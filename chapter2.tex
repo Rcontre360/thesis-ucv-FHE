@@ -175,18 +175,61 @@ Tanto las capas de entrada como las capas ocultas pueden tener múltiples canale
 El entrenamiento de una red neuronal es el proceso de ajustar sus parámetros (pesos y sesgos) para que pueda realizar una tarea específica, como clasificación o regresión, de manera efectiva. En el contexto de cifrado homomórfico el cifrado usualmente se aplica al proceso de inferencia dado que los pesos del modelo no son datos sensibles en la mayoria de casos. Aun asi es necesario conocer que las redes neuronales pasan por una etapa de entrenamiento donde obtenemos los parametros necesarios para obtener resultados significativos durante la inferencia.
 
 \subsection{Función de Pérdida}
-Una función de pérdida cuantifica la discrepancia entre la salida predicha por la red y la salida real deseada. El objetivo del entrenamiento es minimizar esta función de pérdida. Ejemplos comunes incluyen el error cuadrático medio para regresión y la entropía cruzada para clasificación.
+Una función de pérdida (o función de costo) es una medida cuantitativa de la discrepancia entre las predicciones de la red neuronal y los valores reales deseados. Durante el entrenamiento, el objetivo principal es minimizar esta función. Cuanto menor sea el valor de la función de pérdida, mejor será el rendimiento del modelo. La elección de la función de pérdida depende directamente del tipo de problema que se esté resolviendo.
+
+De forma genérica, una función de pérdida $L$ puede ser definida como:
+\begin{equation}
+L(\hat{y}, y)
+\end{equation}
+donde $\hat{y}$ representa la salida predicha por la red neuronal y $y$ es el valor real (la etiqueta o el objetivo).
+
+Un ejemplo ampliamente utilizado para problemas de regresión es el Error Cuadrático Medio (Mean Squared Error, MSE), que se define como:
+\begin{equation}
+\text{MSE}(\hat{y}, y) = \frac{1}{N} \sum_{i=1}^{N} (\hat{y}_i - y_i)^2
+\end{equation}
+donde $N$ es el número de muestras, $\hat{y}_i$ es la predicción de la red para la muestra $i$, y $y_i$ es el valor real para la muestra $i$. 
 
 \subsection{Optimización}
-La optimización es el proceso de encontrar los valores de los parámetros que minimizan la función de pérdida. El método más común es el descenso de gradiente (Gradient Descent) o alguna de sus variantes (e.g., Adam, RMSprop). El descenso de gradiente calcula el gradiente de la función de pérdida con respecto a cada parámetro de la red. El gradiente indica la dirección de máximo aumento de la pérdida, por lo que los parámetros se actualizan en la dirección opuesta (descenso).
+La optimización es el proceso de ajustar los parámetros de la red neuronal (pesos $W$ y sesgos $b$) para minimizar la función de pérdida $L$. El algoritmo de optimización más fundamental es el descenso de gradiente, que actualiza los parámetros iterativamente en la dirección opuesta al gradiente de la función de pérdida.
 
-\subsection{Retropropagación (Backpropagation)}
-La retropropagación es el algoritmo utilizado para calcular eficientemente los gradientes de la función de pérdida con respecto a todos los pesos y sesgos de la red. Consiste en propagar el error hacia atrás desde la capa de salida hasta la capa de entrada, utilizando la regla de la cadena para calcular cómo contribuye cada parámetro al error total.
+La regla de actualización genérica para un parámetro $\theta$ (que puede ser un peso o un sesgo) es:
 
-\subsection{Fases del Entrenamiento}
-El entrenamiento se realiza iterativamente en un conjunto de datos de entrenamiento. En cada iteración (época), los datos se pasan a través de la red (pasada hacia adelante), se calcula la pérdida, se propagan los gradientes hacia atrás y se actualizan los pesos y sesgos. Este ciclo se repite hasta que la red alcanza un rendimiento aceptable o la función de pérdida converge.
+\begin{equation}
+    \theta := \theta - \eta \frac{\partial L}{\partial \theta}
+\end{equation}
 
-Cabe destacar que esta tesis se enfoca exclusivamente en la \textit{inferencia} de redes neuronales sobre datos cifrados, asumiendo que el modelo ya ha sido entrenado previamente en texto plano. La aplicación de cifrado homomórfico durante el entrenamiento es un área de investigación más compleja y está fuera del alcance de este trabajo.
+donde $\eta$ es la tasa de aprendizaje (un hiperparámetro positivo que controla el tamaño del paso en cada actualización) y $\frac{\partial L}{\partial \theta}$ es el gradiente de la función de pérdida con respecto al parámetro $\theta$. Este gradiente indica la dirección de mayor ascenso de la función de pérdida, por lo que restarlo nos mueve hacia el mínimo.
+
+Existen variantes más avanzadas del descenso de gradiente, como el descenso gradiente estocastico o Adam, que adapta la tasa de aprendizaje o utilizan momentos para acelerar la convergencia y manejar mejor los mínimos locales.
+
+\subsection{Propagación hacia atrás}
+La propagación hacia atrás es el algoritmo central para el entrenamiento de redes neuronales, permitiendo calcular eficientemente los gradientes de la función de pérdida con respecto a todos los pesos y sesgos de la red. Este proceso es fundamental para actualizar los parámetros mediante el descenso de gradiente.
+
+El algoritmo opera en dos fases principales:
+\begin{enumerate}
+    \item Pasada hacia adelante: La entrada se propaga a través de la red, calculando las activaciones de cada neurona en cada capa hasta producir la salida final $\hat{y}$. Esta salida se utiliza para calcular la función de pérdida $L(\hat{y}, y)$.
+    \item Pasada hacia atrás: Los gradientes de la pérdida se calculan y se propagan desde la capa de salida hacia las capas anteriores. Esto se logra aplicando la regla de la cadena del cálculo diferencial de manera iterativa.
+\end{enumerate}
+
+Para una red con $K$ capas, y asumiendo que $z^{(l)}$ es la entrada neta a la capa $l$ (antes de la función de activación) y $a^{(l)}$ es la salida de la capa $l$ (después de la función de activación), el gradiente de la pérdida $L$ con respecto a los pesos $W^{(l)}$ y sesgos $b^{(l)}$ de la capa $l$ se calcula como:
+
+\begin{itemize}
+    \item Gradiente del sesgo:
+    \begin{equation}
+    \frac{\partial L}{\partial b^{(l)}} = \delta^{(l)}
+    \end{equation}
+    donde $\delta^{(l)}$ es el error de la capa $l$, definido como $\delta^{(l)} = \frac{\partial L}{\partial z^{(l)}}$.
+    \item Gradiente del peso:
+    \begin{equation}
+    \frac{\partial L}{\partial W^{(l)}} = \delta^{(l)} (a^{(l-1)})^T
+    \end{equation}
+    \item Propagación del error a la capa previa:
+    \begin{equation}
+    \delta^{(l-1)} = ((W^{(l)})^T \delta^{(l)}) \odot \sigma'(z^{(l-1)})
+    \end{equation}
+    donde $\sigma'(\cdot)$ es la derivada de la función de activación de la capa $l-1$ y $\odot$ denota el producto Hadamard (elemento a elemento).
+\end{itemize}
+Este proceso descompone el cálculo de gradientes complejos en productos de gradientes locales más simples que pueden calcularse de forma eficiente capa por capa. La retropropagación permite ajustar los miles o millones de parámetros de una red neuronal de manera sistemática para minimizar la función de pérdida.
 
 \section{Operaciones Lineales en CKKS}
 
