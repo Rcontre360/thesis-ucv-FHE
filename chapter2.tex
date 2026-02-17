@@ -2,7 +2,14 @@
 
 Las redes neuronales artificiales (RNA) han impulsando avances sin precedentes en campos tan diversos como la visión por computadora, el procesamiento del lenguaje natural, la medicina y las finanzas \cite{Goodfellow16}. Su capacidad para aprender patrones complejos directamente de los datos les permite abordar problemas que sin ellas son intratables.
 
-Sin embargo, las RNA plantean serios desafíos en materia de privacidad. El procesamiento de datos confidenciales por RNAs, especialmente en entornos de terceros o servicios en la nube, genera problemas sobre la exposición de información sensible. En este contexto el cifrado homomórfico emerge como una solución. Al permitir realizar cómputos directamente sobre datos cifrados, FHE ofrece un mecanismo robusto para preservar la privacidad en las operaciones de las RNA. La aplicación de FHE a las redes neuronales posibilita la ejecución de inferencias sobre datos sensibles manteniendo la confidencialidad.
+Sin embargo, las RNA plantean serios desafíos en materia de privacidad. El procesamiento de datos confidenciales por RNAs, especialmente en entornos de terceros o servicios en la nube, genera problemas sobre la exposición de información sensible. En este contexto, el cifrado homomórfico emerge como una solución fundamental. Al permitir realizar cómputos directamente sobre datos cifrados, FHE ofrece un mecanismo robusto para preservar la privacidad en las operaciones de las RNA. La aplicación de FHE a las redes neuronales posibilita la ejecución de inferencias sobre datos sensibles manteniendo la confidencialidad en todo momento. En la Figura \ref{fig:fhe_on_ml} se visualiza este flujo de trabajo. Un cliente puede cifrar sus datos localmente y enviarlos a un servidor en la nube sin revelar su contenido. El servidor, sin tener acceso al texto plano, ejecuta el modelo de aprendizaje automático sobre estos datos cifrados y devuelve un resultado también cifrado al cliente. Finalmente, el cliente descifra el resultado para obtener la predicción o clasificación, asegurando que la privacidad de sus datos se mantenga durante todo el proceso.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/fhe_on_ml.png}
+    \caption{Flujo de trabajo de aprendizaje automático con datos cifrados. Un cliente cifra sus datos y los envía al servidor, que realiza la inferencia sobre los datos cifrados. El resultado cifrado es devuelto al cliente para su descifrado.}
+    \label{fig:fhe_on_ml}
+\end{figure}
 
 En este capítulo, nos centraremos en la adaptación de arquitecturas de RNA comunes, concretamente redes neuronales profundas (DNN, Deep Neural Networks) y redes neuronales convolucionales (CNN, Convolutional Neural Networks), para operar eficientemente bajo esquemas de cifrado homomórfico.
 
@@ -38,6 +45,15 @@ z & z \geq 0
 \label{eq:relu_definition}
 \end{equation}
 
+ La Figura \ref{fig:shallow_network} muestra la estructura general de una red neuronal superficial. En ella, se distinguen claramente la capa de entrada donde se reciben los datos, una única capa oculta que procesa la información y una capa de salida que produce el resultado final. Las conexiones entre las neuronas están ponderadas por los pesos, y cada neurona de la capa oculta y de salida incorpora un sesgo, elementos clave para el aprendizaje del modelo.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/shallow_network.png}
+    \caption{Representación de una red neuronal superficial con una capa de entrada, una capa oculta y una capa de salida.}
+    \label{fig:shallow_network}
+\end{figure}
+
 \subsubsection{Neurona}
 Una neurona artificial, es el componente fundamental de una red neuronal. Recibe una o más entradas, realiza una operación (generalmente una suma ponderada de sus entradas más un sesgo), y luego aplica una función de activación no lineal al resultado para producir una salida.
 
@@ -59,7 +75,14 @@ Las neuronas en una red neuronal se organizan en capas.
 Una función de activación introduce no linealidad en la salida de una neurona. Es crucial para permitir que la red aprenda relaciones complejas y no lineales en los datos. Sin una función de activación no lineal, una red neuronal, independientemente de su profundidad, se comportaría como un modelo lineal. En la ecuación \ref{eq:hidden_unit}, la función de activación se denota como $a[\cdot]$.
 
 \section{Redes Neuronales Profundas} \cite{Goodfellow16}
-Las redes neuronales profundas se caracterizan por tener más de una capa oculta. Con funciones de activación, tanto las redes superficiales como las profundas describen mapeos lineales por tramos desde la entrada hasta la salida.
+Las redes neuronales profundas se caracterizan por tener más de una capa oculta. Con funciones de activación, tanto las redes superficiales como las profundas describen mapeos lineales por tramos desde la entrada hasta la salida. La Figura \ref{fig:deep_network} ilustra una red neuronal profunda con múltiples capas ocultas, extendiendo la arquitectura de las redes superficiales. Cada capa oculta adicional permite a la red aprender representaciones más complejas y abstractas de los datos de entrada, lo que es crucial para resolver problemas de mayor dificultad y para manejar datos de alta dimensionalidad.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/deep_network.png}
+    \caption{Representación de una red neuronal profunda con múltiples capas ocultas interconectadas.}
+    \label{fig:deep_network}
+\end{figure}
 
 A medida que aumenta el número de unidades ocultas, las redes neuronales superficiales mejoran su poder descriptivo. Con suficientes unidades ocultas, las redes superficiales pueden describir funciones arbitrariamente complejas en altas dimensiones \cite{Hornik89}. Sin embargo, para algunas funciones, el número requerido de unidades ocultas puede ser demasiado grande. Las redes profundas pueden producir muchas más regiones lineales que las redes superficiales para un número dado de parámetros.
     
@@ -159,7 +182,7 @@ El \textit{stride} (paso) especifica el desplazamiento del filtro sobre la entra
 
 \subsubsection{Convolución como multiplicación matricial}
 
-Las capas convolucionales pueden ser eficientemente implementadas utilizando multiplicaciones matriciales estándar. Esto es fundamental para aprovechar las optimizaciones existentes en bibliotecas de álgebra lineal y, en el contexto de cifrado homomórfico, para alinearse con operaciones homomórficas que a menudo se basan en productos matriciales. La clave para esta transformación es la técnica conocida como \textit{Image to Column} (Im2Col). Esta tecnica convierte bloques locales de la imagen de entrada en columnas de una matriz bidimensional.
+Las capas convolucionales pueden ser eficientemente implementadas utilizando multiplicaciones matriciales estándar. Esto es fundamental para aprovechar las optimizaciones existentes en bibliotecas de álgebra lineal y, en el contexto de cifrado homomórfico, para alinearse con operaciones homomórficas que a menudo se basan en productos matriciales. La clave para esta transformación es la técnica conocida como \textit{Image to Column} (Im2Col). \textbf{Im2Col} convierte bloques locales de la imagen de entrada en columnas de una matriz bidimensional.
 
 \begin{enumerate}
     \item Transformación de la entrada: Para cada posición donde se aplicaría el filtro convolucional, se extrae la región correspondiente de la imagen de entrada. Esta región se transforma en un vector. Todos estos vectores resultantes se apilan como columnas en una nueva matriz, que llamamos la matriz \textit{Im2Col} de la entrada.
@@ -251,7 +274,14 @@ Consideremos una operación fundamental como la multiplicación matriz-vector $y
 
 El producto punto de dos vectores, $a$ y $b$, se define como la suma de los productos de sus componentes correspondientes: $\sum a_i b_i$. En el contexto del cifrado homomórfico CKKS, esta operación se ejecuta usando rotaciones.
 
-El algoritmo para calcular el producto punto homomórfico de dos vectores cifrados $ct_a$ y $ct_b$ se realiza en dos fases principales:
+El algoritmo para calcular el producto punto homomórfico de dos vectores cifrados $ct_a$ y $ct_b$ se realiza en dos fases principales, como se ilustra en la Figura \ref{fig:vec_vec_mult}.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/vec_vec_mult.png}
+    \caption{Representación del producto punto homomórfico de dos vectores. Primero se realiza una multiplicación elemento a elemento sobre los textos cifrados, y luego se suman los resultados rotando hasta la mitad $log_2(n)$ veces.}
+    \label{fig:vec_vec_mult}
+\end{figure}
 
 \begin{enumerate}
     \item Multiplicación Elemento a Elemento:
@@ -265,7 +295,14 @@ El algoritmo para calcular el producto punto homomórfico de dos vectores cifrad
 
 Para optimizar la multiplicación matriz-vector en el dominio homomórfico, una de las técnicas más eficientes es la diagonalización de la matriz de pesos \cite{Halevi14}, popularizada por Halevi y Shoup. Esta técnica se basa en la observación de que la multiplicación de un vector por una matriz puede expresarse como una suma de productos elemento a elemento \cite{Goodfellow16} con rotaciones cíclicas.
 
-La idea central es transformar la matriz de pesos $W$ en un conjunto de vectores que representan sus diagonales. Específicamente, para una matriz $W$, se extraen sus diagonales y se codifican en textos claros que luego se utilizarán en la operación. Cuando se multiplica un vector cifrado $x$ por una matriz $W$, cada elemento del vector resultante $y_i$ es el producto escalar de la $i$-ésima fila de $W$ con el vector $x$. El proceso seria el siguiente:
+La idea central es transformar la matriz de pesos $W$ en un conjunto de vectores que representan sus diagonales. Específicamente, para una matriz $W$, se extraen sus diagonales y se codifican en textos claros que luego se utilizarán en la operación. Cuando se multiplica un vector cifrado $x$ por una matriz $W$, cada elemento del vector resultante $y_i$ es el producto escalar de la $i$-ésima fila de $W$ con el vector $x$. El proceso seria el siguiente, como se detalla en la Figura \ref{fig:matrix_vec_mul}:
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/matrix_vec_mul.png}
+    \caption{Multiplicación matriz-vector homomórfica utilizando la técnica de diagonalización. La matriz de pesos se transforma en diagonales, que se multiplican con versiones rotadas del vector de entrada cifrado, y los resultados se suman.}
+    \label{fig:matrix_vec_mul}
+\end{figure}
 
 \begin{enumerate}
     \item Se codifica el vector de entrada $x$ en un texto cifrado $ct_x$.

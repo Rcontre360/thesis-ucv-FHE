@@ -45,7 +45,14 @@ El nuevo ruido es $e_{add} = e_1 + e_2$. Para la multiplicación, el crecimiento
 \begin{equation}
     c_{mult} = c_1 \cdot c_2 \leftarrow (m_1 \cdot m_2) + q(\dots) + (m_1 e_2 + m_2 e_1 + e_1 e_2)
 \end{equation}
-El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado algo homomórficos.
+El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado algo homomórficos. En la Figura \ref{fig:noise_growth} se ilustra cómo el ruido se acumula de manera más pronunciada en la multiplicación en comparacion con la suma.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/noise.png}
+    \caption{Crecimiento del ruido en operaciones homomórficas.}
+    \label{fig:noise_growth}
+\end{figure}
 
 \subsection{Cifrado Homomórfico por Niveles}\label{sec:leveled_fhe}
 
@@ -74,7 +81,7 @@ El proceso se puede desglosar en los siguientes pasos:
     \item Evaluación Homomórfica del Circuito de Descifrado:
     La función de descifrado, $\text{Dec}(sk, c)$, es un algoritmo que puede ser representado como un circuito de compuertas lógicas (sumas y multiplicaciones), al que llamaremos $f_{dec}$. Las entradas de este circuito son los bits de la clave secreta $sk$ y los componentes del texto cifrado $c$.
 
-    El paso fundamental del \textit{bootstrapping} es ejecutar este circuito de forma homomórfica. Para ello, se utiliza la función $\text{Eval}$ del esquema, que toma como entradas la descripción del circuito $f_{dec}$, la clave secreta cifrada $\overline{sk}$ y el texto cifrado ruidoso $c$ (que para esta evaluación se trata como un dato en texto plano).
+    El paso fundamental del \textit{bootstrapping} es ejecutar este circuito de forma homomórfica (Figura \ref{fig:bootstrapping}). Para ello, se utiliza la función $\text{Eval}$ del esquema, que toma como entradas la descripción del circuito $f_{dec}$, la clave secreta cifrada $\overline{sk}$ y el texto cifrado ruidoso $c$ (que para esta evaluación se trata como un dato en texto plano).
     
     \begin{equation}
         c' = \text{Eval}_{pk'}(f_{dec}, \overline{sk}, c)
@@ -96,7 +103,14 @@ El proceso se puede desglosar en los siguientes pasos:
     \end{itemize}
 \end{enumerate}
 
-Este procedimiento transforma cualquier esquema parcialmente homomórfico, capaz de evaluar su propio descifrado, en un esquema completamente homomórfico (FHE, Fully Homomorphic Encryption).
+Este procedimiento transforma cualquier esquema parcialmente homomorfico, capaz de evaluar su propio descifrado, en un esquema completamente homomórfico (FHE, Fully Homomorphic Encryption). La Figura \ref{fig:bootstrapping} muestra un diagrama general del proceso de bootstrapping.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/bootstrap.png}
+    \caption{Diagrama esquemático del proceso de \textit{Bootstrapping}.}
+    \label{fig:bootstrapping}
+\end{figure}
 
 \section{Aprendizaje con Errores (LWE)}
 
@@ -125,7 +139,7 @@ Denotemos como $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ al grupo aditivo de los núm
     \end{enumerate}
 \end{itemize}
 
-El problema de Aprendizaje con Errores (LWE), en su versión de búsqueda $\mathrm{LWE}_{q,\phi}$, consiste en encontrar el vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$ teniendo acceso a un número polinomial de muestras $(\mathbf{a}_i, t_i)$ de la distribución $A_{\mathbf{s},\phi}$.
+El problema de Aprendizaje con Errores (LWE), en su versión de búsqueda $\mathrm{LWE}_{q,\phi}$, consiste en encontrar el vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$ teniendo acceso a un número polinomial de muestras $(\mathbf{a}_i, t_i)$ de la distribución $A_{\mathbf{s},\phi}$. 
 
 \subsection{Cifrado y Descifrado con LWE}
 
@@ -278,9 +292,17 @@ La elección de $x^n + 1$ como polinomio ciclotómico para definir el anillo $R$
 
 La elección de $n$ como potencia de 2 es también fundamental para la eficiencia de la Transformada de Teoría de Números (NTT), una versión de la Transformada Rápida de Fourier (FFT) adaptada para aritmética modular, que es utilizada para acelerar aún más las multiplicaciones polinomiales en el anillo $R_q$. 
 
-\subsubsection{Codificación}
+En la Figura \ref{fig:roots_unity} se visualizan las raíces de la unidad en el plano complejo.
 
-La codificación o la inversa de la Inmersión Canónica es una funcion biyectiva que va desde los polinomios en el anillo $R$ (se usan para las operaciones homomórficas) y el de los vectores de números complejos (donde residen los datos a procesar). Permiten que las operaciones realizadas sobre polinomios cifrados se traduzcan en operaciones sobre los datos numéricos subyacentes.
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.5\textwidth]{images/roots_unity.png}
+    \caption{Representación de las raíces de la unidad en el plano complejo para $n=5$. Estas raíces se distribuyen uniformemente sobre el círculo unitario.}
+    \label{fig:roots_unity}
+\end{figure}
+
+\subsubsection{Codificación}
+La codificación o la inversa de la inmersión canónica es una funcion biyectiva que va desde los polinomios en el anillo $R$ (se usan para las operaciones homomórficas) y el de los vectores de números complejos (donde residen los datos a procesar). Permiten que las operaciones realizadas sobre polinomios cifrados se traduzcan en operaciones sobre los datos numéricos subyacentes.
 
 \begin{enumerate}
     \item Anillo de Polinomios $R$: CKKS opera en un anillo de polinomios $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$. Cada dato cifrado es un polinomio $p(x)$ cuyos coeficientes son enteros.
@@ -376,7 +398,14 @@ El resultado es un polinomio cuadrático en $s$. Esto se representa como un text
     \item $d_1 = c_{1,0}c_{2,1} + c_{1,1}c_{2,0} \pmod q$
     \item $d_2 = c_{1,1}c_{2,1} \pmod q$
 \end{itemize}
-Este nuevo texto está cifrado bajo la clave $(1, s, s^2)$. Para poder continuar operando, es necesario aplicar la relinearización para gestionar el tamaño del texto cifrado. Adicionalmente, el ruido y el factor de escala deben ser controlados mediante el reescalado, un proceso que se detalla en la sección \ref{sec:gestion_niveles}.
+Este nuevo texto está cifrado bajo la clave $(1, s, s^2)$. Para poder continuar operando, es necesario aplicar la relinearización para gestionar el tamaño del texto cifrado. Adicionalmente, el ruido y el factor de escala deben ser controlados mediante el reescalado, un proceso que se detalla en la sección \ref{sec:gestion_niveles}. En la Figura \ref{fig:ckks_multiplication} se ilustra el proceso de multiplicación en CKKS.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/ckks_mult.png}
+    \caption{Multiplicación en el esquema CKKS, incluyendo la expansión del texto cifrado, la relinearización para reducir su tamaño y el reescalado para controlar el ruido y el factor de escala.}
+    \label{fig:ckks_multiplication}
+\end{figure}
 
 \subsubsection{Rotaciones Homomórficas}
 
