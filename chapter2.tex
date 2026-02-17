@@ -4,14 +4,14 @@ Las redes neuronales artificiales (RNA) han impulsando avances sin precedentes e
 
 Sin embargo, las RNA plantean serios desafíos en materia de privacidad. El procesamiento de datos confidenciales por RNAs, especialmente en entornos de terceros o servicios en la nube, genera problemas sobre la exposición de información sensible. En este contexto el cifrado homomórfico emerge como una solución. Al permitir realizar cómputos directamente sobre datos cifrados, FHE ofrece un mecanismo robusto para preservar la privacidad en las operaciones de las RNA. La aplicación de FHE a las redes neuronales posibilita la ejecución de inferencias sobre datos sensibles manteniendo la confidencialidad.
 
-En este capítulo, nos centraremos en la adaptación de arquitecturas de RNA comunes, concretamente redes neuronales profundas (DNNs) y redes neuronales convolucionales (CNNs), para operar eficientemente bajo esquemas de cifrado homomórfico.
+En este capítulo, nos centraremos en la adaptación de arquitecturas de RNA comunes, concretamente redes neuronales profundas (DNN, Deep Neural Networks) y redes neuronales convolucionales (CNN, Convolutional Neural Networks), para operar eficientemente bajo esquemas de cifrado homomórfico.
 
 \section{Redes Neuronales Superficiales}
 
-Las RNA son modelos computacionales cuyo propósito principal es aprender patrones y relaciones complejas a partir de datos, permitiéndoles realizar tareas como clasificación, regresión etc. Dentro de este vasto campo, las redes neuronales superficiales representan una categoría caracterizada por tener una capa oculta entre su capa de entrada y su capa de salida.
+Las RNA son modelos computacionales cuyo propósito principal es aprender patrones y relaciones complejas a partir de datos, permitiéndoles realizar tareas como clasificación o regresión. Dentro de este vasto campo, las redes neuronales superficiales representan una categoría caracterizada por tener una capa oculta entre su capa de entrada y su capa de salida.
 
 \subsection{Definición Formal y Estructura General}\label{sec:shallow_general_case}
-Hemos descrito redes superficiales de ejemplo para desarrollar la intuición sobre su funcionamiento. Ahora, definimos una ecuación general para una red neuronal superficial $y = f[x, \phi]$ que mapea una entrada multi-dimensional $x \in \mathbb{R}^{D_i}$ a una salida multi-dimensional $y \in \mathbb{R}^{D_o}$ utilizando $D$ unidades ocultas.
+Definimos una ecuación general para una red neuronal superficial $y = f[x, \phi]$ que transforma una entrada multi-dimensional $x \in \mathbb{R}^{D_i}$ a una salida multi-dimensional $y \in \mathbb{R}^{D_o}$ utilizando $D$ unidades ocultas.
 
 Cada unidad oculta $h_d$ se calcula como:
 \begin{equation}
@@ -25,17 +25,10 @@ y_j = \phi_{j0} + \sum_{d=1}^{D} \phi_{jd}h_d,
 \label{eq:output_unit}
 \end{equation}
 
-donde $a[\cdot]$ es una función de activación no lineal. El modelo posee parámetros $\phi = \{\theta_{\bullet\bullet}, \phi_{\bullet\bullet}\}$.
+donde $a[\cdot]$ es una función de activación no lineal.
 
-Para ilustrar este caso general, consideremos el ejemplo de una red que mapea una entrada escalar $x$ a una salida escalar $y$, y que posee diez parámetros $\phi = \{\phi_0, \phi_1, \phi_2, \phi_3, \theta_{10}, \theta_{11}, \theta_{20}, \theta_{21}, \theta_{30}, \theta_{31}\}$:
-\begin{equation}
-y = f[x, \phi] = \phi_0 + \phi_1 a[\theta_{10} + \theta_{11}x] + \phi_2 a[\theta_{20} + \theta_{21}x] + \phi_3 a[\theta_{30} + \theta_{31}x].
-\label{eq:shallow_nn_example}
-\end{equation}
+La función de activación permite al modelo describir relaciones no lineales entre la entrada y la salida. Esta debe ser no lineal. Con una función de activación nula o lineal, el mapeo general de la entrada a la salida estaría restringido a ser lineal. La funcion más común es la unidad lineal rectificada o ReLU:
 
-Este cálculo puede desglosarse en tres partes: primero, se computan tres funciones lineales de los datos de entrada ($\theta_{10} + \theta_{11}x$, $\theta_{20} + \theta_{21}x$, y $\theta_{30} + \theta_{31}x$). Segundo, los tres resultados se pasan a través de una función de activación $a[\cdot]$. Finalmente, las tres activaciones resultantes se ponderan con $\phi_1, \phi_2$, y $\phi_3$, se suman, y se añade un sesgo $\phi_0$.
-
-La función de activación permite al modelo describir relaciones no lineales entre la entrada y la salida; como tal, debe ser no lineal. Con una función de activación nula o lineal, el mapeo general de la entrada a la salida estaría restringido a ser lineal. Se han probado muchas funciones de activación diferentes, pero la elección más común es la unidad lineal rectificada o ReLU:
 \begin{equation}
 a[z] = \text{ReLU}[z] = 
 \begin{cases} 
@@ -45,34 +38,10 @@ z & z \geq 0
 \label{eq:relu_definition}
 \end{equation}
 
-Esta función devuelve la entrada cuando es positiva y cero en caso contrario. Con activaciones ReLU, la red divide el espacio de entrada en politopos convexos definidos por las intersecciones de hiperplanos calculados por las "articulaciones" en las funciones ReLU. Cada politopo convexo contiene una función lineal diferente. Los politopos son los mismos para cada salida, pero las funciones lineales que contienen pueden diferir.
+Esta función devuelve la entrada cuando es positiva y cero en caso contrario. Con activaciones ReLU, la red divide el espacio de entrada en politopos convexos definidos por las intersecciones de hiperplanos calculados por las ``articulaciones`` en las funciones ReLU. Cada politopo convexo contiene una función lineal diferente. Los politopos son los mismos para cada salida, pero las funciones lineales que contienen pueden diferir.
 
-\subsection{Entradas y Salidas Multivariadas}
-
-En el ejemplo anterior, la red tenía una única entrada escalar $x$ y una única salida escalar $y$. Sin embargo, el teorema de aproximación universal también es válido para el caso más general en el que la red mapea entradas multivariadas $x = [x_1, x_2, \dots, x_{D_i}]^T$ a predicciones de salida multivariadas $y = [y_1, y_2, \dots, y_{D_o}]^T$.
-
-Para extender el modelo y predecir salidas multivariadas $y$, simplemente utilizamos una función lineal diferente de las unidades ocultas para cada salida. Por ejemplo, una red con una entrada escalar $x$, cuatro unidades ocultas $h_1, h_2, h_3, h_4$, y una salida multivariada 2D $y = [y_1, y_2]^T$ se definiría como:
-\begin{align*}
-    h_1 &= a[\theta_{10} + \theta_{11}x] \\
-    h_2 &= a[\theta_{20} + \theta_{21}x] \\
-    h_3 &= a[\theta_{30} + \theta_{31}x] \\
-    h_4 &= a[\theta_{40} + \theta_{41}x],
-    \tag{\ref{eq:hidden_units_multivariate}}
-\end{align*}
-y las salidas serían:
-\begin{align*}
-    y_1 &= \phi_{10} + \phi_{11}h_1 + \phi_{12}h_2 + \phi_{13}h_3 + \phi_{14}h_4 \\
-    y_2 &= \phi_{20} + \phi_{21}h_1 + \phi_{22}h_2 + \phi_{23}h_3 + \phi_{24}h_4.
-    \tag{\ref{eq:outputs_multivariate}}
-\end{align*}
-Las dos salidas son funciones lineales diferentes de las mismas unidades ocultas.
-
-Como se observa, los "puntos de inflexión" en las funciones por partes dependen de dónde las funciones lineales iniciales $\theta_{\bullet0} + \theta_{\bullet1}x$ son "recortadas" por las funciones ReLU $a[\cdot]$ en las unidades ocultas. Dado que ambas salidas $y_1$ e $y_2$ son funciones lineales diferentes de las mismas cuatro unidades ocultas, los cuatro "puntos de inflexión" en cada una deben estar en los mismos lugares. Sin embargo, las pendientes de las regiones lineales y el desplazamiento vertical general pueden diferir.
-
-\subsection{Terminología}
-\subsubsection{Neurona o Unidad de Procesamiento}
-
-Una neurona artificial, o unidad de procesamiento, es el componente fundamental de una red neuronal. Recibe una o más entradas, realiza una operación (generalmente una suma ponderada de sus entradas más un sesgo), y luego aplica una función de activación no lineal al resultado para producir una salida.
+\subsubsection{Neurona}
+Una neurona artificial, es el componente fundamental de una red neuronal. Recibe una o más entradas, realiza una operación (generalmente una suma ponderada de sus entradas más un sesgo), y luego aplica una función de activación no lineal al resultado para producir una salida.
 
 \subsubsection{Capas: Entrada, Oculta y Salida}
 Las neuronas en una red neuronal se organizan en capas.
@@ -84,17 +53,78 @@ Las neuronas en una red neuronal se organizan en capas.
 
 \subsubsection{Pesos y Sesgos}
 \begin{itemize}
-    \item \textbf{Pesos ($W$):} Son parámetros ajustables que representan la fuerza de la conexión entre las neuronas de capas adyacentes.
-    \item \textbf{Sesgos ($b$):} Son parámetros ajustables que permiten a una neurona activar su función de activación incluso si todas sus entradas son cero.
+    \item \textbf{Pesos:} Son parámetros ajustables que representan la fuerza de la conexión entre las neuronas de capas adyacentes. En las ecuaciones \ref{eq:hidden_unit} y \ref{eq:output_unit}, los pesos están representados por $\theta_{di}$ (para las unidades ocultas) y $\phi_{jd}$ (para la capa de salida), respectivamente.
+    \item \textbf{Sesgos:} Son parámetros ajustables que permiten a una neurona activar su función de activación incluso si todas sus entradas son cero. Funcionan como un umbral o desplazamiento en la función de activación. En las ecuaciones \ref{eq:hidden_unit} y \ref{eq:output_unit}, los sesgos están representados por $\theta_{d0}$ y $\phi_{j0}$, respectivamente.
 \end{itemize}
 
 \subsubsection{Función de Activación}
-Una función de activación introduce no linealidad en la salida de una neurona. Es crucial para permitir que la red aprenda relaciones complejas y no lineales en los datos. Sin una función de activación no lineal, una red neuronal, independientemente de su profundidad, se comportaría como un modelo lineal. Ejemplos comunes incluyen ReLU, Sigmoide y Tanh.
+Una función de activación introduce no linealidad en la salida de una neurona. Es crucial para permitir que la red aprenda relaciones complejas y no lineales en los datos. Sin una función de activación no lineal, una red neuronal, independientemente de su profundidad, se comportaría como un modelo lineal. En la ecuación \ref{eq:hidden_unit}, la función de activación se denota como $a[\cdot]$. Ejemplos comunes incluyen ReLU (cuya definición se da en la ecuación \ref{eq:relu_definition}), Sigmoide y Tanh.
 
 \section{Redes Neuronales Profundas}
-    \subsection{Composición de Redes Neuronales}
-    \subsection{De la Composición a las Redes Profundas}
-    \subsection{Notación Matricial}
+Las redes neuronales profundas se caracterizan por tener más de una capa oculta. Con funciones de activación, tanto las redes superficiales como las profundas describen mapeos lineales por tramos desde la entrada hasta la salida.
+
+A medida que aumenta el número de unidades ocultas, las redes neuronales superficiales mejoran su poder descriptivo. Con suficientes unidades ocultas, las redes superficiales pueden describir funciones arbitrariamente complejas en altas dimensiones. Sin embargo, para algunas funciones, el número requerido de unidades ocultas puede ser demasiado grande. Las redes profundas pueden producir muchas más regiones lineales que las redes superficiales para un número dado de parámetros.
+    
+\subsection{Composición de Redes Neuronales}
+Para obtener una comprensión del comportamiento de las redes neuronales profundas, primero consideramos la composición de dos redes superficiales, de modo que la salida de la primera se convierte en la entrada de la segunda. Consideremos dos redes superficiales con tres unidades ocultas cada una. La primera red toma una entrada $x$ y devuelve una salida $y$, y se define por:
+
+\begin{align}
+    h_1 &= a[\theta_{10} + \theta_{11}x] \\
+    h_2 &= a[\theta_{20} + \theta_{21}x] \\
+    h_3 &= a[\theta_{30} + \theta_{31}x],
+    \label{eq:deep_h1}
+\end{align}
+
+y
+
+\begin{equation}
+    y = \phi_0 + \phi_1h_1 + \phi_2h_2 + \phi_3h_3.
+    \label{eq:deep_y1}
+\end{equation}
+
+La segunda red toma $y$ como entrada y devuelve $y'$, y se define por:
+
+\begin{equation}
+    y' = \phi'_0 + \phi'_1h'_1 + \phi'_2h'_2 + \phi'_3h'_3.
+    \label{eq:deep_yprime}
+\end{equation}
+
+Con activaciones ReLU, este modelo también describe una familia de funciones lineales por tramos. Sin embargo, el número de regiones lineales es potencialmente mayor que para una red superficial con seis unidades ocultas. 
+
+\subsection{De la Composición a las Redes Profundas}
+
+Una red profunda es, en esencia, una composición de transformaciones no lineales, donde la salida de una capa se convierte en la entrada de la siguiente. Una red profunda general $y = f[x, \phi]$ con $K$ capas se puede describir mediante la siguiente secuencia de operaciones:
+\begin{align}
+    h_1 &= a[\beta_0 + \Omega_0x] \\
+    h_2 &= a[\beta_1 + \Omega_1h_1] \\
+    h_3 &= a[\beta_2 + \Omega_2h_2] \\
+    &\vdots \\
+    h_K &= a[\beta_{K-1} + \Omega_{K-1}h_{K-1}] \\
+    y &= \beta_K + \Omega_K h_K.
+    \label{eq:general_deep_nn}
+\end{align}
+Aquí, $h_k$ representa el vector de unidades ocultas en la capa $k$. Cada $\beta_k$ es el vector de sesgos para la capa $k+1$, y $\Omega_k$ es la matriz de pesos que conecta la salida de la capa $k$ con la entrada de la capa $k+1$. La función $a[\cdot]$ es una función de activación no lineal que se aplica elemento a elemento. Los parámetros $\phi$ de este modelo comprenden todas estas matrices de pesos y vectores de sesgos $\phi = \{\beta_k, \Omega_k\}_{k=0}^K$.
+
+\subsection{Notación Matricial}
+
+Para describir redes profundas de manera concisa y general, se utiliza la notación matricial. Siguiendo la formulación general de una red profunda con $K$ capas (como se presentó en la sección \ref{eq:general_deep_nn}), podemos describir el procesamiento en cada capa de manera compacta.
+
+Si $h_k$ representa el vector de activaciones de la capa $k$, la operación de una capa oculta se puede expresar como:
+\begin{equation}
+h_{k+1} = a[\beta_k + \Omega_k h_k]
+\end{equation}
+donde $\beta_k$ es el vector de sesgos para la capa $k+1$ y $\Omega_k$ es la matriz de pesos que conecta la capa $k$ con la capa $k+1$. La función $a[\cdot]$ aplica la función de activación por separado a cada elemento de su entrada vectorial.
+
+Los parámetros de este modelo ($\phi = \{\beta_k, \Omega_k\}_{k=0}^K$) se definen por sus dimensiones:
+Si la capa $k$ tiene $D_k$ unidades ocultas:
+\begin{itemize}
+    \item El vector de sesgos $\beta_{k-1}$ será de tamaño $D_k$.
+    \item La primera matriz de pesos $\Omega_0$ tiene un tamaño $D_1 \times D_i$, donde $D_i$ es el tamaño de la entrada.
+    \item Las matrices de pesos restantes $\Omega_k$ (para $k=1, \dots, K-1$) son de tamaño $D_{k+1} \times D_k$.
+    \item El último vector de sesgos $\beta_K$ tiene el tamaño $D_o$ de la salida.
+    \item La última matriz de pesos $\Omega_K$ es $D_o \times D_K$.
+\end{itemize}
+Esta notación simplifica la representación y el análisis de redes muy profundas.
 
 \section{Redes Neuronales Convolucionales}
     \subsection{Introducción a las CNNs y su Motivación}
