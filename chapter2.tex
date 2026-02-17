@@ -196,7 +196,6 @@ El algoritmo para calcular el producto punto homomórfico de dos vectores cifrad
         Una vez obtenidos todos los productos $a_i \cdot b_i$ en las ranuras de $ct_{prod}$, el siguiente paso es sumarlos para obtener el resultado final del producto punto. El texto cifrado se rota $ct_{prod}$ a la mitad de sus ranuras y se suma a si mismo, luego se rota el resultado a un cuarto de sus ranuras y se suma, así sucesivamente, hasta que la suma de todos los elementos se acumule en la primera ranura. Estas rotaciones son optimizadas por técnicas como las desarrolladas por Halevi y Shoup \cite{Halevi14}.
 \end{enumerate}
 
-
 \subsection{Multiplicación Matriz Vector}
 
 Para optimizar la multiplicación matriz-vector en el dominio homomórfico, una de las técnicas más eficientes es la diagonalización de la matriz de pesos \cite{Halevi14}, popularizada por Halevi y Shoup. Esta técnica se basa en la observación de que la multiplicación de un vector por una matriz puede expresarse como una suma de productos elemento a elemento \cite{Goodfellow16} con rotaciones cíclicas.
@@ -214,9 +213,45 @@ Un enfoque simple para la multiplicación matriz-vector, sin la diagonalización
 
 Esta técnica es particularmente eficiente porque reduce el número de rotaciones necesarias. En lugar de rotar el texto cifrado de entrada para cada elemento de la matriz, se rotan los resultados intermedios o se utilizan rotaciones específicas que se corresponden con las diagonales de la matriz. Esto minimiza el consumo de niveles y el costo computacional, haciendo que la multiplicación matriz-vector sea práctica en CKKS.
 
-\subsection{Convoluciones}
+\subsection{Funciones de Activación}
 
-Las operaciones de convolución son fundamentales en las Redes Neuronales Convolucionales (CNNs) y, al igual que la multiplicación matriz-vector, requieren una adaptación específica para ser ejecutadas en el dominio homomórfico. La estrategia más común y eficiente para realizar convoluciones homomórficas es transformarlas en una multiplicación matriz-vector, una técnica conocida como `im2col` \cite{Goodfellow16}.
+Uno de los mayores desafíos al implementar redes neuronales sobre cifrado homomórfico es el manejo de las funciones de activación no lineales. El esquema CKKS solo soporta de forma nativa adiciones y multiplicaciones. Funciones como Sigmoide, Tanh o ReLU no pueden ser evaluadas directamente.
+
+La solución a este problema es aproximar estas funciones de activación mediante polinomios. La elección del polinomio de aproximación es un compromiso crítico entre la precisión del modelo y el rendimiento del cómputo homomórfico.
+
+\subsection{Técnicas de Aproximación}
+
+Existen varias estrategias para encontrar una aproximación polinómica adecuada:
+
+\begin{itemize}
+    \item Aproximación por Series de Taylor: Para funciones suaves como la sigmoide o la tangente hiperbólica, se puede utilizar su expansión en series de Taylor alrededor de un punto. Esta es una técnica directa sugerida en los trabajos fundacionales del esquema CKKS \cite{CKKS17}.
+
+    \item Uso de Polinomios Simples: En muchos casos, especialmente para reducir la profundidad del circuito, se reemplaza la función de activación por un polinomio de bajo grado. Una de las aproximaciones más comunes y eficientes es usar la función cuadrática $f(x) = ax^2 + bx + c$. Por ejemplo, la red CryptoNets \cite{GiladBachrach2016CryptoNets} popularizó el uso de la función cuadrada $f(x) = x^2$ como una alternativa a ReLU. Aunque menos precisa, esta aproximación introduce la no linealidad necesaria con un costo computacional mínimo (una sola multiplicación homomórfica).
+\end{itemize}
+
+\subsubsection{Impacto en la Profundidad del Circuito}
+
+Cada multiplicación homomórfica consume un nivel en el esquema CKKS, reduciendo el presupuesto de ruido y el módulo del texto cifrado. La evaluación de un polinomio de grado $d$ requiere una profundidad multiplicativa de $O(\sqrt d)$, utilizando algoritmos de evaluación paralela como el propuesto por Paterson y Stockmeyer \cite{Paterson1973}. Por lo tanto, un polinomio de aproximación de alto grado, aunque más preciso, aumentará significativamente la profundidad del circuito homomórfico. Esto exige parámetros criptográficos más grandes (mayor tamaño de módulo inicial), lo que a su vez incrementa el costo computacional y el tamaño de las claves.
+
+La elección del polinomio de aproximación es, por tanto, una decisión de diseño fundamental en la inferencia de redes neuronales homomórficas, donde se debe balancear la precisión del modelo con las limitaciones y costos del esquema de cifrado \cite{benaissa2021tenseal}.
+
+\subsection{Inferencia de Redes Neuronales con CKKS}
+La inferencia de redes neuronales sobre datos cifrados con el esquema CKKS se realiza aprovechando las propiedades homomórficas de este esquema para la adición y la multiplicación. El objetivo es procesar las entradas de la red, que se encuentran cifradas, con los pesos de la red, que pueden estar cifrados o en texto plano, sin que en ningún momento se revele la información sensible.
+
+El proceso general de inferencia para una capa neuronal (ya sea totalmente conectada o convolucional) en el dominio cifrado sigue los siguientes pasos:
+\begin{enumerate}
+    \item Cifrado de la Entrada: La entrada de la red ($x$) se codifica en un polinomio de texto plano y luego se cifra utilizando la clave pública del esquema CKKS, resultando en un texto cifrado $ct_x$. Los pesos de la red ($\Omega_k, \beta_k$) permanecen en texto plano.
+    \item Multiplicación homomórfica: Cada operación de multiplicación entre un peso y una entrada cifrada (o entre una matriz de pesos planos y un vector de entradas cifrado) se realiza utilizando la multiplicación homomórfica del esquema CKKS. Para capas totalmente conectadas, esto implica una serie de multiplicaciones y sumas que se optimizan mediante la diagonalización para la multiplicación matriz-vector. Para capas convolucionales, la operación se transforma a una multiplicación matriz-vector utilizando `im2col` \cite{Goodfellow16} sobre los datos cifrados.
+    \item Adición homomórfica (sesgos y sumas ponderadas): Los resultados de las multiplicaciones homomórficas se suman homomórficamente con los sesgos (también cifrados o en texto plano) utilizando la adición homomórfica del esquema CKKS.
+    \item Gestión del ruido y la escala: Después de cada multiplicación homomórfica, el ruido en el texto cifrado crece y el factor de escala cambia. Es crucial aplicar operaciones de relinearización y reescalado para gestionar el presupuesto de ruido y mantener la precisión de los datos. Estas operaciones, permiten que la red siga funcionando a través de múltiples capas.
+    \item Funciones de activación: Dado que las funciones de activación no lineales no pueden evaluarse directamente en el dominio cifrado, se utilizan aproximaciones polinómicas. Estas aproximaciones se evalúan homomórficamente aplicando multiplicaciones y sumas sobre el texto cifrado.
+    \item Descifrado de la salida: Una vez que la inferencia ha finalizado y se ha obtenido la salida cifrada de la red, esta puede ser descifrada utilizando la clave secreta, revelando el resultado de la inferencia sin haber expuesto la entrada ni los estados intermedios.
+\end{enumerate}
+Este flujo permite la evaluación completa de una red neuronal profunda sobre datos cifrados, garantizando la privacidad de la información procesada.
+
+\subsection{Convoluciones en el esquema CKKS}
+
+Las operaciones de convolución son fundamentales en las Redes Neuronales Convolucionales (CNNs) y, al igual que la multiplicación matriz-vector, requieren una adaptación específica para ser ejecutadas en el dominio homomórfico. La estrategia más común y eficiente para realizar convoluciones homomórficas es transformarlas en una multiplicación matriz-vector, una técnica conocida como `im2col`.
 
 El proceso se descompone en los siguientes pasos:
 
@@ -241,24 +276,3 @@ El proceso se descompone en los siguientes pasos:
     \end{itemize}
 \end{enumerate}
 
-\section{Funciones de Activación}
-
-Uno de los mayores desafíos al implementar redes neuronales sobre cifrado homomórfico es el manejo de las funciones de activación no lineales. El esquema CKKS solo soporta de forma nativa adiciones y multiplicaciones. Funciones como Sigmoide, Tanh o ReLU no pueden ser evaluadas directamente.
-
-La solución a este problema es aproximar estas funciones de activación mediante polinomios. La elección del polinomio de aproximación es un compromiso crítico entre la precisión del modelo y el rendimiento del cómputo homomórfico.
-
-\subsection{Técnicas de Aproximación}
-
-Existen varias estrategias para encontrar una aproximación polinómica adecuada:
-
-\begin{itemize}
-    \item Aproximación por Series de Taylor: Para funciones suaves como la sigmoide o la tangente hiperbólica, se puede utilizar su expansión en series de Taylor alrededor de un punto. Esta es una técnica directa sugerida en los trabajos fundacionales del esquema CKKS \cite{CKKS17}.
-
-    \item Uso de Polinomios Simples: En muchos casos, especialmente para reducir la profundidad del circuito, se reemplaza la función de activación por un polinomio de bajo grado. Una de las aproximaciones más comunes y eficientes es usar la función cuadrática $f(x) = ax^2 + bx + c$. Por ejemplo, la red CryptoNets \cite{GiladBachrach2016CryptoNets} popularizó el uso de la función cuadrada $f(x) = x^2$ como una alternativa a ReLU. Aunque menos precisa, esta aproximación introduce la no linealidad necesaria con un costo computacional mínimo (una sola multiplicación homomórfica).
-\end{itemize}
-
-\subsection{Impacto en la Profundidad del Circuito}
-
-Cada multiplicación homomórfica consume un nivel en el esquema CKKS, reduciendo el presupuesto de ruido y el módulo del texto cifrado. La evaluación de un polinomio de grado $d$ requiere una profundidad multiplicativa de $O(\sqrt d)$, utilizando algoritmos de evaluación paralela como el propuesto por Paterson y Stockmeyer \cite{Paterson1973}. Por lo tanto, un polinomio de aproximación de alto grado, aunque más preciso, aumentará significativamente la profundidad del circuito homomórfico. Esto exige parámetros criptográficos más grandes (mayor tamaño de módulo inicial), lo que a su vez incrementa el costo computacional y el tamaño de las claves.
-
-La elección del polinomio de aproximación es, por tanto, una decisión de diseño fundamental en la inferencia de redes neuronales homomórficas, donde se debe balancear la precisión del modelo con las limitaciones y costos del esquema de cifrado \cite{benaissa2021tenseal}.
