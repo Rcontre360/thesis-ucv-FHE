@@ -1,6 +1,6 @@
 \chapter{Cifrado Homomórfico sobre Redes Neuronales}
 
-Las redes neuronales artificiales (RNA) han impulsando avances sin precedentes en campos tan diversos como la visión por computadora, el procesamiento del lenguaje natural, la medicina y las finanzas. Su capacidad para aprender patrones complejos directamente de los datos les permite abordar problemas que sin ellas son intratables. Este éxito masivo ha llevado a una proliferación de aplicaciones donde las RNA procesan volúmenes crecientes de información personal y sensible.
+Las redes neuronales artificiales (RNA) han impulsando avances sin precedentes en campos tan diversos como la visión por computadora, el procesamiento del lenguaje natural, la medicina y las finanzas. Su capacidad para aprender patrones complejos directamente de los datos les permite abordar problemas que sin ellas son intratables.
 
 Sin embargo, las RNA plantean serios desafíos en materia de privacidad. El procesamiento de datos confidenciales por RNAs, especialmente en entornos de terceros o servicios en la nube, genera problemas sobre la exposición de información sensible. En este contexto el cifrado homomórfico emerge como una solución. Al permitir realizar cómputos directamente sobre datos cifrados, FHE ofrece un mecanismo robusto para preservar la privacidad en las operaciones de las RNA. La aplicación de FHE a las redes neuronales posibilita la ejecución de inferencias sobre datos sensibles manteniendo la confidencialidad.
 
@@ -27,7 +27,7 @@ y_j = \phi_{j0} + \sum_{d=1}^{D} \phi_{jd}h_d,
 
 donde $a[\cdot]$ es una función de activación no lineal.
 
-La función de activación permite al modelo describir relaciones no lineales entre la entrada y la salida. Esta debe ser no lineal. Con una función de activación nula o lineal, el mapeo general de la entrada a la salida estaría restringido a ser lineal. La funcion más común es la unidad lineal rectificada o ReLU:
+La función de activación permite al modelo describir relaciones no lineales entre la entrada y la salida. Esta debe ser no lineal. Con una función de activación nula o lineal, el mapeo general de la entrada a la salida estaría restringido a ser lineal. La funcion más común es la unidad lineal rectificada o ReLU. Esta función devuelve la entrada cuando es positiva y cero en caso contrario.
 
 \begin{equation}
 a[z] = \text{ReLU}[z] = 
@@ -38,27 +38,25 @@ z & z \geq 0
 \label{eq:relu_definition}
 \end{equation}
 
-Esta función devuelve la entrada cuando es positiva y cero en caso contrario. Con activaciones ReLU, la red divide el espacio de entrada en politopos convexos definidos por las intersecciones de hiperplanos calculados por las ``articulaciones`` en las funciones ReLU. Cada politopo convexo contiene una función lineal diferente. Los politopos son los mismos para cada salida, pero las funciones lineales que contienen pueden diferir.
-
 \subsubsection{Neurona}
 Una neurona artificial, es el componente fundamental de una red neuronal. Recibe una o más entradas, realiza una operación (generalmente una suma ponderada de sus entradas más un sesgo), y luego aplica una función de activación no lineal al resultado para producir una salida.
 
 \subsubsection{Capas: Entrada, Oculta y Salida}
 Las neuronas en una red neuronal se organizan en capas.
 \begin{itemize}
-    \item \textbf{Capa de Entrada:} Recibe los datos iniciales o características del problema.
-    \item \textbf{Capa Oculta:} Son capas intermedias entre la entrada y la salida.
-    \item \textbf{Capa de Salida:} Produce el resultado final de la red.
+    \item Capa de Entrada: Recibe los datos iniciales o características del problema.
+    \item Capa Oculta: Son capas intermedias entre la entrada y la salida.
+    \item Capa de Salida: Produce el resultado final de la red.
 \end{itemize}
 
 \subsubsection{Pesos y Sesgos}
 \begin{itemize}
-    \item \textbf{Pesos:} Son parámetros ajustables que representan la fuerza de la conexión entre las neuronas de capas adyacentes. En las ecuaciones \ref{eq:hidden_unit} y \ref{eq:output_unit}, los pesos están representados por $\theta_{di}$ (para las unidades ocultas) y $\phi_{jd}$ (para la capa de salida), respectivamente.
-    \item \textbf{Sesgos:} Son parámetros ajustables que permiten a una neurona activar su función de activación incluso si todas sus entradas son cero. Funcionan como un umbral o desplazamiento en la función de activación. En las ecuaciones \ref{eq:hidden_unit} y \ref{eq:output_unit}, los sesgos están representados por $\theta_{d0}$ y $\phi_{j0}$, respectivamente.
+    \item Pesos: Son parámetros ajustables que representan la fuerza de la conexión entre las neuronas de capas adyacentes. En las ecuaciones \ref{eq:hidden_unit} y \ref{eq:output_unit}, los pesos están representados por $\theta_{di}$ (para las unidades ocultas) y $\phi_{jd}$ (para la capa de salida), respectivamente.
+    \item Sesgos: Son parámetros ajustables que permiten a una neurona activar su función de activación incluso si todas sus entradas son cero. Funcionan como un umbral o desplazamiento en la función de activación. En las ecuaciones \ref{eq:hidden_unit} y \ref{eq:output_unit}, los sesgos están representados por $\theta_{d0}$ y $\phi_{j0}$, respectivamente.
 \end{itemize}
 
 \subsubsection{Función de Activación}
-Una función de activación introduce no linealidad en la salida de una neurona. Es crucial para permitir que la red aprenda relaciones complejas y no lineales en los datos. Sin una función de activación no lineal, una red neuronal, independientemente de su profundidad, se comportaría como un modelo lineal. En la ecuación \ref{eq:hidden_unit}, la función de activación se denota como $a[\cdot]$. Ejemplos comunes incluyen ReLU (cuya definición se da en la ecuación \ref{eq:relu_definition}), Sigmoide y Tanh.
+Una función de activación introduce no linealidad en la salida de una neurona. Es crucial para permitir que la red aprenda relaciones complejas y no lineales en los datos. Sin una función de activación no lineal, una red neuronal, independientemente de su profundidad, se comportaría como un modelo lineal. En la ecuación \ref{eq:hidden_unit}, la función de activación se denota como $a[\cdot]$.
 
 \section{Redes Neuronales Profundas}
 Las redes neuronales profundas se caracterizan por tener más de una capa oculta. Con funciones de activación, tanto las redes superficiales como las profundas describen mapeos lineales por tramos desde la entrada hasta la salida.
@@ -82,7 +80,7 @@ y
     \label{eq:deep_y1}
 \end{equation}
 
-La segunda red toma $y$ como entrada y devuelve $y'$, y se define por:
+La segunda red toma $y = h'$ como entrada y devuelve $y'$
 
 \begin{equation}
     y' = \phi'_0 + \phi'_1h'_1 + \phi'_2h'_2 + \phi'_3h'_3.
@@ -127,17 +125,50 @@ Si la capa $k$ tiene $D_k$ unidades ocultas:
 Esta notación simplifica la representación y el análisis de redes muy profundas.
 
 \section{Redes Neuronales Convolucionales}
-    \subsection{Introducción a las CNNs y su Motivación}
-    \subsection{Capas Convolucionales}
-        \subsubsection{Filtros (Kernels), Stride y Padding}
-        \subsubsection{Operación de Convolución}
-        \subsubsection{Compartición de Pesos y Conectividad Local}
-    \subsection{Capas de Agrupamiento (Pooling Layers)}
-        \subsubsection{Max Pooling}
-        \subsubsection{Average Pooling}
-    \subsection{Arquitectura Típica de una CNN}
-    \subsection{Ventajas y Aplicaciones de las CNNs}
+Ciertas estructuras de datos, como las imágenes, poseen propiedades inherentes que sugieren la necesidad de arquitecturas de red más especializadas. Las imágenes son datos de alta dimensionalidad, donde los píxeles cercanos están estadísticamente relacionados y su interpretación es estable bajo transformaciones geométricas (como traslaciones). Las capas convolucionales están diseñadas para explotar estas propiedades, procesando cada región local de la entrada de manera independiente y compartiendo parámetros a través de toda la entrada. Esto resulta en un menor número de parámetros, una mejor explotación de las relaciones espaciales y una eficiencia mejorada al no tener que reaprender patrones en cada posición. Una red compuesta predominantemente por capas convolucionales se conoce como red neuronal convolucional (CNN).
 
+\subsection{Operación de Convolución}
+Las redes convolucionales consisten en una serie de capas convolucionales, cada una de las cuales es equivariante a la traslación. Típicamente, también incluyen mecanismos de agrupamiento (pooling) que inducen una invariancia parcial a la traslación. A continuación, se detalla la operación de convolución en una y dos dimensiones.
+
+\subsubsection{Convolución 1D}
+
+En una dimensión, una convolución transforma un vector de entrada $x$ en un vector de salida $z$, de modo que cada salida $z_i$ es una suma ponderada de las entradas cercanas. Los mismos pesos se utilizan en cada posición y se denominan colectivamente filtro de convolución. El tamaño de la región sobre la que se combinan las entradas se denomina tamaño del filtro ($K$). Para un filtro de tamaño $K$, la operación de convolución se define generalmente como:
+
+\begin{equation}
+z_i = \sum_{j=1}^{K} \omega_j x_{i+j - \lfloor K/2 \rfloor -1}
+\label{eq:conv1d}
+\end{equation}
+
+donde $\omega = [\omega_1, \dots, \omega_K]^T$ es el filtro. La operación de convolución es equivariante con respecto a la traslación: si se traslada la entrada $x$, la salida correspondiente $z$ se traslada de la misma manera.
+
+        \subsubsection{Convolución 2D}
+Las redes convolucionales son comúnmente aplicadas a datos de imagen 2D. En este caso, el filtro de convolución es un objeto 2D, típicamente una matriz de tamaño $K \times K$. Aplicado a una entrada 2D $x_{ij}$, la operación computa una capa de unidades ocultas $h_{ij}$ como:
+\begin{equation}
+h_{ij} = a\left[\beta + \sum_{m=1}^{K} \sum_{n=1}^{K} \omega_{mn}x_{i+m-\lfloor K/2 \rfloor-1, j+n-\lfloor K/2 \rfloor-1}\right],
+\label{eq:conv2d}
+\end{equation}
+donde $\omega_{mn}$ son las entradas del filtro convolucional y $\beta$ es un sesgo. Esta es una suma ponderada sobre una región cuadrada $K \times K$ de la entrada. El filtro se traslada tanto horizontal como verticalmente a través de la entrada 2D para crear una salida en cada posición.
+
+    \subsection{Capas Convolucionales}
+Una capa convolucional calcula su salida mediante la operación de convolución sobre la entrada, añadiendo un sesgo $\beta$, y pasando cada resultado a través de una función de activación $a[\cdot]$.
+
+        \subsubsection{Filtros, Stride y Padding}
+        El filtro define las ponderaciones utilizadas en la operación de convolución. El \textit{padding} aborda el manejo de los bordes de la entrada, donde el filtro no puede centrarse completamente. La opción más común es $padding = 0$, que asume que la entrada es cero fuera de su rango válido. Alternativamente, se pueden descartar las posiciones de salida donde el filtro excede el rango de la entrada ('valid convolutions'), lo que reduce el tamaño de la representación.
+
+El \textit{stride} (paso) especifica el desplazamiento del filtro sobre la entrada en cada paso. Un \textit{stride} de uno evalúa la salida en cada posición, mientras que un \textit{stride} mayor que uno (por ejemplo, dos) reduce el tamaño de la salida. El tamaño del filtro puede aumentarse para integrar información de un área más grande, generalmente manteniendo un número impar para que pueda centrarse. Las convoluciones dilatadas introducen ceros entre los valores del filtro, permitiendo integrar información de una región de entrada más grande con menos pesos. La tasa de dilatación es el número de ceros intercalados entre los pesos más uno.
+
+        \subsubsection{Compartición de pesos y conectividad local}
+Las capas convolucionales utilizan significativamente menos parámetros que las capas totalmente conectadas debido a dos características clave:
+\begin{itemize}
+    \item Conectividad Local: Cada unidad en una capa convolucional está conectada solo a una pequeña región de la entrada, definida por el tamaño del filtro. Esto contrasta con las capas totalmente conectadas, donde cada unidad está conectada a todas las entradas.
+    \item Compartición de Pesos: Los pesos del filtro se comparten a través de toda la entrada. Esto significa que el mismo conjunto de pesos se aplica a diferentes regiones de la entrada, lo que permite detectar patrones en cualquier lugar de la entrada sin tener que aprenderlos por separado para cada ubicación.
+\end{itemize}
+Estas propiedades son cruciales para el procesamiento eficiente de datos estructurados, como imágenes, donde los patrones locales son relevantes independientemente de su posición.
+
+\subsubsection{Canales}
+En la práctica, la aplicación de una única convolución a menudo resulta en una pérdida de información o una representación insuficiente. Por lo tanto, es habitual computar varias convoluciones en paralelo. Cada una de estas convoluciones produce un nuevo conjunto de variables ocultas, denominado mapa de características o canal.
+
+Tanto las capas de entrada como las capas ocultas pueden tener múltiples canales. Si una capa de entrada tiene $C_i$ canales y se utiliza un filtro de tamaño $K$ por canal, las unidades ocultas en cada canal de salida se calculan como una suma ponderada sobre todos los $C_i$ canales de entrada y las $K$ entradas del filtro, más un sesgo. Si se desean $C_o$ canales de salida, se necesitarán $C_i \times C_o \times K$ pesos y $C_o$ sesgos (para el caso 1D), o $C_i \times C_o \times K \times K$ pesos y $C_o$ sesgos (para el caso 2D).
 
 \section{Operaciones Lineales en CKKS}
 
@@ -192,20 +223,20 @@ El proceso se descompone en los siguientes pasos:
 \begin{enumerate}
     \item Transformación del Tensor de Entrada:
     \begin{itemize}
-        \item El tensor de entrada se transforma en una matriz 2D. Cada seccion de la entrada que sería procesado por el kernel de convolución se transforma en una columna de esta nueva matriz.
+        \item El tensor de entrada se transforma en una matriz 2D. Cada seccion de la entrada que sería procesado por el filtro de convolución se transforma en una columna de esta nueva matriz.
         \item Esta transformación se realiza en texto plano antes de cifrar los datos, o se puede adaptar para operar sobre datos cifrados si la entrada ya está cifrada.
-        \item Los parámetros de la convolución, como el tamaño del kernel, el stride y el padding, se incorporan en esta transformación `im2col`.
+        \item Los parámetros de la convolución, como el tamaño del filtro, el \textit{stride} y el \textit{padding}, se incorporan en esta transformación `im2col`.
     \end{itemize}
 
-    \item Transformación del Kernel de Convolución:
+    \item Transformación del filtro de Convolución:
     \begin{itemize}
-        \item El kernel (o filtro) de convolución, que es un tensor pequeño, también se transforma en una matriz 2D. Esta matriz se organiza de manera que cada fila corresponda a un kernel aplanado.
+        \item El filtro de convolución, que es un tensor pequeño, también se transforma en una matriz 2D. Esta matriz se organiza de manera que cada fila corresponda a un filtro aplanado.
     \end{itemize}
 
     \item Multiplicación Matriz-Vector Homomórfica:
     \begin{itemize}
-        \item Una vez que el tensor de entrada y el kernel se han transformado en matrices 2D, la operación de convolución se convierte en una multiplicación matriz-vector estándar.
-        \item Se aplica el algoritmo para multiplicación Matriz-Vector descrito en la Sección 1.3. La matriz `im2col` de la entrada se trata como el vector de entrada cifrado, y la matriz del kernel se trata como la matriz de pesos.
+        \item Una vez que el tensor de entrada y el filtro se han transformado en matrices 2D, la operación de convolución se convierte en una multiplicación matriz-vector estándar.
+        \item Se aplica el algoritmo para multiplicación Matriz-Vector descrito en la Sección 1.3. La matriz `im2col` de la entrada se trata como el vector de entrada cifrado, y la matriz del filtro se trata como la matriz de pesos.
         \item El resultado de esta multiplicación es un texto cifrado que representa el mapa de características de salida aplanado.
     \end{itemize}
 \end{enumerate}
