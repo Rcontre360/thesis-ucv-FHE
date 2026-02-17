@@ -12,7 +12,7 @@ Matemáticamente, un esquema de cifrado es homomórfico si, dado un conjunto de 
 \end{equation}
 donde $m_1, m_2 \in \mathcal{M}$, y $\text{Enc}$ y $\text{Dec}$ son las funciones de cifrado y descifrado, respectivamente.
 
-Durante décadas, la construcción de un esquema de cifrado que pudiera evaluar un número arbitrario de operaciones de suma y multiplicación, conocido como \textbf{cifrado totalmente homomórfico (FHE, Fully Homomorphic Encryption)}, fue considerado uno de los mayores desafíos en la criptografía. Antes del primer esquema FHE, se desarrollaron varios \textbf{esquemas parcialmente homomórficos (PHE)}, que solo admitían un tipo de operación (suma o multiplicación) un número ilimitado de veces. Algunos ejemplos notables son:
+Durante décadas, la construcción de un esquema de cifrado que pudiera evaluar un número arbitrario de operaciones de suma y multiplicación, conocido como cifrado totalmente homomórfico (FHE, Fully Homomorphic Encryption), fue considerado uno de los mayores desafíos en la criptografía. Antes del primer esquema FHE, se desarrollaron varios esquemas parcialmente homomórficos (PHE), que solo admitían un tipo de operación (suma o multiplicación) un número ilimitado de veces. Algunos ejemplos notables son:
 
 \begin{itemize}
     \item RSA: RSA \cite{RSA78} es multiplicativamente homomórfico. Dados dos textos cifrados $c_1 = \text{Enc}(m_1) = m_1^e \pmod{N}$ y $c_2 = \text{Enc}(m_2) = m_2^e \pmod{N}$, su producto es:
@@ -29,7 +29,7 @@ Estos esquemas PHE son útiles en aplicaciones específicas, pero no son suficie
 
 \section{Ruido en el Cifrado Homomórfico}
 
-En 2009, cuando Craig Gentry, en su tesis doctoral \cite{Gentry09}, presentó el primer esquema de cifrado totalmente homomórfico. La construcción de Gentry se basó en retículos y superó el principal obstáculo que impedía la creación de esquemas FHE, el \textbf{ruido}. El esquema de Gentry permite realizar adicion y multiplicacion sobre texto cifrado, ademas es posible construir circuitos para realizar computo arbitrario.
+En 2009, cuando Craig Gentry, en su tesis doctoral \cite{Gentry09}, presentó el primer esquema de cifrado totalmente homomórfico. La construcción de Gentry se basó en retículos y superó el principal obstáculo que impedía la creación de esquemas FHE, el ruido. El esquema de Gentry permite realizar adicion y multiplicacion sobre texto cifrado, ademas es posible construir circuitos para realizar computo arbitrario.
 
 En la mayoría de los esquemas homomórficos modernos, un texto cifrado no es solo una función del mensaje, sino también de un error o ``ruido`` que es fundamental para la seguridad del esquema. Un texto cifrado $c$ de un mensaje $m$ se puede representar conceptualmente como:
 \begin{equation}
@@ -49,7 +49,7 @@ El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los rui
 
 \subsection{Cifrado Homomórfico por Niveles}\label{sec:leveled_fhe}
 
-Los esquemas de cifrado que soportan un número limitado de operaciones se conocen como \textbf{Cifrado Algo Homomórfico}. Para extender su utilidad, Gentry propuso en su trabajo de 2009 \cite{Gentry09} el concepto de \textbf{Cifrado Homomórfico por Niveles}.
+Los esquemas de cifrado que soportan un número limitado de operaciones se conocen como Cifrado Algo Homomórfico. Para extender su utilidad, Gentry propuso en su trabajo de 2009 \cite{Gentry09} el concepto de Cifrado Homomórfico por Niveles.
 
 La idea fundamental es que, si conocemos de antemano la complejidad del cómputo que se desea realizar (es decir, la ``profundidad'' del circuito de operaciones), podemos configurar los parámetros del esquema de cifrado para que soporte exactamente ese número de operaciones sin que el ruido desborde el texto cifrado.
 
@@ -102,7 +102,7 @@ Este procedimiento transforma cualquier esquema parcialmente homomorfico, capaz 
 
 Aunque el esquema original de Gentry fue un hito teórico, era demasiado lento para ser práctico. Esto desencadenó una intensa investigación para mejorar su eficiencia y encontrar construcciones más viables. Las generaciones posteriores de esquemas FHE se centraron en dos áreas principales: optimizar la gestión del ruido sin depender siempre del costoso \textit{bootstrapping}, y basar la seguridad en problemas matemáticos más estructurados y eficientes que los utilizados por Gentry.
 
-Los esquemas modernos basan su seguridad en el problema de \textbf{Aprendizaje con Errores (LWE)} y su variante más eficiente, el \textbf{Aprendizaje con Errores en Anillos (RLWE)}. La formulación del problema LWE, introducida por Oded Regev \cite{Regev05}, es la siguiente.
+Los esquemas modernos basan su seguridad en el problema de Aprendizaje con Errores (LWE) y su variante más eficiente, el Aprendizaje con Errores en Anillos (RLWE). La formulación del problema LWE, introducida por Oded Regev \cite{Regev05}, es la siguiente.
 
 Denotemos como $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ al grupo aditivo de los números reales módulo uno. Intuitivamente, se puede pensar en el toro como el conjunto de los números reales en el intervalo `[0, 1)`. Por ejemplo, si sumamos $0.7 + 0.5 = 1.2$, en $\mathbb{T}$ el resultado es equivalente a $0.2$.
 
@@ -125,7 +125,7 @@ Denotemos como $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ al grupo aditivo de los núm
     \end{enumerate}
 \end{itemize}
 
-El \textbf{problema de Aprendizaje con Errores (LWE)}, en su versión de búsqueda $\mathrm{LWE}_{q,\phi}$, consiste en encontrar el vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$ teniendo acceso a un número polinomial de muestras $(\mathbf{a}_i, t_i)$ de la distribución $A_{\mathbf{s},\phi}$.
+El problema de Aprendizaje con Errores (LWE), en su versión de búsqueda $\mathrm{LWE}_{q,\phi}$, consiste en encontrar el vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$ teniendo acceso a un número polinomial de muestras $(\mathbf{a}_i, t_i)$ de la distribución $A_{\mathbf{s},\phi}$.
 
 \subsection{Cifrado y Descifrado con LWE}
 
@@ -162,7 +162,7 @@ La corrección del descifrado se basa en que $d = \mu \cdot \lfloor q/2 \rfloor 
 
 \section{Aprendizaje con Errores en Anillos (RLWE)}
 
-La variante \textbf{RLWE} \cite{LPR10} traslada el problema desde vectores sobre $\mathbb{Z}_q$ hacia estructuras algebraicas mas flexibles, permitiendo optimizaciones algorítmicas significativas.
+La variante RLWE \cite{LPR10} traslada el problema desde vectores sobre $\mathbb{Z}_q$ hacia estructuras algebraicas mas flexibles, permitiendo optimizaciones algorítmicas significativas.
 
 \subsection{Anillos Polinomiales}
 
@@ -182,7 +182,7 @@ En $R_q$, los elementos son polinomios de grado máximo $n-1$. La suma se realiz
 
 Sobre la estructura de $R_q$, se define una distribución de error $\chi$ que genera polinomios con coeficientes pequeños en comparación con $q$.
 
-El \textbf{problema de Búsqueda RLWE} (Search-RLWE) consiste en encontrar el polinomio secreto $s(x) \in R_q$ a partir de un número polinomial de muestras. Cada muestra es un par de polinomios $(a_i(x), b_i(x))$, donde:
+El problema de Búsqueda RLWE (Search-RLWE) consiste en encontrar el polinomio secreto $s(x) \in R_q$ a partir de un número polinomial de muestras. Cada muestra es un par de polinomios $(a_i(x), b_i(x))$, donde:
 \begin{itemize}
     \item $a_i(x)$ es un polinomio elegido uniformemente al azar del anillo $R_q$.
     \item $b_i(x)$ se calcula como $b_i(x) = a_i(x) \cdot s(x) + e_i(x) \pmod{q}$, donde $s(x)$ es el polinomio secreto que se desea encontrar y $e_i(x)$ es un polinomio de error ``pequeño`` muestreado de la distribución $\chi$.
@@ -235,7 +235,7 @@ En la \hyperref[tab:fhe_comparativa]{Tabla~\ref{tab:fhe_comparativa}} se resumen
     \vspace{0.5em}
     \begin{tabular}{| l | l | l | l | l |}
         \hline
-        \textbf{Característica} & \textbf{BGV / BFV} & \textbf{CKKS} & \textbf{TFHE} \\ 
+        Característica & BGV / BFV & CKKS & TFHE \\ 
         \hline
         
         Tipo de Dato & Enteros exactos & Reales / Complejos & Bits / Enteros cortos \\ 
@@ -256,7 +256,7 @@ Cada uno de estos esquemas homomórficos posee características distintivas que 
 
 \section{Esquema Cheon-Kim-Kim-Song}
 
-El esquema propuesto por Cheon, Kim, Kim y Song en 2017 \cite{CKKS17} o CKKS, introdujo el concepto de \textbf{aritmética aproximada}. A diferencia de los esquemas BGV o BFV, que están diseñados para computar de manera exacta sobre campos finitos o anillos de enteros, CKKS permite procesar de forma nativa números reales y complejos. En los esquemas exactos, trabajar con decimales requiere técnicas de cuantización que incrementan el tamaño de los coeficientes en los polinomios, esto agota el presupuesto de ruido del sistema. CKKS resuelve este problema tratando el ruido inherente de RLWE no como un obstáculo a eliminar, sino como un error de redondeo controlado, similar al que ocurre en la aritmética de punto flotante de los procesadores convencionales.
+El esquema propuesto por Cheon, Kim, Kim y Song en 2017 \cite{CKKS17} o CKKS, introdujo el concepto de aritmética aproximada. A diferencia de los esquemas BGV o BFV, que están diseñados para computar de manera exacta sobre campos finitos o anillos de enteros, CKKS permite procesar de forma nativa números reales y complejos. En los esquemas exactos, trabajar con decimales requiere técnicas de cuantización que incrementan el tamaño de los coeficientes en los polinomios, esto agota el presupuesto de ruido del sistema. CKKS resuelve este problema tratando el ruido inherente de RLWE no como un obstáculo a eliminar, sino como un error de redondeo controlado, similar al que ocurre en la aritmética de punto flotante de los procesadores convencionales.
 
 \subsection{Codificación y Decodificación}
 
@@ -264,9 +264,9 @@ Para procesar datos en CKKS, es necesario transformar los vectores de números r
 
 \subsubsection{Polinomios Ciclótomicos y Raíces de la Unidad}
 
-Un \textbf{polinomio ciclotómico} $\Phi_n(x)$ es un tipo especial de polinomio con coeficientes enteros. Su característica más relevante es que sus raíces son las \textbf{raíces primitivas $n$-ésimas de la unidad}. Las \textbf{raíces $n$-ésimas de la unidad} son todos los números complejos $z$ que satisfacen la ecuación $z^n = 1$. Geométricamente, estas raíces se distribuyen uniformemente en el círculo unitario en el plano complejo. Una raíz primitiva $n$-ésima de la unidad es aquella que genera todas las demás raíces $n$-ésimas al ser elevada a diferentes potencias.
+Un polinomio ciclotómico $\Phi_n(x)$ es un tipo especial de polinomio con coeficientes enteros. Su característica más relevante es que sus raíces son las raíces primitivas $n$-ésimas de la unidad. Las raíces $n$-ésimas de la unidad son todos los números complejos $z$ que satisfacen la ecuación $z^n = 1$. Geométricamente, estas raíces se distribuyen uniformemente en el círculo unitario en el plano complejo. Una raíz primitiva $n$-ésima de la unidad es aquella que genera todas las demás raíces $n$-ésimas al ser elevada a diferentes potencias.
 
-En los esquemas de cifrado basados en retículos como CKKS, se utiliza un tipo particular de polinomio ciclotómico: $\Phi_n(x) = x^n + 1$, donde $n$ es una potencia de 2 (por ejemplo, $n=2^k$). Este polinomio es crucial porque define el \textbf{anillo de polinomios} $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$ sobre el cual se realizan todas las operaciones criptográficas. Este anillo es, en esencia, un conjunto de polinomios donde cualquier $x^n$ se reemplaza por $-1$.
+En los esquemas de cifrado basados en retículos como CKKS, se utiliza un tipo particular de polinomio ciclotómico: $\Phi_n(x) = x^n + 1$, donde $n$ es una potencia de 2 (por ejemplo, $n=2^k$). Este polinomio es crucial porque define el anillo de polinomios $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$ sobre el cual se realizan todas las operaciones criptográficas. Este anillo es, en esencia, un conjunto de polinomios donde cualquier $x^n$ se reemplaza por $-1$.
 
 La elección de $x^n + 1$ como polinomio ciclotómico para definir el anillo $R$ ofrece varias ventajas computacionales clave:
 
@@ -280,7 +280,7 @@ La elección de $n$ como potencia de 2 es también fundamental para la eficienci
 
 \subsubsection{Codificación}
 
-La codificación o la inversa de la \textbf{Inmersión Canónica} es una funcion biyectiva que va desde los polinomios en el anillo $R$ (se usan para las operaciones homomórficas) y el de los vectores de números complejos (donde residen los datos a procesar). Permiten que las operaciones realizadas sobre polinomios cifrados se traduzcan en operaciones sobre los datos numéricos subyacentes.
+La codificación o la inversa de la Inmersión Canónica es una funcion biyectiva que va desde los polinomios en el anillo $R$ (se usan para las operaciones homomórficas) y el de los vectores de números complejos (donde residen los datos a procesar). Permiten que las operaciones realizadas sobre polinomios cifrados se traduzcan en operaciones sobre los datos numéricos subyacentes.
 
 \begin{enumerate}
     \item El Anillo de Polinomios $R$: CKKS opera en un anillo de polinomios $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$. Cada dato cifrado es un polinomio $p(x)$ cuyos coeficientes son enteros.
@@ -376,11 +376,11 @@ El resultado es un polinomio cuadrático en $s$. Esto se representa como un text
     \item $d_1 = c_{1,0}c_{2,1} + c_{1,1}c_{2,0} \pmod q$
     \item $d_2 = c_{1,1}c_{2,1} \pmod q$
 \end{itemize}
-Este nuevo texto está cifrado bajo la clave $(1, s, s^2)$. Para poder continuar operando, es necesario aplicar la \textbf{relinearización} para gestionar el tamaño del texto cifrado. Adicionalmente, el ruido y el factor de escala deben ser controlados mediante el \textbf{reescalado}, un proceso que se detalla en la sección \ref{sec:gestion_niveles}.
+Este nuevo texto está cifrado bajo la clave $(1, s, s^2)$. Para poder continuar operando, es necesario aplicar la relinearización para gestionar el tamaño del texto cifrado. Adicionalmente, el ruido y el factor de escala deben ser controlados mediante el reescalado, un proceso que se detalla en la sección \ref{sec:gestion_niveles}.
 
 \subsubsection{Rotaciones Homomórficas}
 
-Las rotaciones permiten permutar los elementos dentro de las ranuras de un vector cifrado. Esta operación se basa en los \textbf{automorfismos de Galois}. Para rotar un vector $k$ posiciones, se aplica el automorfismo $\phi_k: p(x) \mapsto p(x^k)$ al polinomio del texto cifrado. Si aplicamos esto a un texto cifrado $$ct = (c_0(x), c_1(x))$$ obtenemos un nuevo par $$(c_0(x^k), c_1(x^k))$$ Sin embargo, este nuevo texto esta cifrado bajo la clave secreta transformada $s(x^k)$. Para devolverlo al formato original, se necesita un proceso de cambio de clave que utiliza las \textbf{Claves de Galois ($galk$)}, una por cada rotación necesaria. Estas claves son, en esencia, cifrados de la clave secreta original $s(x)$ bajo las claves secretas transformadas $s(x^k)$.
+Las rotaciones permiten permutar los elementos dentro de las ranuras de un vector cifrado. Esta operación se basa en los automorfismos de Galois. Para rotar un vector $k$ posiciones, se aplica el automorfismo $\phi_k: p(x) \mapsto p(x^k)$ al polinomio del texto cifrado. Si aplicamos esto a un texto cifrado $$ct = (c_0(x), c_1(x))$$ obtenemos un nuevo par $$(c_0(x^k), c_1(x^k))$$ Sin embargo, este nuevo texto esta cifrado bajo la clave secreta transformada $s(x^k)$. Para devolverlo al formato original, se necesita un proceso de cambio de clave que utiliza las Claves de Galois ($galk$), una por cada rotación necesaria. Estas claves son, en esencia, cifrados de la clave secreta original $s(x)$ bajo las claves secretas transformadas $s(x^k)$.
 
 
 \subsection{Cifrado por Niveles}\label{sec:gestion_niveles}

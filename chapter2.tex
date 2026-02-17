@@ -157,13 +157,17 @@ Una capa convolucional calcula su salida mediante la operación de convolución 
 
 El \textit{stride} (paso) especifica el desplazamiento del filtro sobre la entrada en cada paso. Un \textit{stride} de uno evalúa la salida en cada posición, mientras que un \textit{stride} mayor que uno (por ejemplo, dos) reduce el tamaño de la salida. El tamaño del filtro puede aumentarse para integrar información de un área más grande, generalmente manteniendo un número impar para que pueda centrarse. Las convoluciones dilatadas introducen ceros entre los valores del filtro, permitiendo integrar información de una región de entrada más grande con menos pesos. La tasa de dilatación es el número de ceros intercalados entre los pesos más uno.
 
-        \subsubsection{Compartición de pesos y conectividad local}
-Las capas convolucionales utilizan significativamente menos parámetros que las capas totalmente conectadas debido a dos características clave:
-\begin{itemize}
-    \item Conectividad Local: Cada unidad en una capa convolucional está conectada solo a una pequeña región de la entrada, definida por el tamaño del filtro. Esto contrasta con las capas totalmente conectadas, donde cada unidad está conectada a todas las entradas.
-    \item Compartición de Pesos: Los pesos del filtro se comparten a través de toda la entrada. Esto significa que el mismo conjunto de pesos se aplica a diferentes regiones de la entrada, lo que permite detectar patrones en cualquier lugar de la entrada sin tener que aprenderlos por separado para cada ubicación.
-\end{itemize}
-Estas propiedades son cruciales para el procesamiento eficiente de datos estructurados, como imágenes, donde los patrones locales son relevantes independientemente de su posición.
+\subsubsection{Convolución como multiplicación matricial}
+
+Las capas convolucionales pueden ser eficientemente implementadas utilizando multiplicaciones matriciales estándar. Esto es fundamental para aprovechar las optimizaciones existentes en bibliotecas de álgebra lineal y, en el contexto de cifrado homomórfico, para alinearse con operaciones homomórficas que a menudo se basan en productos matriciales. La clave para esta transformación es la técnica conocida como \textit{Image to Column} (Im2Col). Esta tecnica convierte bloques locales de la imagen de entrada en columnas de una matriz bidimensional.
+
+\begin{enumerate}
+    \item Transformación de la entrada: Para cada posición donde se aplicaría el filtro convolucional, se extrae la región correspondiente de la imagen de entrada. Esta región se transforma en un vector. Todos estos vectores resultantes se apilan como columnas en una nueva matriz, que llamamos la matriz \textit{Im2Col} de la entrada.
+    \item Transformación del filtro: De manera similar, cada filtro convolucional de la capa se aplana en un vector. Estos vectores de filtro se apilan como filas en una segunda matriz.
+    \item Multiplicación matricial: La operación de convolución se reduce entonces a una multiplicación de la matriz de filtros (transpuesta) por la matriz Im2Col de la entrada. El resultado es una matriz donde cada elemento corresponde a una salida de la convolución.
+\end{enumerate}
+
+Este enfoque permite que las propiedades de conectividad local (cada columna de Im2Col representa una región local) y compartición de pesos (cada fila de la matriz de filtros se aplica a múltiples columnas de Im2Col) se mantengan, mientras se traduce la operación a un formato que es computacionalmente muy eficiente. La expresión de la convolución como multiplicación matricial es, por lo tanto, una abstracción poderosa que subyace a muchas implementaciones optimizadas de CNNs.
 
 \subsubsection{Canales}
 En la práctica, la aplicación de una única convolución a menudo resulta en una pérdida de información o una representación insuficiente. Por lo tanto, es habitual computar varias convoluciones en paralelo. Cada una de estas convoluciones produce un nuevo conjunto de variables ocultas, denominado mapa de características o canal.
