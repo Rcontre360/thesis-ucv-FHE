@@ -89,7 +89,7 @@ La segunda red toma $y = h'$ como entrada y devuelve $y'$
 
 Con activaciones ReLU, este modelo también describe una familia de funciones lineales por tramos. Sin embargo, el número de regiones lineales es potencialmente mayor que para una red superficial con seis unidades ocultas. 
 
-\subsection{De la Composición a las Redes Profundas}
+\subsection{Estructura General de las Redes Neuronales Profundas}
 
 Una red profunda es, en esencia, una composición de transformaciones no lineales, donde la salida de una capa se convierte en la entrada de la siguiente. Una red profunda general $y = f[x, \phi]$ con $K$ capas se puede describir mediante la siguiente secuencia de operaciones:
 \begin{align}
@@ -125,10 +125,10 @@ Si la capa $k$ tiene $D_k$ unidades ocultas:
 Esta notación simplifica la representación y el análisis de redes muy profundas.
 
 \section{Redes Neuronales Convolucionales}
-Ciertas estructuras de datos, como las imágenes, poseen propiedades inherentes que sugieren la necesidad de arquitecturas de red más especializadas. Las imágenes son datos de alta dimensionalidad, donde los píxeles cercanos están estadísticamente relacionados y su interpretación es estable bajo transformaciones geométricas (como traslaciones). Las capas convolucionales están diseñadas para explotar estas propiedades, procesando cada región local de la entrada de manera independiente y compartiendo parámetros a través de toda la entrada. Esto resulta en un menor número de parámetros, una mejor explotación de las relaciones espaciales y una eficiencia mejorada al no tener que reaprender patrones en cada posición. Una red compuesta predominantemente por capas convolucionales se conoce como red neuronal convolucional (CNN).
+Ciertas estructuras de datos, como las imágenes, poseen propiedades inherentes que sugieren la necesidad de arquitecturas de red más especializadas. Las imágenes son datos de alta dimensionalidad, donde los píxeles cercanos están estadísticamente relacionados y su interpretación es estable bajo transformaciones geométricas (como traslaciones). Las capas convolucionales están diseñadas para explotar estas propiedades, procesando cada región local de la entrada de manera independiente y compartiendo parámetros a través de toda la entrada. Esto resulta en un menor número de parámetros, una mejor explotación de las relaciones espaciales y una eficiencia mejorada al no tener que reaprender patrones en cada posición. Una red compuesta predominantemente por capas convolucionales se conoce como red neuronal convolucional (CNN, Convolutional Neural Networks).
 
 \subsection{Operación de Convolución}
-Las redes convolucionales consisten en una serie de capas convolucionales, cada una de las cuales es equivariante a la traslación. Típicamente, también incluyen mecanismos de agrupamiento (pooling) que inducen una invariancia parcial a la traslación. A continuación, se detalla la operación de convolución en una y dos dimensiones.
+Las redes convolucionales consisten en una serie de capas convolucionales, cada una de las cuales es equivariante a la traslación. Típicamente, también incluyen mecanismos de agrupamiento que inducen una invariancia parcial a la traslación. A continuación, se detalla la operación de convolución en una y dos dimensiones.
 
 \subsubsection{Convolución 1D}
 
@@ -152,8 +152,8 @@ donde $\omega_{mn}$ son las entradas del filtro convolucional y $\beta$ es un se
     \subsection{Capas Convolucionales}
 Una capa convolucional calcula su salida mediante la operación de convolución sobre la entrada, añadiendo un sesgo $\beta$, y pasando cada resultado a través de una función de activación $a[\cdot]$.
 
-        \subsubsection{Filtros, Stride y Padding}
-        El filtro define las ponderaciones utilizadas en la operación de convolución. El \textit{padding} aborda el manejo de los bordes de la entrada, donde el filtro no puede centrarse completamente. La opción más común es $padding = 0$, que asume que la entrada es cero fuera de su rango válido. Alternativamente, se pueden descartar las posiciones de salida donde el filtro excede el rango de la entrada ('valid convolutions'), lo que reduce el tamaño de la representación.
+\subsubsection{Filtros, Stride y Padding}
+    El filtro define las ponderaciones utilizadas en la operación de convolución. El \textit{padding} aborda el manejo de los bordes de la entrada, donde el filtro no puede centrarse completamente. La opción más común es asumir que la entrada es cero fuera de su rango válido. Alternativamente, se pueden descartar las posiciones de salida donde el filtro excede el rango de la entrada ('valid convolutions'), lo que reduce el tamaño de la representación.
 
 El \textit{stride} (paso) especifica el desplazamiento del filtro sobre la entrada en cada paso. Un \textit{stride} de uno evalúa la salida en cada posición, mientras que un \textit{stride} mayor que uno (por ejemplo, dos) reduce el tamaño de la salida. El tamaño del filtro puede aumentarse para integrar información de un área más grande, generalmente manteniendo un número impar para que pueda centrarse. Las convoluciones dilatadas introducen ceros entre los valores del filtro, permitiendo integrar información de una región de entrada más grande con menos pesos. La tasa de dilatación es el número de ceros intercalados entre los pesos más uno.
 
@@ -169,6 +169,24 @@ Estas propiedades son cruciales para el procesamiento eficiente de datos estruct
 En la práctica, la aplicación de una única convolución a menudo resulta en una pérdida de información o una representación insuficiente. Por lo tanto, es habitual computar varias convoluciones en paralelo. Cada una de estas convoluciones produce un nuevo conjunto de variables ocultas, denominado mapa de características o canal.
 
 Tanto las capas de entrada como las capas ocultas pueden tener múltiples canales. Si una capa de entrada tiene $C_i$ canales y se utiliza un filtro de tamaño $K$ por canal, las unidades ocultas en cada canal de salida se calculan como una suma ponderada sobre todos los $C_i$ canales de entrada y las $K$ entradas del filtro, más un sesgo. Si se desean $C_o$ canales de salida, se necesitarán $C_i \times C_o \times K$ pesos y $C_o$ sesgos (para el caso 1D), o $C_i \times C_o \times K \times K$ pesos y $C_o$ sesgos (para el caso 2D).
+
+\section{Entrenamiento de Redes Neuronales}
+
+El entrenamiento de una red neuronal es el proceso de ajustar sus parámetros (pesos y sesgos) para que pueda realizar una tarea específica, como clasificación o regresión, de manera efectiva. En el contexto de cifrado homomórfico el cifrado usualmente se aplica al proceso de inferencia dado que los pesos del modelo no son datos sensibles en la mayoria de casos. Aun asi es necesario conocer que las redes neuronales pasan por una etapa de entrenamiento donde obtenemos los parametros necesarios para obtener resultados significativos durante la inferencia.
+
+\subsection{Función de Pérdida}
+Una función de pérdida cuantifica la discrepancia entre la salida predicha por la red y la salida real deseada. El objetivo del entrenamiento es minimizar esta función de pérdida. Ejemplos comunes incluyen el error cuadrático medio para regresión y la entropía cruzada para clasificación.
+
+\subsection{Optimización}
+La optimización es el proceso de encontrar los valores de los parámetros que minimizan la función de pérdida. El método más común es el descenso de gradiente (Gradient Descent) o alguna de sus variantes (e.g., Adam, RMSprop). El descenso de gradiente calcula el gradiente de la función de pérdida con respecto a cada parámetro de la red. El gradiente indica la dirección de máximo aumento de la pérdida, por lo que los parámetros se actualizan en la dirección opuesta (descenso).
+
+\subsection{Retropropagación (Backpropagation)}
+La retropropagación es el algoritmo utilizado para calcular eficientemente los gradientes de la función de pérdida con respecto a todos los pesos y sesgos de la red. Consiste en propagar el error hacia atrás desde la capa de salida hasta la capa de entrada, utilizando la regla de la cadena para calcular cómo contribuye cada parámetro al error total.
+
+\subsection{Fases del Entrenamiento}
+El entrenamiento se realiza iterativamente en un conjunto de datos de entrenamiento. En cada iteración (época), los datos se pasan a través de la red (pasada hacia adelante), se calcula la pérdida, se propagan los gradientes hacia atrás y se actualizan los pesos y sesgos. Este ciclo se repite hasta que la red alcanza un rendimiento aceptable o la función de pérdida converge.
+
+Cabe destacar que esta tesis se enfoca exclusivamente en la \textit{inferencia} de redes neuronales sobre datos cifrados, asumiendo que el modelo ya ha sido entrenado previamente en texto plano. La aplicación de cifrado homomórfico durante el entrenamiento es un área de investigación más compleja y está fuera del alcance de este trabajo.
 
 \section{Operaciones Lineales en CKKS}
 
