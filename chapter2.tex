@@ -74,9 +74,9 @@ Las Redes Neuronales Convolucionales son una clase especializada de redes neuron
 \subsubsection{Capas Convolucionales}
 El componente central de una CNN es la capa convolucional. Esta capa aplica un conjunto de filtros a los datos de entrada. Un filtro es una pequeña matriz de pesos que se desliza sobre la entrada para calcular productos punto, generando un ``mapa de características`` que resalta la presencia de un patrón específico. Los parámetros clave de esta operación son \cite{Goodfellow16}:
 \begin{itemize}
-    \item \textbf{Tamaño del Kernel (Kernel Size):} Define las dimensiones del filtro. Un kernel pequeño detectará patrones muy locales, mientras que uno más grande capturará características más amplias.
-    \item \textbf{Stride:} Especifica el número de píxeles que el filtro se desplaza en cada paso sobre la entrada. Un stride de 1 mueve el filtro un píxel a la vez, mientras que un stride mayor produce mapas de características de menor tamaño.
-    \item \textbf{Padding:} Consiste en añadir un borde de ceros alrededor de la entrada. El padding permite controlar las dimensiones del mapa de características de salida y asegura que los píxeles en los bordes de la imagen sean procesados por el filtro el mismo número de veces que los píxeles centrales.
+    \item Tamaño del Kernel (Kernel Size): Define las dimensiones del filtro. Un kernel pequeño detectará patrones muy locales, mientras que uno más grande capturará características más amplias.
+    \item Stride: Especifica el número de píxeles que el filtro se desplaza en cada paso sobre la entrada. Un stride de 1 mueve el filtro un píxel a la vez, mientras que un stride mayor produce mapas de características de menor tamaño.
+    \item Padding: Consiste en añadir un borde de ceros alrededor de la entrada. El padding permite controlar las dimensiones del mapa de características de salida y asegura que los píxeles en los bordes de la imagen sean procesados por el filtro el mismo número de veces que los píxeles centrales.
 \end{itemize}
 La operación de convolución 2D discreta para una entrada $I$ y un kernel $K$ se define como:
 \begin{equation}
