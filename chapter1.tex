@@ -96,7 +96,7 @@ El proceso se puede desglosar en los siguientes pasos:
     \end{itemize}
 \end{enumerate}
 
-Este procedimiento transforma cualquier esquema parcialmente homomorfico, capaz de evaluar su propio descifrado, en un esquema completamente homomórfico (FHE, Fully Homomorphic Encryption).
+Este procedimiento transforma cualquier esquema parcialmente homomórfico, capaz de evaluar su propio descifrado, en un esquema completamente homomórfico (FHE, Fully Homomorphic Encryption).
 
 \section{Aprendizaje con Errores (LWE)}
 
@@ -219,9 +219,9 @@ Ambos esquemas son ideales para aplicaciones que requieren precisión absoluta, 
 
 \subsection{Esquema TFHE y Bootstrapping Programable}
 
-El esquema TFHE (Chillotti et al., 2016) \cite{TFHE16} a diferencia de BGV/BFV/CKKS, que se enfocan en aritmética de vectores, se especializa en la evaluación de puertas lógicas (AND, OR, MUX) y funciones arbitrarias mediante una técnica llamada \textit{Programmable Bootstrapping}. TFHE opera principalmente sobre el Toro Real ($\mathbb{T} = \mathbb{R}/\mathbb{Z}$), lo que permite una gestión del ruido muy precisa. Su mayor ventaja es que el proceso de \textit{bootstrapping} aquí se realiza en milisegundos y está integrado en cada operación. Esto permite ejecutar circuitos de profundidad infinita sin que el programador deba preocuparse por el crecimiento del ruido.
+El esquema TFHE (Chillotti et al., 2016) \cite{TFHE16} a diferencia de BGV/BFV/CKKS, que se enfocan en aritmética de vectores, se especializa en la evaluación de puertas lógicas (AND, OR, MUX) y funciones arbitrarias mediante una técnica llamada \textit{programmable bootstrapping}. TFHE opera principalmente sobre el Toro Real ($\mathbb{T} = \mathbb{R}/\mathbb{Z}$), lo que permite una gestión del ruido muy precisa. Su mayor ventaja es que el proceso de \textit{bootstrapping} aquí se realiza en milisegundos y está integrado en cada operación. Esto permite ejecutar circuitos de profundidad infinita sin que el programador deba preocuparse por el crecimiento del ruido.
 
-\subsection{El Esquema CKKS para Cómputo Aproximado}
+\subsection{Esquema CKKS para Cómputo Aproximado}
 
 Propuesto por Cheon, Kim, Kim y Song en 2017 \cite{CKKS17}, el esquema CKKS representa un cambio de paradigma en FHE. A diferencia de sus predecesores, CKKS permite realizar aritmética sobre números reales y complejos con una precisión controlada. La innovación clave de CKKS es que trata el ruido inherente de RLWE no como un error que debe eliminarse por completo, sino como parte del error de redondeo que ocurre naturalmente en el cálculo numérico de punto flotante. 
 
@@ -283,15 +283,15 @@ La elección de $n$ como potencia de 2 es también fundamental para la eficienci
 La codificación o la inversa de la Inmersión Canónica es una funcion biyectiva que va desde los polinomios en el anillo $R$ (se usan para las operaciones homomórficas) y el de los vectores de números complejos (donde residen los datos a procesar). Permiten que las operaciones realizadas sobre polinomios cifrados se traduzcan en operaciones sobre los datos numéricos subyacentes.
 
 \begin{enumerate}
-    \item El Anillo de Polinomios $R$: CKKS opera en un anillo de polinomios $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$. Cada dato cifrado es un polinomio $p(x)$ cuyos coeficientes son enteros.
+    \item Anillo de Polinomios $R$: CKKS opera en un anillo de polinomios $R = \mathbb{Z}[x] / \langle x^n + 1 \rangle$. Cada dato cifrado es un polinomio $p(x)$ cuyos coeficientes son enteros.
     
-    \item Las Raíces de la Unidad: El polinomio ciclotómico $\Phi_n(x) = x^n + 1$ tiene un conjunto específico de raíces complejas. Estas son las $n$ raíces $2n$-ésimas de la unidad, denotadas como $\zeta_j = e^{i \frac{2\pi j}{2n}}$ para $j \in \{1, 3, \dots, 2n-1\}$. 
+    \item Raíces de la Unidad: El polinomio ciclotómico $\Phi_n(x) = x^n + 1$ tiene un conjunto específico de raíces complejas. Estas son las $n$ raíces $2n$-ésimas de la unidad, denotadas como $\zeta_j = e^{i \frac{2\pi j}{2n}}$ para $j \in \{1, 3, \dots, 2n-1\}$. 
     
-    \item La Correspondencia directa ($\sigma$): La inmersión canónica define una transformacion $\sigma: R \to \mathbb{C}^{n}$ que toma un polinomio $p(x)$ del anillo $R$ y lo transforma en un vector de números complejos. Este vector se obtiene evaluando el polinomio $p(x)$ en cada una de las raíces de la unidad mencionadas:
+    \item Correspondencia directa ($\sigma$): La inmersión canónica define una correspondencia $\sigma: R \to \mathbb{C}^{n}$ que toma un polinomio $p(x)$ del anillo $R$ y lo transforma en un vector de números complejos. Este vector se obtiene evaluando el polinomio $p(x)$ en cada una de las raíces de la unidad mencionadas:
     $$ \sigma(p(x)) = (p(\zeta_1), p(\zeta_3), \dots, p(\zeta_{2n-1})) $$
     Cada componente del vector resultante es un número complejo.
     
-    \item La Correspondencia inversa ($\sigma^{-1}$): Para la codificación, se utiliza la inversa de la inmersión canónica, $\sigma^{-1}$. Este proceso toma un vector de $n/2$ números complejos (los datos que queremos cifrar) y encuentra un polinomio $p(x) \in R$ tal que, al evaluar $p(x)$ en las raíces de la unidad, se obtenga el vector original. 
+    \item Correspondencia inversa ($\sigma^{-1}$): Para la codificación, se utiliza la inversa de la inmersión canónica, $\sigma^{-1}$. Este proceso toma un vector de $n/2$ números complejos (los datos que queremos cifrar) y encuentra un polinomio $p(x) \in R$ tal que, al evaluar $p(x)$ en las raíces de la unidad, se obtenga el vector original. 
 \end{enumerate}
 
 \subsubsection{Escalado y Discretización}
@@ -385,7 +385,7 @@ Las rotaciones permiten permutar los elementos dentro de las ranuras de un vecto
 
 \subsection{Cifrado por Niveles}\label{sec:gestion_niveles}
 
-El esquema CKKS define un conjunto de operaciones para lograr usar cifrado homomorfico por niveles~\ref{sec:leveled_fhe}.
+El esquema CKKS define un conjunto de operaciones para lograr usar cifrado homomórfico por niveles~\ref{sec:leveled_fhe}. En esta seccion explicamos las distintas operaciones y conceptos necesarios para lograr el cifrado por niveles con este esquema.
 
 \subsubsection{Niveles}
 
@@ -417,9 +417,7 @@ La profundidad del circuito se refiere al número máximo de multiplicaciones se
 
 Para circuitos de profundidad arbitraria o algoritmos iterativos muy largos, se requeriría la operación de \textit{bootstrapping}, la cual permite elevar nuevamente el texto cifrado a un nivel superior de la jerarquía. Sin embargo, debido a su alto costo computacional, la estrategia preferida en CKKS es optimizar la profundidad del circuito para trabajar dentro de una jerarquía de módulos predefinida.
 
-\subsection{Bootstrapping}
-
-El cómputo por niveles tiene una limitación: la profundidad del circuito. El \textit{bootstrapping} es el proceso que convierte un esquema nivelado en uno totalmente homomórfico, permitiendo un número virtualmente ilimitado de operaciones. En esencia, es un procedimiento para refrescar un texto cifrado cuyo presupuesto de ruido y niveles se ha agotado.
+\subsection{Bootstrapping en el esquema CKKS}
 
 El principal desafío del \textit{bootstrapping} en CKKS es evaluar homomórficamente su propia función de descifrado. Esta función, $\text{Dec}(c) = [\langle c, sk \rangle]_q$, incluye una operación de reducción modular (mod $q$) que no es un polinomio y, por tanto, no se puede aplicar directamente.
 
