@@ -45,14 +45,15 @@ El nuevo ruido es $e_{add} = e_1 + e_2$. Para la multiplicación, el crecimiento
 \begin{equation}
     c_{mult} = c_1 \cdot c_2 \leftarrow (m_1 \cdot m_2) + q(\dots) + (m_1 e_2 + m_2 e_1 + e_1 e_2)
 \end{equation}
-El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado algo homomórficos. En la Figura \ref{fig:noise_growth} se ilustra cómo el ruido se acumula de manera más pronunciada en la multiplicación en comparacion con la suma.
+El nuevo ruido $e_{mult}$ es aproximadamente proporcional al producto de los ruidos iniciales. Si este ruido acumulado supera un cierto umbral, el descifrado fallará. Esto limita el número de operaciones que se pueden realizar, dando lugar a los esquemas de cifrado algo homomórficos. 
+%En la Figura \ref{fig:noise_growth} se ilustra cómo el ruido se acumula de manera más pronunciada en la multiplicación en comparacion con la suma.
 
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.8\textwidth]{images/noise.png}
-    \caption{Crecimiento del ruido en operaciones homomórficas.}
-    \label{fig:noise_growth}
-\end{figure}
+%\begin{figure}[h!]
+    %\centering
+    %\includegraphics[width=0.8\textwidth]{images/noise.png}
+    %\caption{Crecimiento del ruido en operaciones homomórficas.}
+    %\label{fig:noise_growth}
+%\end{figure}
 
 \subsection{Cifrado Homomórfico por Niveles}\label{sec:leveled_fhe}
 
@@ -241,7 +242,7 @@ Propuesto por Cheon, Kim, Kim y Song en 2017 \cite{CKKS17}, el esquema CKKS repr
 
 \subsection{Comparativa de capacidades}
 
-En la \hyperref[tab:fhe_comparativa]{Tabla~\ref{tab:fhe_comparativa}} se resumen las diferencias técnicas principales entre estos esquemas:
+En la \hyperref[tab:fhe_comparativa]{Tabla~\ref{tab:fhe_comparativa}} se resumen las diferencias técnicas principales entre estos esquemas. Se observa como solo CKKS se especializa en tratar con numeros flotantes de forma nativa. El resto de los metodos existentes son exactos, ya sea con enteros o Bits.
 
 \begin{table}[h]
     \centering

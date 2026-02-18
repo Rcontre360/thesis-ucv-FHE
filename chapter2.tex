@@ -13,9 +13,9 @@ Sin embargo, las RNA plantean serios desafíos en materia de privacidad. El proc
 
 En este capítulo, nos centraremos en la adaptación de arquitecturas de RNA comunes, concretamente redes neuronales profundas (DNN, Deep Neural Networks) y redes neuronales convolucionales (CNN, Convolutional Neural Networks), para operar eficientemente bajo esquemas de cifrado homomórfico.
 
-\section{Redes Neuronales Superficiales} \cite{Goodfellow16}
+\section{Redes Neuronales Superficiales} 
 
-Las RNA son modelos computacionales cuyo propósito principal es aprender patrones y relaciones complejas a partir de datos, permitiéndoles realizar tareas como clasificación o regresión. Dentro de este vasto campo, las redes neuronales superficiales representan una categoría caracterizada por tener una capa oculta entre su capa de entrada y su capa de salida.
+Las RNA son modelos computacionales cuyo propósito principal es aprender patrones y relaciones complejas a partir de datos, permitiéndoles realizar tareas como clasificación o regresión. Dentro de este vasto campo, las redes neuronales superficiales representan una categoría caracterizada por tener una capa oculta entre su capa de entrada y su capa de salida\cite{Goodfellow16}.
 
 \subsection{Definición Formal y Estructura General}\label{sec:shallow_general_case}
 Definimos una ecuación general para una red neuronal superficial $y = f[x, \phi]$ que transforma una entrada multi-dimensional $x \in \mathbb{R}^{D_i}$ a una salida multi-dimensional $y \in \mathbb{R}^{D_o}$ utilizando $D$ unidades ocultas.
@@ -74,8 +74,8 @@ Las neuronas en una red neuronal se organizan en capas.
 \subsubsection{Función de Activación}
 Una función de activación introduce no linealidad en la salida de una neurona. Es crucial para permitir que la red aprenda relaciones complejas y no lineales en los datos. Sin una función de activación no lineal, una red neuronal, independientemente de su profundidad, se comportaría como un modelo lineal. En la ecuación \ref{eq:hidden_unit}, la función de activación se denota como $a[\cdot]$.
 
-\section{Redes Neuronales Profundas} \cite{Goodfellow16}
-Las redes neuronales profundas se caracterizan por tener más de una capa oculta. Con funciones de activación, tanto las redes superficiales como las profundas describen mapeos lineales por tramos desde la entrada hasta la salida. La Figura \ref{fig:deep_network} ilustra una red neuronal profunda con múltiples capas ocultas, extendiendo la arquitectura de las redes superficiales. Cada capa oculta adicional permite a la red aprender representaciones más complejas y abstractas de los datos de entrada, lo que es crucial para resolver problemas de mayor dificultad y para manejar datos de alta dimensionalidad.
+\section{Redes Neuronales Profundas} 
+Las redes neuronales profundas se caracterizan por tener más de una capa oculta. Con funciones de activación, tanto las redes superficiales como las profundas describen mapeos lineales por tramos desde la entrada hasta la salida. La Figura \ref{fig:deep_network} ilustra una red neuronal profunda con múltiples capas ocultas, extendiendo la arquitectura de las redes superficiales. Cada capa oculta adicional permite a la red aprender representaciones más complejas y abstractas de los datos de entrada, lo que es crucial para resolver problemas de mayor dificultad y para manejar datos de alta dimensionalidad \cite{Goodfellow16}.
 
 \begin{figure}[h!]
     \centering
@@ -112,9 +112,31 @@ La segunda red toma $y = h'$ como entrada y devuelve $y'$
 
 Con activaciones ReLU, este modelo también describe una familia de funciones lineales por tramos. Sin embargo, el número de regiones lineales es potencialmente mayor que para una red superficial con seis unidades ocultas. 
 
+\subsection{Notación Matricial}
+
+Para describir redes profundas de manera concisa y general, se utiliza la notación matricial. Esta formalización es fundamental para entender cómo se procesa la información capa por capa. La operación de una capa neuronal se puede expresar de forma compacta mediante una ecuación matricial.
+
+Si $h_k$ es el vector de activaciones que sale de la capa $k$ (y que servirá de entrada para la capa $k+1$), la operación para obtener las activaciones de la siguiente capa, $h_{k+1}$, es:
+\begin{equation}
+h_{k+1} = a[\beta_k + \Omega_k h_k]
+\end{equation}
+donde:
+\begin{itemize}
+    \item $\Omega_k$ es la matriz de pesos que conecta la capa $k$ con la capa $k+1$.
+    \item $\beta_k$ es el vector de sesgos para la capa $k+1$.
+    \item $a[\cdot]$ es la función de activación no lineal que se aplica elemento a elemento al resultado de la operación matricial.
+\end{itemize}
+
+Los parámetros de un modelo de red neuronal, denotados como $\phi$, están compuestos por el conjunto de todas las matrices de pesos y vectores de sesgos, es decir, $\phi = \{\beta_k, \Omega_k\}$. Las dimensiones de estos parámetros dependen del número de neuronas en cada capa. Si la capa de entrada tiene $D_i$ unidades, cada capa oculta $k$ tiene $D_k$ unidades y la capa de salida tiene $D_o$ unidades, entonces:
+\begin{itemize}
+    \item La primera matriz de pesos, $\Omega_0$, tiene una dimensión de $D_1 \times D_i$.
+    \item Las matrices de pesos intermedias, $\Omega_k$, tienen dimensiones $D_{k+1} \times D_k$.
+    \item El vector de sesgos $\beta_k$ tiene una dimensión de $D_{k+1}$.
+\end{itemize}
+
 \subsection{Estructura General de las Redes Neuronales Profundas}
 
-Una red profunda es, en esencia, una composición de transformaciones no lineales, donde la salida de una capa se convierte en la entrada de la siguiente. Una red profunda general $y = f[x, \phi]$ con $K$ capas se puede describir mediante la siguiente secuencia de operaciones:
+Una red profunda es, en esencia, una composición de transformaciones no lineales donde la salida de una capa se convierte en la entrada de la siguiente. Utilizando la notación matricial introducida previamente, una red profunda general $y = f[x, \phi]$ con $K$ capas se puede describir como una secuencia de operaciones:
 \begin{align}
     h_1 &= a[\beta_0 + \Omega_0x] \\
     h_2 &= a[\beta_1 + \Omega_1h_1] \\
@@ -124,31 +146,11 @@ Una red profunda es, en esencia, una composición de transformaciones no lineale
     y &= \beta_K + \Omega_K h_K.
     \label{eq:general_deep_nn}
 \end{align}
-Aquí, $h_k$ representa el vector de unidades ocultas en la capa $k$. Cada $\beta_k$ es el vector de sesgos para la capa $k+1$, y $\Omega_k$ es la matriz de pesos que conecta la salida de la capa $k$ con la entrada de la capa $k+1$. La función $a[\cdot]$ es una función de activación no lineal que se aplica elemento a elemento. Los parámetros $\phi$ de este modelo comprenden todas estas matrices de pesos y vectores de sesgos $\phi = \{\beta_k, \Omega_k\}_{k=0}^K$.
+Aquí, $x$ es el vector de entrada inicial, y cada $h_k$ representa el vector de salida (activaciones) de la capa oculta $k$. La capa final produce la salida de la red, $y$, aplicando una última transformación lineal (o no lineal, dependiendo de la tarea). El conjunto completo de parámetros del modelo, $\phi = \{\beta_k, \Omega_k\}_{k=0}^K$, es aprendido durante el proceso de entrenamiento.
 
-\subsection{Notación Matricial}
 
-Para describir redes profundas de manera concisa y general, se utiliza la notación matricial. Siguiendo la formulación general de una red profunda con $K$ capas (como se presentó en la sección \ref{eq:general_deep_nn}), podemos describir el procesamiento en cada capa de manera compacta.
-
-Si $h_k$ representa el vector de activaciones de la capa $k$, la operación de una capa oculta se puede expresar como:
-\begin{equation}
-h_{k+1} = a[\beta_k + \Omega_k h_k]
-\end{equation}
-donde $\beta_k$ es el vector de sesgos para la capa $k+1$ y $\Omega_k$ es la matriz de pesos que conecta la capa $k$ con la capa $k+1$. La función $a[\cdot]$ aplica la función de activación por separado a cada elemento de su entrada vectorial.
-
-Los parámetros de este modelo ($\phi = \{\beta_k, \Omega_k\}_{k=0}^K$) se definen por sus dimensiones:
-Si la capa $k$ tiene $D_k$ unidades ocultas:
-\begin{itemize}
-    \item El vector de sesgos $\beta_{k-1}$ será de tamaño $D_k$.
-    \item La primera matriz de pesos $\Omega_0$ tiene un tamaño $D_1 \times D_i$, donde $D_i$ es el tamaño de la entrada.
-    \item Las matrices de pesos restantes $\Omega_k$ (para $k=1, \dots, K-1$) son de tamaño $D_{k+1} \times D_k$.
-    \item El último vector de sesgos $\beta_K$ tiene el tamaño $D_o$ de la salida.
-    \item La última matriz de pesos $\Omega_K$ es $D_o \times D_K$.
-\end{itemize}
-Esta notación simplifica la representación y el análisis de redes muy profundas.
-
-\section{Redes Neuronales Convolucionales} \cite{Goodfellow16}
-Ciertas estructuras de datos, como las imágenes, poseen propiedades inherentes que sugieren la necesidad de arquitecturas de red más especializadas. Las imágenes son datos de alta dimensionalidad, donde los píxeles cercanos están estadísticamente relacionados y su interpretación es estable bajo transformaciones geométricas (como traslaciones). Las capas convolucionales están diseñadas para explotar estas propiedades, procesando cada región local de la entrada de manera independiente y compartiendo parámetros a través de toda la entrada. Esto resulta en un menor número de parámetros, una mejor explotación de las relaciones espaciales y una eficiencia mejorada al no tener que reaprender patrones en cada posición. Una red compuesta predominantemente por capas convolucionales se conoce como red neuronal convolucional (CNN, Convolutional Neural Networks).
+\section{Redes Neuronales Convolucionales} 
+Ciertas estructuras de datos, como las imágenes, poseen propiedades inherentes que sugieren la necesidad de arquitecturas de red más especializadas. Las imágenes son datos de alta dimensionalidad, donde los píxeles cercanos están estadísticamente relacionados y su interpretación es estable bajo transformaciones geométricas (como traslaciones). Las capas convolucionales están diseñadas para explotar estas propiedades, procesando cada región local de la entrada de manera independiente y compartiendo parámetros a través de toda la entrada. Esto resulta en un menor número de parámetros, una mejor explotación de las relaciones espaciales y una eficiencia mejorada al no tener que reaprender patrones en cada posición. Una red compuesta predominantemente por capas convolucionales se conoce como red neuronal convolucional (CNN, Convolutional Neural Networks) \cite{Goodfellow16}.
 
 \subsection{Operación de Convolución}
 Las redes convolucionales consisten en una serie de capas convolucionales, cada una de las cuales es equivariante a la traslación. Típicamente, también incluyen mecanismos de agrupamiento que inducen una invariancia parcial a la traslación. A continuación, se detalla la operación de convolución en una y dos dimensiones.
@@ -176,30 +178,30 @@ donde $\omega_{mn}$ son las entradas del filtro convolucional y $\beta$ es un se
 Una capa convolucional calcula su salida mediante la operación de convolución sobre la entrada, añadiendo un sesgo $\beta$, y pasando cada resultado a través de una función de activación $a[\cdot]$.
 
 \subsubsection{Filtros, Stride y Padding}
-    El filtro define las ponderaciones utilizadas en la operación de convolución. El \textit{padding} aborda el manejo de los bordes de la entrada, donde el filtro no puede centrarse completamente. La opción más común es asumir que la entrada es cero fuera de su rango válido. Alternativamente, se pueden descartar las posiciones de salida donde el filtro excede el rango de la entrada ('valid convolutions'), lo que reduce el tamaño de la representación.
+    El filtro define las ponderaciones utilizadas en la operación de convolución. El \textit{padding} aborda el manejo de los bordes de la entrada, donde el filtro no puede centrarse completamente. La opción más común es asumir que la entrada es cero fuera de su rango válido. Alternativamente, se pueden descartar las posiciones de salida donde el filtro excede el rango de la entrada, lo que reduce el tamaño de la representación.
 
 El \textit{stride} (paso) especifica el desplazamiento del filtro sobre la entrada en cada paso. Un \textit{stride} de uno evalúa la salida en cada posición, mientras que un \textit{stride} mayor que uno (por ejemplo, dos) reduce el tamaño de la salida. El tamaño del filtro puede aumentarse para integrar información de un área más grande, generalmente manteniendo un número impar para que pueda centrarse. Las convoluciones dilatadas introducen ceros entre los valores del filtro, permitiendo integrar información de una región de entrada más grande con menos pesos. La tasa de dilatación es el número de ceros intercalados entre los pesos más uno.
 
 \subsubsection{Convolución como multiplicación matricial}
 
-Las capas convolucionales pueden ser eficientemente implementadas utilizando multiplicaciones matriciales estándar. Esto es fundamental para aprovechar las optimizaciones existentes en bibliotecas de álgebra lineal y, en el contexto de cifrado homomórfico, para alinearse con operaciones homomórficas que a menudo se basan en productos matriciales. La clave para esta transformación es la técnica conocida como \textit{Image to Column} (Im2Col). \textbf{Im2Col} convierte bloques locales de la imagen de entrada en columnas de una matriz bidimensional.
+Las capas convolucionales pueden ser eficientemente implementadas utilizando multiplicaciones matriciales estándar. Esto es fundamental para aprovechar las optimizaciones existentes en bibliotecas de álgebra lineal y, en el contexto de cifrado homomórfico, para alinearse con operaciones homomórficas que a menudo se basan en productos matriciales. La clave para esta transformación es la técnica conocida como imagen a columna (\textit{Im2Col}). \textit{Im2Col} convierte bloques locales de la imagen de entrada en columnas de una matriz bidimensional.
 
 \begin{enumerate}
     \item Transformación de la entrada: Para cada posición donde se aplicaría el filtro convolucional, se extrae la región correspondiente de la imagen de entrada. Esta región se transforma en un vector. Todos estos vectores resultantes se apilan como columnas en una nueva matriz, que llamamos la matriz \textit{Im2Col} de la entrada.
     \item Transformación del filtro: De manera similar, cada filtro convolucional de la capa se aplana en un vector. Estos vectores de filtro se apilan como filas en una segunda matriz.
-    \item Multiplicación matricial: La operación de convolución se reduce entonces a una multiplicación de la matriz de filtros (transpuesta) por la matriz Im2Col de la entrada. El resultado es una matriz donde cada elemento corresponde a una salida de la convolución.
+    \item Multiplicación matricial: La operación de convolución se reduce entonces a una multiplicación de la matriz de filtros (transpuesta) por la matriz \textit{Im2Col} de la entrada. El resultado es una matriz donde cada elemento corresponde a una salida de la convolución.
 \end{enumerate}
 
-Este enfoque permite que las propiedades de conectividad local (cada columna de Im2Col representa una región local) y compartición de pesos (cada fila de la matriz de filtros se aplica a múltiples columnas de Im2Col) se mantengan, mientras se traduce la operación a un formato que es computacionalmente muy eficiente. La expresión de la convolución como multiplicación matricial es, por lo tanto, una abstracción poderosa que subyace a muchas implementaciones optimizadas de CNNs.
+Este enfoque permite que las propiedades de conectividad local (cada columna de \textit{Im2Col} representa una región local) y compartición de pesos (cada fila de la matriz de filtros se aplica a múltiples columnas de \textit{Im2Col}) se mantengan, mientras se traduce la operación a un formato que es computacionalmente muy eficiente. La expresión de la convolución como multiplicación matricial es, por lo tanto, una abstracción poderosa que subyace a muchas implementaciones optimizadas de CNNs.
 
 \subsubsection{Canales}
 En la práctica, la aplicación de una única convolución a menudo resulta en una pérdida de información o una representación insuficiente. Por lo tanto, es habitual computar varias convoluciones en paralelo. Cada una de estas convoluciones produce un nuevo conjunto de variables ocultas, denominado mapa de características o canal.
 
 Tanto las capas de entrada como las capas ocultas pueden tener múltiples canales. Si una capa de entrada tiene $C_i$ canales y se utiliza un filtro de tamaño $K$ por canal, las unidades ocultas en cada canal de salida se calculan como una suma ponderada sobre todos los $C_i$ canales de entrada y las $K$ entradas del filtro, más un sesgo. Si se desean $C_o$ canales de salida, se necesitarán $C_i \times C_o \times K$ pesos y $C_o$ sesgos (para el caso 1D), o $C_i \times C_o \times K \times K$ pesos y $C_o$ sesgos (para el caso 2D).
 
-\section{Entrenamiento de Redes Neuronales} \cite{Goodfellow16}
+\section{Entrenamiento de Redes Neuronales} 
 
-El entrenamiento de una red neuronal es el proceso de ajustar sus parámetros (pesos y sesgos) para que pueda realizar una tarea específica, como clasificación o regresión, de manera efectiva. En el contexto de cifrado homomórfico el cifrado usualmente se aplica al proceso de inferencia dado que los pesos del modelo no son datos sensibles en la mayoria de casos. Aun asi es necesario conocer que las redes neuronales pasan por una etapa de entrenamiento donde obtenemos los parametros necesarios para obtener resultados significativos durante la inferencia.
+El entrenamiento de una red neuronal es el proceso de ajustar sus parámetros (pesos y sesgos) para que pueda realizar una tarea específica, como clasificación o regresión, de manera efectiva. En el contexto de FHE usualmente el cifrado se aplica al proceso de inferencia dado que los pesos del modelo no son datos sensibles en la mayoria de casos. Aun asi es necesario conocer que las redes neuronales pasan por una etapa de entrenamiento donde obtenemos los parametros necesarios para obtener resultados significativos durante la inferencia \cite{Goodfellow16}.
 
 \subsection{Función de Pérdida}
 Una función de pérdida (o función de costo) es una medida cuantitativa de la discrepancia entre las predicciones de la red neuronal y los valores reales deseados. Durante el entrenamiento, el objetivo principal es minimizar esta función. Cuanto menor sea el valor de la función de pérdida, mejor será el rendimiento del modelo. La elección de la función de pérdida depende directamente del tipo de problema que se esté resolviendo.

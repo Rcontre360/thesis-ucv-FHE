@@ -9,9 +9,9 @@ En este contexto, el cifrado homomórfico emerge como una solución prometedora.
 
 A pesar de su potencial, la aplicación práctica del cifrado homomórfico, especialmente en tareas computacionalmente intensivas como la inferencia de redes neuronales, ha estado limitada por su alto costo computacional. Los esquemas de cifrado homomórfico más avanzados, como CKKS (Cheon-Kim-Kim-Song), son capaces de manejar aritmética aproximada sobre números reales y complejos, lo cual los hace particularmente adecuados para las operaciones de punto flotante características del ML. No obstante, las implementaciones existentes de CKKS suelen depender de la CPU, lo que introduce cuellos de botella significativos cuando se trabaja con tensores grandes o modelos complejos.
 
-La presente tesis aborda esta limitación proponiendo el desarrollo de una librería Python que aproveche la capacidad de procesamiento paralelo de las Unidades de Procesamiento Gráfico (GPU) para acelerar las operaciones tensoriales bajo el esquema de cifrado homomórfico CKKS. Nuestro objetivo es facilitar la inferencia privada de modelos de aprendizaje automático, ofreciendo una herramienta eficiente que combine la seguridad criptográfica con el rendimiento computacional necesario para aplicaciones del mundo real.
+El presente trabajo aborda esta limitación proponiendo el desarrollo de una librería Python que aproveche la capacidad de procesamiento paralelo de las Unidades de Procesamiento Gráfico (GPU) para acelerar las operaciones tensoriales bajo el esquema de cifrado homomórfico CKKS. Nuestro objetivo es facilitar la inferencia privada de modelos de aprendizaje automático, ofreciendo una herramienta eficiente que combine la seguridad criptográfica con el rendimiento computacional necesario para aplicaciones del mundo real.
 
-El resto de esta tesis se estructura en tres capítulos principales, cada uno diseñado para sentar las bases teóricas y justificar la propuesta:
+El resto de este trabajo se estructura en tres capítulos principales, cada uno diseñado para sentar las bases teóricas y justificar la propuesta:
 
 \begin{itemize}
    \item \textbf{Capítulo 1: Fundamentos del Cifrado Homomórfico}
@@ -21,6 +21,6 @@ Este capítulo introduce los conceptos esenciales del cifrado homomórfico. Se e
 Aquí se examina la intersección entre el cifrado homomórfico y el aprendizaje automático. Se discute cómo las arquitecturas de redes neuronales, tanto profundas como convolucionales, pueden adaptarse para operar sobre datos cifrados. Se profundiza en la implementación de operaciones lineales clave (producto punto, multiplicación matriz-vector y convoluciones) en el dominio homomórfico, y se aborda el desafío de las funciones de activación no lineales y sus aproximaciones polinómicas. 
 
    \item \textbf{Capítulo 3: Propuesta de Trabajo Especial de Grado}
-Este capítulo presenta la propuesta central de esta tesis. Se explica el objetivo general y los objetivos específicos que guiarán el desarrollo de la librería. Se identifican las tecnologías clave a utilizar para la creacion de la libreria. Finalmente, se detalla un plan de actividades que describe las fases de implementación, pruebas y comparación de rendimiento con otras soluciones existentes.
+Este capítulo presenta la propuesta central del presente trabajo. Se explica el objetivo general y los objetivos específicos que guiarán el desarrollo de la librería. Se identifican las tecnologías clave a utilizar para la creacion de la libreria. Finalmente, se detalla un plan de actividades que describe las fases de implementación, pruebas y comparación de rendimiento con otras soluciones existentes.
 \end{itemize}
 
