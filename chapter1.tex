@@ -12,7 +12,7 @@ Matemáticamente, un esquema de cifrado es homomórfico si, dado un conjunto de 
 \end{equation}
 donde $m_1, m_2 \in \mathcal{M}$, y $\text{Enc}$ y $\text{Dec}$ son las funciones de cifrado y descifrado, respectivamente.
 
-Durante décadas, la construcción de un esquema de cifrado que pudiera evaluar un número arbitrario de operaciones de suma y multiplicación, conocido como cifrado totalmente homomórfico (FHE, Fully Homomorphic Encryption), fue considerado uno de los mayores desafíos en la criptografía. Antes del primer esquema FHE, se desarrollaron varios esquemas parcialmente homomórficos (PHE), que solo admitían un tipo de operación (suma o multiplicación) un número ilimitado de veces. Algunos ejemplos notables son:
+Durante décadas, la construcción de un esquema de cifrado que pudiera evaluar un número arbitrario de operaciones de suma y multiplicación, conocido como cifrado totalmente homomórfico (FHE, \textit{Fully Homomorphic Encryption}), fue considerado uno de los mayores desafíos en la criptografía. Antes del primer esquema FHE, se desarrollaron varios esquemas parcialmente homomórficos (PHE), que solo admitían un tipo de operación (suma o multiplicación) un número ilimitado de veces. Algunos ejemplos notables son:
 
 \begin{itemize}
     \item RSA: RSA \cite{RSA78} es multiplicativamente homomórfico. Dados dos textos cifrados $c_1 = \text{Enc}(m_1) = m_1^e \pmod{N}$ y $c_2 = \text{Enc}(m_2) = m_2^e \pmod{N}$, su producto es:

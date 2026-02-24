@@ -2,7 +2,7 @@
 
 Las redes neuronales artificiales (RNA) han impulsando avances sin precedentes en campos tan diversos como la visión por computadora, el procesamiento del lenguaje natural, la medicina y las finanzas \cite{Goodfellow16}. Su capacidad para aprender patrones complejos directamente de los datos les permite abordar problemas que sin ellas son intratables.
 
-Sin embargo, las RNA plantean serios desafíos en materia de privacidad. El procesamiento de datos confidenciales por RNAs, especialmente en entornos de terceros o servicios en la nube, genera problemas sobre la exposición de información sensible. En este contexto, el cifrado homomórfico emerge como una solución fundamental. Al permitir realizar cómputos directamente sobre datos cifrados, FHE ofrece un mecanismo robusto para preservar la privacidad en las operaciones de las RNA. La aplicación de FHE a las redes neuronales posibilita la ejecución de inferencias sobre datos sensibles manteniendo la confidencialidad en todo momento. En la Figura \ref{fig:fhe_on_ml} se visualiza este flujo de trabajo. Un cliente puede cifrar sus datos localmente y enviarlos a un servidor en la nube sin revelar su contenido. El servidor, sin tener acceso al texto plano, ejecuta el modelo de aprendizaje automático sobre estos datos cifrados y devuelve un resultado también cifrado al cliente. Finalmente, el cliente descifra el resultado para obtener la predicción o clasificación, asegurando que la privacidad de sus datos se mantenga durante todo el proceso.
+Sin embargo, las RNA plantean serios desafíos en materia de privacidad. El procesamiento de datos confidenciales por RNAs, especialmente en entornos de terceros o servicios en la nube, genera problemas sobre la exposición de información sensible. En este contexto, el cifrado homomórfico emerge como una solución fundamental. Al permitir realizar cómputos directamente sobre datos cifrados, el cifrado totalmente homomórfico (FHE, \textit{Fully Homomorphic Encryption}) ofrece un mecanismo robusto para preservar la privacidad en las operaciones de las RNA. La aplicación de FHE a las redes neuronales posibilita la ejecución de inferencias sobre datos sensibles manteniendo la confidencialidad en todo momento. En la Figura \ref{fig:fhe_on_ml} se visualiza este flujo de trabajo. Un cliente puede cifrar sus datos localmente y enviarlos a un servidor en la nube sin revelar su contenido. El servidor, sin tener acceso al texto plano, ejecuta el modelo de aprendizaje automático sobre estos datos cifrados y devuelve un resultado también cifrado al cliente. Finalmente, el cliente descifra el resultado para obtener la predicción o clasificación, asegurando que la privacidad de sus datos se mantenga durante todo el proceso.
 
 \begin{figure}[h!]
     \centering
@@ -34,15 +34,11 @@ y_j = \phi_{j0} + \sum_{d=1}^{D} \phi_{jd}h_d,
 
 donde $a[\cdot]$ es una función de activación no lineal.
 
-La función de activación permite al modelo describir relaciones no lineales entre la entrada y la salida. Esta debe ser no lineal. Con una función de activación nula o lineal, el mapeo general de la entrada a la salida estaría restringido a ser lineal. La funcion más común es la unidad lineal rectificada o ReLU \cite{Goodfellow16}. Esta función devuelve la entrada cuando es positiva y cero en caso contrario.
+La función de activación permite al modelo describir relaciones no lineales entre la entrada y la salida. La función de activación debe ser no lineal, ya que sin ella la transformación de la entrada a la salida estaría restringida a ser lineal. Una de las funciones más comunes es la función sigmoide \cite{Goodfellow16}. Esta función mapea cualquier valor real al intervalo (0, 1).
 
 \begin{equation}
-a[z] = \text{ReLU}[z] = 
-\begin{cases} 
-0 & z < 0 \\
-z & z \geq 0 
-\end{cases}
-\label{eq:relu_definition}
+a[z] = \sigma(z) = \frac{1}{1 + e^{-z}}
+\label{eq:sigmoid_definition}
 \end{equation}
 
  La Figura \ref{fig:shallow_network} muestra la estructura general de una red neuronal superficial. En ella, se distinguen claramente la capa de entrada donde se reciben los datos, una única capa oculta que procesa la información y una capa de salida que produce el resultado final. Las conexiones entre las neuronas están ponderadas por los pesos, y cada neurona de la capa oculta y de salida incorpora un sesgo, elementos clave para el aprendizaje del modelo.
@@ -53,6 +49,10 @@ z & z \geq 0
     \caption{Representación de una red neuronal superficial con una capa de entrada, una capa oculta y una capa de salida.}
     \label{fig:shallow_network}
 \end{figure}
+
+\subsection{Elementos de una red neuronal}
+
+Para comprender el funcionamiento de las arquitecturas más complejas, es necesario descomponer una red neuronal en sus componentes fundamentales. Estos elementos son los siguientes.
 
 \subsubsection{Neurona}
 Una neurona artificial, es el componente fundamental de una red neuronal. Recibe una o más entradas, realiza una operación (generalmente una suma ponderada de sus entradas más un sesgo), y luego aplica una función de activación no lineal al resultado para producir una salida.
@@ -75,7 +75,7 @@ Las neuronas en una red neuronal se organizan en capas.
 Una función de activación introduce no linealidad en la salida de una neurona. Es crucial para permitir que la red aprenda relaciones complejas y no lineales en los datos. Sin una función de activación no lineal, una red neuronal, independientemente de su profundidad, se comportaría como un modelo lineal. En la ecuación \ref{eq:hidden_unit}, la función de activación se denota como $a[\cdot]$.
 
 \section{Redes Neuronales Profundas} 
-Las redes neuronales profundas se caracterizan por tener más de una capa oculta. Con funciones de activación, tanto las redes superficiales como las profundas describen mapeos lineales por tramos desde la entrada hasta la salida. La Figura \ref{fig:deep_network} ilustra una red neuronal profunda con múltiples capas ocultas, extendiendo la arquitectura de las redes superficiales. Cada capa oculta adicional permite a la red aprender representaciones más complejas y abstractas de los datos de entrada, lo que es crucial para resolver problemas de mayor dificultad y para manejar datos de alta dimensionalidad \cite{Goodfellow16}.
+Las redes neuronales profundas se caracterizan por tener más de una capa oculta. Con funciones de activación, tanto las redes superficiales como las profundas describen transformaciones lineales por tramos desde la entrada hasta la salida. La Figura \ref{fig:deep_network} ilustra una red neuronal profunda con múltiples capas ocultas, extendiendo la arquitectura de las redes superficiales. Cada capa oculta adicional permite a la red aprender representaciones más complejas y abstractas de los datos de entrada, lo que es crucial para resolver problemas de mayor dificultad y para manejar datos de alta dimensionalidad \cite{Goodfellow16}.
 
 \begin{figure}[h!]
     \centering
@@ -84,7 +84,7 @@ Las redes neuronales profundas se caracterizan por tener más de una capa oculta
     \label{fig:deep_network}
 \end{figure}
 
-A medida que aumenta el número de unidades ocultas, las redes neuronales superficiales mejoran su poder descriptivo. Con suficientes unidades ocultas, las redes superficiales pueden describir funciones arbitrariamente complejas en altas dimensiones \cite{Hornik89}. Sin embargo, para algunas funciones, el número requerido de unidades ocultas puede ser demasiado grande. Las redes profundas pueden producir muchas más regiones lineales que las redes superficiales para un número dado de parámetros.
+A medida que aumenta el número de capas ocultas, las redes neuronales superficiales mejoran su poder descriptivo. Con suficientes unidades ocultas, las redes superficiales pueden describir funciones arbitrariamente complejas en altas dimensiones \cite{Hornik89}. Sin embargo, para algunas funciones, el número requerido de unidades ocultas puede ser demasiado grande. Las redes profundas pueden producir muchas más regiones lineales que las redes superficiales para un número dado de parámetros.
     
 \subsection{Composición de Redes Neuronales}
 Para obtener una comprensión del comportamiento de las redes neuronales profundas, primero consideramos la composición de dos redes superficiales, de modo que la salida de la primera se convierte en la entrada de la segunda. Consideremos dos redes superficiales con tres unidades ocultas cada una. La primera red toma una entrada $x$ y devuelve una salida $y$, y se define por:
@@ -178,9 +178,9 @@ donde $\omega_{mn}$ son las entradas del filtro convolucional y $\beta$ es un se
 Una capa convolucional calcula su salida mediante la operación de convolución sobre la entrada, añadiendo un sesgo $\beta$, y pasando cada resultado a través de una función de activación $a[\cdot]$.
 
 \subsubsection{Filtros, Stride y Padding}
-    El filtro define las ponderaciones utilizadas en la operación de convolución. El \textit{padding} aborda el manejo de los bordes de la entrada, donde el filtro no puede centrarse completamente. La opción más común es asumir que la entrada es cero fuera de su rango válido. Alternativamente, se pueden descartar las posiciones de salida donde el filtro excede el rango de la entrada, lo que reduce el tamaño de la representación.
+    El filtro define las ponderaciones utilizadas en la operación de convolución. El \textit{padding} aborda el manejo de los bordes de la entrada, donde el filtro no puede centrarse completamente. La opción más común es que los valores tomados por el filtro por fuera del rango de la imagen valen cero. Alternativamente, se pueden descartar las posiciones de salida donde el filtro excede el rango de la entrada, lo que reduce el tamaño de la representación.
 
-El \textit{stride} (paso) especifica el desplazamiento del filtro sobre la entrada en cada paso. Un \textit{stride} de uno evalúa la salida en cada posición, mientras que un \textit{stride} mayor que uno (por ejemplo, dos) reduce el tamaño de la salida. El tamaño del filtro puede aumentarse para integrar información de un área más grande, generalmente manteniendo un número impar para que pueda centrarse. Las convoluciones dilatadas introducen ceros entre los valores del filtro, permitiendo integrar información de una región de entrada más grande con menos pesos. La tasa de dilatación es el número de ceros intercalados entre los pesos más uno.
+El \textit{stride} (paso) específica el desplazamiento del filtro sobre la entrada en cada paso. Un \textit{stride} de uno evalúa la salida en cada posición, mientras que un \textit{stride} mayor que uno (por ejemplo, dos) reduce el tamaño de la salida. El tamaño del filtro puede aumentarse para integrar información de un área más grande, generalmente manteniendo un número impar para que pueda centrarse. Las convoluciones dilatadas introducen ceros entre los valores del filtro, permitiendo integrar información de una región de entrada más grande con menos pesos. La tasa de dilatación es el número de ceros intercalados entre los pesos más uno.
 
 \subsubsection{Convolución como multiplicación matricial}
 
@@ -231,8 +231,8 @@ donde $\eta$ es la tasa de aprendizaje (un hiperparámetro positivo que controla
 
 Existen variantes más avanzadas del descenso de gradiente, como el descenso gradiente estocastico o Adam, que adapta la tasa de aprendizaje o utilizan momentos para acelerar la convergencia y manejar mejor los mínimos locales.
 
-\subsection{Propagación hacia atrás}
-La propagación hacia atrás es el algoritmo central para el entrenamiento de redes neuronales, permitiendo calcular eficientemente los gradientes de la función de pérdida con respecto a todos los pesos y sesgos de la red. Este proceso es fundamental para actualizar los parámetros mediante el descenso de gradiente.
+\subsection{Backpropagation}
+El \textit{backpropagation} es el algoritmo central para el entrenamiento de redes neuronales, permitiendo calcular eficientemente los gradientes de la función de pérdida con respecto a todos los pesos y sesgos de la red. Este proceso es fundamental para actualizar los parámetros mediante el descenso de gradiente.
 
 El algoritmo opera en dos fases principales:
 \begin{enumerate}

@@ -13,10 +13,10 @@ Para implementar redes neuronales que realicen operaciones con datos cifrados ex
 
 Desarrollar una biblioteca de código abierto en Python para el cómputo de operaciones tensoriales, utilizando el esquema de cifrado homomórfico CKKS de forma que se aproveche la unidad de procesamiento gráfico (GPU).
 
-\section{Objetivos especificos}
+\section{Objetivos específicos}
 
 \begin{itemize}
-    \item Diseñar una interfaz en Python que permita interactuar con la biblioteca HEonGPU y usar las operaciones básicas del esquema de cifrado CKKS.
+    \item Diseñar una interfaz en Python que permita interactuar con las bibliotecas FIDESlib y OpenFHE, y usar las operaciones básicas del esquema de cifrado CKKS.
     \item Implementar las clases y módulos que permitan realizar operaciones con tensores y matrices, abstrayendo la complejidad del esquema CKKS del usuario.
     \item Crear casos de uso donde se ejemplifique cómo usar la biblioteca para aprovechar el cifrado homomórfico durante la inferencia en modelos de aprendizaje automático.
     \item Comparar el rendimiento de capas de redes neuronales implementadas con capas que usan otras bibliotecas de cifrado homomórfico.
@@ -24,7 +24,26 @@ Desarrollar una biblioteca de código abierto en Python para el cómputo de oper
 
 \section{Tecnologías necesarias}
 
-La biblioteca HEonGPU se usará como base que implementa el esquema CKKS. La implementación de la biblioteca se realizará usando C++ y Python. Estos serán necesarios para crear los bindings de Python para la biblioteca HEonGPU. Entre las bibliotecas que se utilizarán están Pybind11 para crear los bindings junto a C++ y Matplotlib para la visualización de gráficos.
+El desarrollo de la biblioteca propuesta es un sistema de múltiples capas de abstracción, cuyo objetivo es cerrar la brecha entre los entornos de programación de alto nivel utilizados en aprendizaje automático y la ejecución de operaciones criptográficas complejas aceleradas por hardware. Para lograr esto, se emplearán librerias que permitan usar el esquema CKKS en el GPU y que nos permitan usar el esquema desde el lenguaje Python.
+
+\begin{itemize}
+    \item FIDESlib: Desarrollada en C++ y CUDA, esta biblioteca proporciona una implementación optimizada del esquema CKKS sobre el GPU \cite{FIDESlib}. 
+    
+    \item OpenFHE-Python y Pybind11: Para usar las primitivas matemáticas de FIDESlib en Python, se utilizará la interfaz oficial OpenFHE-Python \cite{OpenFHEPython}. Esta herramienta actúa como interface, empleando Pybind11 para crear \textit{bindings} que exponen los objetos complejos de C++ como objetos nativos de Python. La incorporación de Pybind11 es indispensable para servir como mecanismo formal de traducción de tipos y gestión de memoria entre ambos lenguajes, permitiendo además la personalización de \textit{bindings} en caso de requerir optimizaciones específicas para la manipulación de tensores o características exclusivas de FIDESlib.
+\end{itemize}
+
+Finalmente, la biblioteca propuesta se desarrollara en Python, abstrayendo la complejidad criptográfica para el usuario mediante estructuras de datos como tensores cifrados. Las operaciones sobre estos tensores invocarán los \textit{bindings} de OpenFHE-Python, los cuales delegarán la validación criptográfica a OpenFHE y el cálculo intensivo a la GPU a través de FIDESlib. Se emplearán bibliotecas adicionales del ecosistema de Python, como Matplotlib, para la visualización y análisis de los resultados de rendimiento.
+
+\section{Modelos a implementar y comparativas}
+
+Una vez finalizado el desarrollo de la biblioteca, el enfoque se centrará en la implementación de diferentes arquitecturas de redes neuronales para validar su funcionalidad. Específicamente, se construirán redes neuronales totalmente conectadas con un número variable de capas y neuronas, diseñadas tanto para tareas de regresión como de clasificación. Además, se implementará una red neuronal convolucional orientada a tareas de clasificación. Durante estas pruebas, también se evaluará el impacto de cambiar las funciones de activación dentro de estos modelos cifrados.
+
+Para validar la efectividad y eficiencia de la solución propuesta, se llevarán a cabo dos tipos de comparativas principales:
+
+\begin{enumerate}
+    \item \textbf{Resultados} Se compararán los resultados de inferencia obtenida por los modelos usando cifrado homomórfico, frente a los mismos modelos operando sobre datos sin cifrado. Esto permitirá medir la pérdida de precisión inducida por las aproximaciones polinómicas y la gestión del ruido del esquema CKKS.
+    \item \textbf{Rendimiento:} Se contrastarán los tiempos de ejecución y uso de memoria de la biblioteca propuesta contra otras herramientas disponibles en Python que permiten usar cifrado homomórfico, como TenSEAL \cite{benaissa2021tenseal} (la cual implementa CKKS) y Concrete ML \cite{ConcreteML} (basada en el esquema de cifrado TFHE). Es importante destacar que TenSEAL usa exclusivamente el CPU mientras que Concrete ML usa el GPU pero usa un esquema de cifrado distinto a CKKS.
+\end{enumerate}
 
 \section{Planificación de actividades}
 
@@ -37,8 +56,8 @@ Las actividades planificadas se detallan en la \hyperref[tab:plan_trabajo]{Tabla
         \textbf{Objetivo} & \textbf{Actividad} & \textbf{Días} \\
         \hline
         % Spans 2 rows
-        \multirow{2}{=}{Implementar una interfaz en Python para interactuar con HEonGPU}
-            & Investigar la API de HEonGPU. & 5 \\
+        \multirow{2}{=}{Implementar una interfaz en Python para interactuar con FIDESlib y OpenFHE}
+            & Investigar las API de FIDESlib y OpenFHE. & 5 \\
         \cline{2-3}
             & Implementar bindings para funciones relacionadas con el esquema CKKS. & 10 \\
         \hline
@@ -50,19 +69,19 @@ Las actividades planificadas se detallan en la \hyperref[tab:plan_trabajo]{Tabla
         \hline
         % Spans 2 rows
         \multirow{2}{=}{Crear casos de uso en modelos de Machine Learning}
-            & Seleccionar modelos de ML para los casos de uso. & 5 \\
+            & Implementar redes totalmente conectadas (regresión/clasificación) y convolucionales. & 10 \\
         \cline{2-3}
-            & Implementar la inferencia de los modelos usando la biblioteca. & 15 \\
+            & Realizar inferencia variando funciones de activación y comparar los resultados. & 10 \\
         \hline
         % Spans 4 rows
         \multirow{4}{=}{Comparar performance con otras bibliotecas}
-            & Investigar y seleccionar bibliotecas para la comparación. & 5 \\
+            & Configurar el entorno para las bibliotecas de referencia (TenSEAL y Concrete ML). & 5 \\
         \cline{2-3}
-            & Implementar capas de redes neuronales con las bibliotecas a comparar. & 15 \\
+            & Implementar las mismas arquitecturas de redes usando TenSEAL y Concrete ML. & 10 \\
         \cline{2-3}
-            & Diseñar y ejecutar benchmarks para medir tiempo y uso de memoria. & 10 \\
+            & Ejecutar benchmarks de tiempo de ejecución y uso de memoria. & 10 \\
         \cline{2-3}
-            & Analizar los resultados. & 5 \\
+            & Analizar los resultados y redactar conclusiones. & 5 \\
         \hline
     \end{tabular}
     \caption{Plan de Trabajo}
