@@ -16,6 +16,8 @@
 \usepackage{algpseudocode}
 \usepackage[footnotesize]{subfigure}
 \usepackage{makeidx}
+\usepackage[hidelinks]{hyperref} 
+\usepackage[all]{hypcap}
 \usepackage{color}
 \makeindex
 %\renewcommand{\baselinestretch}{1}
@@ -54,6 +56,9 @@
 
 %Inicio de documento
 \begin{document}
+\makeatletter
+\renewcommand{\@seccntformat}[1]{\csname the#1\endcsname\quad}
+\makeatother
 \hyphenation{pa-la-bra}
 
 \renewcommand{\contentsname}{Tabla de Contenidos}
@@ -63,7 +68,6 @@
 		\input{portada}
 		%\input{agradecimientos}	%opcional
 		%\input{dedicatoria}		%opcional
-		\input{abstract}
 		\tableofcontents	%indice
 		\listoffigures	%opcional
 		\listoftables		%opcional
@@ -72,10 +76,6 @@
 		\input{chapter1}
 		\input{chapter2}
 		\input{chapter3}
-		\input{chapter4}
-		\input{chapter5}
-		%\input{chaptern}
-		\input{conclusiones}
 	\backmatter
 		\bibliographystyle{IEEEtran}
 		%\bibliographystyle{plain}     %You may prefer \bibliographystyle{alpha}
@@ -83,5 +83,4 @@
 		%\bibliographystyle{babalpha}
 		\bibliography{books}
 		\nocite{*}
-		\input{anexos}	%opcional
 \end{document}
