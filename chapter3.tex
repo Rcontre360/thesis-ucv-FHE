@@ -24,7 +24,7 @@ Desarrollar una biblioteca de código abierto en Python para el cómputo de oper
 
 \section{Tecnologías necesarias}
 
-El desarrollo de la biblioteca propuesta es un sistema de múltiples capas de abstracción, cuyo objetivo es cerrar la brecha entre los entornos de programación de alto nivel utilizados en aprendizaje automático y la ejecución de operaciones criptográficas complejas aceleradas por hardware. Para lograr esto, se emplearán librerias que permitan usar el esquema CKKS en el GPU y que nos permitan usar el esquema desde el lenguaje Python.
+El desarrollo de la biblioteca propuesta es un sistema de múltiples capas de abstracción, cuyo objetivo es cerrar la brecha entre los entornos de programación de alto nivel utilizados en aprendizaje automático y la ejecución de operaciones criptográficas complejas aceleradas por hardware. Para lograr esto, se emplearán bibliotecas que permitan usar el esquema CKKS en el GPU y que nos permitan usar el esquema desde el lenguaje Python.
 
 \begin{itemize}
     \item FIDESlib: Desarrollada en C++ y CUDA, esta biblioteca proporciona una implementación optimizada del esquema CKKS sobre el GPU \cite{FIDESlib}. 
@@ -32,7 +32,7 @@ El desarrollo de la biblioteca propuesta es un sistema de múltiples capas de ab
     \item OpenFHE-Python y Pybind11: Para usar las primitivas matemáticas de FIDESlib en Python, se utilizará la interfaz oficial OpenFHE-Python \cite{OpenFHEPython}. Esta herramienta actúa como interface, empleando Pybind11 para crear \textit{bindings} que exponen los objetos complejos de C++ como objetos nativos de Python. La incorporación de Pybind11 es indispensable para servir como mecanismo formal de traducción de tipos y gestión de memoria entre ambos lenguajes, permitiendo además la personalización de \textit{bindings} en caso de requerir optimizaciones específicas para la manipulación de tensores o características exclusivas de FIDESlib.
 \end{itemize}
 
-Finalmente, la biblioteca propuesta se desarrollara en Python, abstrayendo la complejidad criptográfica para el usuario mediante estructuras de datos como tensores cifrados. Las operaciones sobre estos tensores invocarán los \textit{bindings} de OpenFHE-Python, los cuales delegarán la validación criptográfica a OpenFHE y el cálculo intensivo a la GPU a través de FIDESlib. Se emplearán bibliotecas adicionales del ecosistema de Python, como Matplotlib, para la visualización y análisis de los resultados de rendimiento.
+Finalmente, la biblioteca propuesta se desarrollará en Python, abstrayendo la complejidad criptográfica para el usuario mediante estructuras de datos como tensores cifrados. Las operaciones sobre estos tensores invocarán los \textit{bindings} de OpenFHE-Python, los cuales delegarán la validación criptográfica a OpenFHE y el cálculo intensivo a la GPU a través de FIDESlib. Se emplearán bibliotecas adicionales del ecosistema de Python, como Matplotlib, para la visualización y análisis de los resultados de rendimiento.
 
 \section{Modelos a implementar y comparativas}
 
@@ -41,13 +41,13 @@ Una vez finalizado el desarrollo de la biblioteca, el enfoque se centrará en la
 Para validar la efectividad y eficiencia de la solución propuesta, se llevarán a cabo dos tipos de comparativas principales:
 
 \begin{enumerate}
-    \item \textbf{Resultados} Se compararán los resultados de inferencia obtenida por los modelos usando cifrado homomórfico, frente a los mismos modelos operando sobre datos sin cifrado. Esto permitirá medir la pérdida de precisión inducida por las aproximaciones polinómicas y la gestión del ruido del esquema CKKS.
+    \item \textbf{Resultados:} Se compararán los resultados de inferencia obtenida por los modelos usando cifrado homomórfico, frente a los mismos modelos operando sobre datos sin cifrado. Esto permitirá medir la pérdida de precisión inducida por las aproximaciones polinómicas y la gestión del ruido del esquema CKKS.
     \item \textbf{Rendimiento:} Se contrastarán los tiempos de ejecución y uso de memoria de la biblioteca propuesta contra otras herramientas disponibles en Python que permiten usar cifrado homomórfico, como TenSEAL \cite{benaissa2021tenseal} (la cual implementa CKKS) y Concrete ML \cite{ConcreteML} (basada en el esquema de cifrado TFHE). Es importante destacar que TenSEAL usa exclusivamente el CPU mientras que Concrete ML usa el GPU pero usa un esquema de cifrado distinto a CKKS.
 \end{enumerate}
 
 \section{Planificación de actividades}
 
-Las actividades planificadas se detallan en la \hyperref[tab:plan_trabajo]{Tabla~\ref{tab:plan_trabajo}}:
+Para cada uno de los objetivos específicos definidos, se han determinado las actividades necesarias para su cumplimiento. En la \hyperref[tab:plan_trabajo]{Tabla~\ref{tab:plan_trabajo}} se detalla el cronograma propuesto y se estima la duración de cada actividad en días:
 
 \begin{table}[h]
     \centering
@@ -68,7 +68,7 @@ Las actividades planificadas se detallan en la \hyperref[tab:plan_trabajo]{Tabla
             & Implementar pruebas unitarias para las operaciones con tensores. & 5 \\
         \hline
         % Spans 2 rows
-        \multirow{2}{=}{Crear casos de uso en modelos de Machine Learning}
+        \multirow{2}{=}{Definir casos de uso en modelos de Machine Learning}
             & Implementar redes totalmente conectadas (regresión/clasificación) y convolucionales. & 10 \\
         \cline{2-3}
             & Realizar inferencia variando funciones de activación y comparar los resultados. & 10 \\

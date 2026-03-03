@@ -1,4 +1,0 @@
----
-**Chapter/Section:** Chapter 4
-**Sentence:** `...sin embargo, este esquema tiene un desempeño peor a CKKS para varios tipos de operaciones (ref).`
-**Missing Reference:** A paper that provides a performance comparison between the TFHE and CKKS schemes, showing that TFHE has worse performance for some operations relevant to machine learning (e.g., arithmetic on large vectors).
