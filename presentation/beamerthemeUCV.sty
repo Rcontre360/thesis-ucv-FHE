@@ -11,11 +11,10 @@
 % Outer theme with sides
 \useoutertheme[width=.15\paperwidth]{sidebar}
 
-% Define height of head regular frames
-\setlength{\beamer@headheight}{.15\paperheight}
+% Define height of head regular frames (Increased for logo space)
+\setlength{\beamer@headheight}{.18\paperheight}
 
 % Declare Images (Using UCV Logo and actual corner decorations)
-\pgfdeclareimage[width=.12\paperwidth]{small-logo1}{logoucv.png}
 \pgfdeclareimage[width=.12\paperwidth]{small-logo}{logoucv.png}
 \pgfdeclareimage[width=.33\paperwidth]{type-logo}{logoucv.png}
 \pgfdeclareimage[width=.33\paperwidth]{white-logo}{logoucv.png}
@@ -51,16 +50,14 @@
 \pgfsetcolor{white}
 \pgfusepath{stroke}
 % Line between frame content and navigation
-\pgfpathmoveto{\pgfpoint{.15\paperwidth}{-.18\paperheight}}
+\pgfpathmoveto{\pgfpoint{.15\paperwidth}{-.21\paperheight}}
 \pgfpathlineto{\pgfpoint{.15\paperwidth}{-.97\paperheight}}
 \pgfsetlinewidth{1pt}
 \pgfsetinnerlinewidth{0pt}
 \pgfsetcolor{UCVBlue}
 \pgfusepath{stroke}
-% Image on top-left
-\pgftext[at=\pgfpoint{.07\paperwidth}{-.155\paperheight},center,base]{\pgfuseimage{small-logo}}
-% Image on bottom-left
-\pgftext[at=\pgfpoint{.075\paperwidth}{-.97\paperheight},center,base]{\pgfuseimage{small-logo1}}
+% Image on top-left (Adjusted size and position)
+\pgftext[at=\pgfpoint{.075\paperwidth}{-.10\paperheight},center,base]{\pgfuseimage{small-logo}}
 \end{pgfpicture}%
 \vskip-25pt%
 }
