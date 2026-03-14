@@ -1,0 +1,43 @@
+% --- Part 5: Neural Networks over CKKS (Slides 18-21) ---
+\section{Inferencia Privada con CKKS}
+
+\begin{frame}{Flujo de Trabajo para Inferencia Privada}
+    \begin{itemize}
+        \item Cliente cifra datos $ct_x$.
+        \item Servidor evalúa el modelo homomórficamente sobre $ct_x$.
+        \item Cliente descifra el resultado final.
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=0.8\textwidth]{fhe_on_ml.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Multiplicación Matriz-Vector y Diagonalización}
+    \begin{itemize}
+        \item Operación lineal costosa en el dominio homomórfico.
+        \item Técnica de Diagonalización (Halevi y Shoup) para minimizar rotaciones.
+        \item Optimiza el uso de la estructura SIMD.
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=0.8\textwidth]{matrix_vec_mul.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Aproximación de Funciones de Activación}
+    \begin{itemize}
+        \item El esquema CKKS solo soporta sumas y multiplicaciones.
+        \item Activaciones no lineales (ReLU, Sigmoid) no pueden evaluarse directamente.
+        \item \textbf{Solución:} Aproximación por polinomios (p.ej., Series de Taylor o $x^2$).
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Convoluciones Homomórficas e Im2Col}
+    \begin{itemize}
+        \item Transformación del tensor de entrada y filtros mediante \textit{Im2Col}.
+        \item La convolución se convierte en una multiplicación matriz-vector optimizada.
+        \item Permite aprovechar el paralelismo SIMD del esquema.
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=0.4\textwidth]{img2conv.png}
+    \end{center}
+\end{frame}

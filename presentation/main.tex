@@ -1,0 +1,48 @@
+\documentclass[10pt, spanish, aspectratio=169]{beamer}
+
+% --- Configuración de Idioma y Matemáticas ---
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{subfigure}
+
+% --- Tema Visual Personalizado (UCV basado en UASLP1) ---
+\usetheme{UCV}
+
+% --- Ruta de Imágenes ---
+\graphicspath{{../doc/images/}}
+
+% --- Metadatos ---
+\title{Librería Python para CKKS en GPU}
+\subtitle{Operaciones Tensoriales con Cifrado Homomórfico}
+\author{Rafael Eduardo Contreras}
+\institute{Universidad Central de Venezuela \\ Facultad de Ciencias}
+\date{\today}
+
+\begin{document}
+
+% Portada
+\begin{frame}[plain,t]
+    \titlepage
+\end{frame}
+
+% Índice Automático
+\begin{frame}{Contenido del Seminario}
+    \tableofcontents
+\end{frame}
+
+% --- Carga de Secciones Modulares ---
+\include{slides/01_intro}
+\include{slides/02_fundamentos}
+\include{slides/03_ckks_depth}
+\include{slides/04_nn_fundamentals}
+\include{slides/05_nn_over_ckks}
+\include{slides/06_proposed_library}
+
+% Diapositiva Final
+\ThankYouFrame
+
+\end{document}

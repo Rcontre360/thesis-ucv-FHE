@@ -1,0 +1,53 @@
+% --- Part 3: The CKKS Scheme in Depth (Slides 9-13) ---
+\section{El Esquema CKKS}
+
+\begin{frame}{Introducción al Esquema CKKS}
+    Propuesto por Cheon, Kim, Kim y Song en 2017, el esquema CKKS representa un avance fundamental diseñado específicamente para el cómputo sobre números reales y complejos.
+
+    \begin{itemize}
+        \item \textbf{Propósito:} Habilitar aritmética aproximada de punto flotante de manera homomórfica.
+        \item \textbf{Innovación:} Trata el ruido inherente del cifrado como un error de redondeo controlado, similar al cálculo numérico estándar.
+        \item \textbf{Aplicabilidad:} Es el esquema de elección para tareas de Machine Learning y procesamiento de señales debido a su eficiencia en operaciones de alta precisión.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Parámetros Críticos en CKKS}
+    \begin{itemize}
+        \item \textbf{Grado del Polinomio ($N$):} Define el número de ranuras y el nivel de seguridad.
+        \item \textbf{Módulo ($Q$):} Determina el "presupuesto de ruido" para operaciones.
+        \item \textbf{Factor de Escala ($\Delta$):} Define la precisión de la representación decimal.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Codificación y SIMD}
+    \begin{itemize}
+        \item Inmersión Canónica para empaquetar $N/2$ números en un solo polinomio.
+        \item Ventaja SIMD (\textit{Single Instruction, Multiple Data}).
+        \item Una operación homomórfica afecta a todo el vector simultáneamente.
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=0.4\textwidth]{roots_unity.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{CKKS por Niveles (Leveled)}
+    \begin{itemize}
+        \item Cadena de módulos: $Q_L > Q_{L-1} > \dots > Q_0$.
+        \item \textbf{Reescalado:} Reduce el módulo para gestionar el ruido tras multiplicaciones.
+        \item Permite configurar parámetros para circuitos de profundidad fija.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Bootstrapping en CKKS}
+    \begin{itemize}
+        \item Evaluación homomórfica del circuito de descifrado.
+        \item Refresco del texto cifrado para reducir el ruido acumulado.
+        \item Permite realizar un número arbitrario de operaciones (FHE).
+    \end{itemize}
+    \vfill
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\textwidth]{bootstrap.png}
+        \caption{Diagrama esquemático del proceso de Bootstrapping.}
+    \end{figure}
+\end{frame}
