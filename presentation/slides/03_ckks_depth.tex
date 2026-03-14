@@ -1,0 +1,48 @@
+% --- Part 3: The CKKS Scheme in Depth (Slides 9-13) ---
+\section{El Esquema CKKS}
+
+\begin{frame}{Paradigma: Aritmética Aproximada}
+    \begin{itemize}
+        \item Cambio de paradigma respecto a BGV/BFV (enteros).
+        \item Maneja de forma nativa números reales y complejos.
+        \item El ruido se trata como el error de redondeo del cálculo numérico convencional.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Parámetros Críticos en CKKS}
+    \begin{itemize}
+        \item \textbf{Grado del Polinomio ($N$):} Define el número de ranuras y el nivel de seguridad.
+        \item \textbf{Módulo ($Q$):} Determina el "presupuesto de ruido" para operaciones.
+        \item \textbf{Factor de Escala ($\Delta$):} Define la precisión de la representación decimal.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Codificación y SIMD}
+    \begin{itemize}
+        \item Inmersión Canónica para empaquetar $N/2$ números en un solo polinomio.
+        \item Ventaja SIMD (\textit{Single Instruction, Multiple Data}).
+        \item Una operación homomórfica afecta a todo el vector simultáneamente.
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=0.4\textwidth]{roots_unity.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{CKKS por Niveles (Leveled)}
+    \begin{itemize}
+        \item Cadena de módulos: $Q_L > Q_{L-1} > \dots > Q_0$.
+        \item \textbf{Reescalado:} Reduce el módulo para gestionar el ruido tras multiplicaciones.
+        \item Permite configurar parámetros para circuitos de profundidad fija.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Bootstrapping en CKKS}
+    \begin{itemize}
+        \item Evaluación homomórfica del circuito de descifrado.
+        \item Refresco del texto cifrado para reducir el ruido.
+        \item Permite realizar un número arbitrario de operaciones.
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=0.6\textwidth]{bootstrap.png}
+    \end{center}
+\end{frame}

@@ -1,0 +1,37 @@
+% --- Part 1: Introduction & Motivation (Slides 1-3) ---
+\section{Introducción y Motivación}
+
+\begin{frame}{Título y Autores}
+    \begin{center}
+        \Huge \textbf{Librería Python para CKKS en GPU} \\
+        \large \textit{Operaciones Tensoriales con Cifrado Homomórfico} \\
+        \vspace{1cm}
+        \normalsize \textbf{Rafael Eduardo Contreras} \\
+        \textit{Universidad Central de Venezuela \\ Facultad de Ciencias}
+    \end{center}
+\end{frame}
+
+\begin{frame}{El Dilema de la Privacidad}
+    \begin{columns}
+        \column{0.6\textwidth}
+        \begin{itemize}
+            \item Explosión del \textbf{Machine Learning (ML)} en áreas sensibles.
+            \item \textbf{Sectores:} Medicina, Finanzas, etc.
+            \item \textbf{Riesgo:} Fuga de datos al usar servicios de terceros en la nube para inferencia.
+        \end{itemize}
+        
+        \column{0.4\textwidth}
+        \begin{figure}
+            \centering
+            \includegraphics[width=\textwidth]{fhe_on_ml.png}
+        \end{figure}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Cifrado Homomórfico (HE) como Solución}
+    \begin{itemize}
+        \item \textbf{Definición:} Computar directamente sobre datos cifrados.
+        \item \textbf{Propiedad:} El resultado, una vez descifrado, coincide con el obtenido en texto plano.
+        \item \textbf{Beneficio:} El servidor nunca tiene acceso a la información sensible.
+    \end{itemize}
+\end{frame}

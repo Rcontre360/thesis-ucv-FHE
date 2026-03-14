@@ -1,0 +1,39 @@
+% --- Part 4: Neural Networks Fundamentals (Slides 14-17) ---
+\section{Fundamentos de Redes Neuronales}
+
+\begin{frame}{Neurona Artificial y Capas}
+    \begin{itemize}
+        \item Estructura básica: Entrada, Pesos, Sesgo y Función de Activación.
+        \item Organización en capas: Entrada, Ocultas y Salida.
+        \item Operación fundamental: $h = a[\beta + \Omega x]$.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Redes Superficiales vs. Profundas}
+    \begin{itemize}
+        \item \textbf{Superficiales:} Una sola capa oculta.
+        \item \textbf{Profundas (DNN):} Múltiples capas ocultas interconectadas.
+        \item Mayor jerarquía permite aprender representaciones más abstractas de los datos.
+    \end{itemize}
+    \begin{figure}
+        \centering
+        \subfigure[Superficial]{\includegraphics[width=0.4\textwidth]{shallow_network.png}}
+        \subfigure[Profunda]{\includegraphics[width=0.4\textwidth]{deep_network.png}}
+    \end{figure}
+\end{frame}
+
+\begin{frame}{Redes Neuronales Convolucionales (CNN)}
+    \begin{itemize}
+        \item Especializadas en datos con estructura espacial (imágenes).
+        \item Operaciones clave: Convolución y Agrupamiento (\textit{Pooling}).
+        \item Aprovechan la invarianza espacial y compartición de parámetros.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Entrenamiento vs. Inferencia}
+    \begin{itemize}
+        \item \textbf{Entrenamiento:} Ajuste de parámetros mediante retropropagación (muy costoso en FHE).
+        \item \textbf{Inferencia:} Aplicación del modelo entrenado a nuevos datos.
+        \item Foco del trabajo: Optimizar la inferencia sobre datos cifrados con pesos públicos.
+    \end{itemize}
+\end{frame}

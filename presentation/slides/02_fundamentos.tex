@@ -1,0 +1,49 @@
+% --- Part 2: Fundamentals of HE & Modern Schemes (Slides 4-8) ---
+\section{Fundamentos de HE}
+
+\begin{frame}{Orígenes y Evolución}
+    \begin{itemize}
+        \item Propuesto en 1978 como \textit{"Privacy Homomorphisms"}.
+        \item Evolución desde Cifrado Parcialmente Homomórfico (PHE) como RSA y Paillier.
+        \item Hacia el Cifrado Totalmente Homomórfico (FHE).
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{El Problema del "Ruido"}
+    \begin{itemize}
+        \item El cifrado incluye un "error" o ruido para garantizar seguridad.
+        \item El ruido crece con cada operación homomórfica.
+        \item La multiplicación aumenta el ruido mucho más rápido que la suma.
+        \item Si el ruido supera un umbral, el descifrado falla.
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=0.6\textwidth]{noise.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Esquemas FHE Modernos (Comparativa)}
+    \begin{itemize}
+        \item \textbf{BGV / BFV:} Aritmética exacta sobre enteros. Gestión vía \textit{Modulus/Scale switching}.
+        \item \textbf{TFHE:} Bootstrapping rápido, operación bit a bit. Ideal para lógica booleana.
+        \item \textbf{CKKS:} Aritmética aproximada para números reales y complejos.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Aprendizaje con Errores (LWE)}
+    \begin{itemize}
+        \item Base matemática de la seguridad moderna en criptografía de retículos.
+        \item Dificultad de encontrar un vector secreto en un sistema lineal ruidoso.
+        \item \[ t = \langle \mathbf{a}, \mathbf{s} \rangle / q + e \]
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=0.4\textwidth]{lwe.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Aprendizaje con Errores en Anillos (RLWE)}
+    \begin{itemize}
+        \item Extensión de LWE a anillos polinomiales: $R_q = \mathbb{Z}_q[x] / \langle x^n + 1 \rangle$.
+        \item Eficiencia mejorada: Multiplicación vía \textbf{Transformada de Teoría de Números (NTT)}.
+        \item Habilita operaciones paralelas nativas (\textbf{SIMD}).
+    \end{itemize}
+\end{frame}
