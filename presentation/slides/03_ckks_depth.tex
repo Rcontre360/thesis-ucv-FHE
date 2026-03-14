@@ -74,13 +74,35 @@
     \begin{itemize}
         \item \textbf{Adición:} Lineal y directa.
         \[ ct_{add} = (c_{1,0} + c_{2,0}, c_{1,1} + c_{2,1}) \pmod q \]
-        \item \textbf{Multiplicación:} Genera un texto cifrado cuadrático de tamaño 3:
-        \[ ct_{mult} = (d_0, d_1, d_2) \]
-        donde $d_2$ es el término que acompaña a $s^2$.
+        \item \textbf{Multiplicación:} Genera un texto cifrado cuadrático que requiere gestión de escala y tamaño.
     \end{itemize}
-    \begin{center}
-        \includegraphics[width=0.6\textwidth]{ckks_mult.png}
-    \end{center}
+
+    \vfill
+    \centering
+    \begin{tikzpicture}[scale=0.8, every node/.style={font=\tiny}]
+        % Barras de estado
+        % Fila 1
+        \draw[thick] (0,3) rectangle (4,3.6);
+        \fill[green!60!black!50] (0,3) rectangle (1.5,3.6) node[pos=.5, white] {$\Delta$};
+        \node[left] at (-0.5, 3.3) {\textbf{Multiplicación}};
+        \node[right] at (4.5, 3.3) {$\text{mod } Q_l$};
+
+        % Fila 2
+        \draw[thick] (0,1.5) rectangle (4,2.1);
+        \fill[green!60!black!50] (0,1.5) rectangle (3,2.1) node[pos=.5, white] {$\Delta^2$};
+        \node[left] at (-0.5, 1.8) {\textbf{\& Relinearización}};
+        \node[right] at (4.5, 1.8) {$\text{mod } Q_l$};
+
+        % Fila 3
+        \draw[thick] (1.5,0) rectangle (4,0.6);
+        \fill[green!60!black!50] (1.5,0) rectangle (3,0.6) node[pos=.5, white] {$\Delta$};
+        \node[left] at (-0.5, 0.3) {\textbf{Reescalado}};
+        \node[right] at (4.5, 0.3) {$\text{mod } Q_{l-1}$};
+
+        % Flechas de flujo
+        \draw[->, >=stealth, bend right=40, thick] (-0.2, 3.1) to (-0.2, 2.0);
+        \draw[->, >=stealth, bend right=40, thick] (-0.2, 1.6) to (-0.2, 0.5);
+    \end{tikzpicture}
 \end{frame}
 
 \begin{frame}{Operaciones: Rotaciones Homomórficas}

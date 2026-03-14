@@ -2,8 +2,11 @@
 \section{Inferencia Privada con CKKS}
 
 \begin{frame}{Inferencia Privada}
+    La inferencia privada permite que un cliente utilice un modelo de aprendizaje automático alojado en un servidor remoto sin revelar sus datos de entrada ni el resultado de la predicción. Mediante el uso de cifrado homomórfico, el servidor puede ejecutar el modelo directamente sobre los datos cifrados, garantizando que la información sensible nunca sea expuesta durante el proceso de cómputo.
+
+    \vfill
     \begin{center}
-        \includegraphics[width=0.85\textwidth]{fhe_on_ml.png}
+        \includegraphics[width=0.65\textwidth]{fhe_on_ml.png}
     \end{center}
 \end{frame}
 
@@ -83,7 +86,7 @@
             \draw[fill=gray!30] (4.8, 2.0) rectangle (5.3, 2.5) node[pos=.5] {$\mathbf{y}$};
         \end{scope}
         
-        % Fórmula centrada abajo
+        % Fórmula centrada abajo (Adjusted position and size)
         \node[below, black!70] at (6,-0.2) {\normalsize $\mathbf{y} = \sum_{i=0}^{n-1} \text{Rot}(\mathbf{x}, i) \odot \mathbf{d}_i$};
     \end{tikzpicture}
 \end{frame}
@@ -114,10 +117,10 @@
 
     \vfill
     \centering
-    \begin{tikzpicture}[scale=0.6, every node/.style={font=\tiny}]
+    \begin{tikzpicture}[scale=0.75, every node/.style={font=\tiny}]
         % KERNEL (Arriba)
         \begin{scope}[shift={(0,2.5)}]
-            \draw[step=0.7cm, black!40, thin] (0,0) grid (1.4,1.4);
+            \draw[step=0.7cm, gray!60, thin] (0,0) grid (1.4,1.4);
             \fill[orange!20, opacity=0.5] (0,0) rectangle (1.4,1.4);
             \node at (0.35, 1.05) {$w_1$}; \node at (1.05, 1.05) {$w_2$};
             \node at (0.35, 0.35) {$w_3$}; \node at (1.05, 0.35) {$w_4$};
@@ -126,41 +129,41 @@
 
         % ENTRADA (Abajo)
         \begin{scope}[shift={(0,0)}]
-            \draw[step=0.7cm, black!40, thin] (0,0) grid (2.1,2.1);
+            \draw[step=0.7cm, gray!60, thin] (0,0) grid (2.1,2.1);
             \fill[blue!20, opacity=0.5] (0,0.7) rectangle (1.4,2.1);
             \node at (0.35, 1.75) {$x_1$}; \node at (1.05, 1.75) {$x_2$};
             \node at (0.35, 1.05) {$x_4$}; \node at (1.05, 1.05) {$x_5$};
             \node[left] at (-0.2, 1.05) {Entrada};
         \end{scope}
 
-        % Flechas RECTAS
-        \draw[->, black!30, thick] (1.5, 3.2) -- (3.5, 3.2);
-        \draw[->, black!30, thick] (2.2, 1.05) -- (3.5, 1.05);
+        % Flechas RECTAS y más cortas
+        \draw[->, gray!60, thick] (1.6, 3.2) -- (2.6, 3.2);
+        \draw[->, gray!60, thick] (2.3, 1.05) -- (2.6, 1.05);
 
         % VECTORES
-        \begin{scope}[shift={(3.8,3)}]
-            \draw[fill=orange!20] (0,0) rectangle (0.5,0.45) node[pos=.5] {$w_1$};
-            \draw[fill=orange!20] (0.5,0) rectangle (1.0,0.45) node[pos=.5] {$w_2$};
-            \draw[fill=orange!20] (1.0,0) rectangle (1.5,0.45) node[pos=.5] {$w_3$};
-            \draw[fill=orange!20] (1.5,0) rectangle (2.0,0.45) node[pos=.5] {$w_4$};
+        \begin{scope}[shift={(2.8,3)}]
+            \draw[gray!60, fill=orange!20] (0,0) rectangle (0.5,0.45) node[pos=.5, text=black] {$w_1$};
+            \draw[gray!60, fill=orange!20] (0.5,0) rectangle (1.0,0.45) node[pos=.5, text=black] {$w_2$};
+            \draw[gray!60, fill=orange!20] (1.0,0) rectangle (1.5,0.45) node[pos=.5, text=black] {$w_3$};
+            \draw[gray!60, fill=orange!20] (1.5,0) rectangle (2.0,0.45) node[pos=.5, text=black] {$w_4$};
         \end{scope}
 
-        \node at (4.8, 2.1) {\normalsize $\cdot$};
+        \node at (3.8, 2.1) {\normalsize $\cdot$};
 
-        \begin{scope}[shift={(3.8,0.8)}]
-            \draw[fill=blue!20] (0,0) rectangle (0.5,0.45) node[pos=.5] {$x_1$};
-            \draw[fill=blue!20] (0.5,0) rectangle (1.0,0.45) node[pos=.5] {$x_2$};
-            \draw[fill=blue!20] (1.0,0) rectangle (1.5,0.45) node[pos=.5] {$x_4$};
-            \draw[fill=blue!20] (1.5,0) rectangle (2.0,0.45) node[pos=.5] {$x_5$};
+        \begin{scope}[shift={(2.8,0.8)}]
+            \draw[gray!60, fill=blue!20] (0,0) rectangle (0.5,0.45) node[pos=.5, text=black] {$x_1$};
+            \draw[gray!60, fill=blue!20] (0.5,0) rectangle (1.0,0.45) node[pos=.5, text=black] {$x_2$};
+            \draw[gray!60, fill=blue!20] (1.0,0) rectangle (1.5,0.45) node[pos=.5, text=black] {$x_4$};
+            \draw[gray!60, fill=blue!20] (1.5,0) rectangle (2.0,0.45) node[pos=.5, text=black] {$x_5$};
         \end{scope}
 
         % Flecha hacia resultado
-        \draw[->, black!30, thick] (6, 2.1) -- (7.5, 2.1);
+        \draw[->, gray!60, thick] (5.0, 2.1) -- (5.8, 2.1);
 
         % MATRIZ DE SALIDA
-        \begin{scope}[shift={(8,1.4)}]
-            \draw[step=0.7cm, black!40, thin] (0,0) grid (1.4,1.4);
-            \fill[green!30] (0,0.7) rectangle (0.7,1.4) node[pos=.5] {$z_{1,1}$};
+        \begin{scope}[shift={(6.0,1.4)}]
+            \draw[step=0.7cm, gray!60, thin] (0,0) grid (1.4,1.4);
+            \draw[gray!60, fill=orange!30] (0,0.7) rectangle (0.7,1.4) node[pos=.5, text=black] {$z_{1,1}$};
             \node[above] at (0.7, 1.4) {Salida};
         \end{scope}
     \end{tikzpicture}
