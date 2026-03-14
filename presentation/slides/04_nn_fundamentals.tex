@@ -10,34 +10,96 @@
 \end{frame}
 
 \begin{frame}{Redes Superficiales vs. Profundas}
-    \begin{block}{Red Superficial (Shallow NN)}
-        Consiste en una única capa oculta entre la entrada y la salida:
-        \[ \hat{y} = \sigma(\mathbf{W}^{(2)} \cdot \sigma(\mathbf{W}^{(1)} \mathbf{x} + \mathbf{b}^{(1)}) + \mathbf{b}^{(2)}) \]
-    \end{block}
-
-    \begin{block}{Red Profunda (Deep NN)}
-        Composición de múltiples transformaciones lineales y no lineales:
-        \[ \mathbf{h}^{(l)} = \sigma(\mathbf{W}^{(l)} \mathbf{h}^{(l-1)} + \mathbf{b}^{(l)}) \]
-        donde la salida final es la composición:
-        \[ \hat{y} = (\mathbf{f}_L \circ \mathbf{f}_{L-1} \circ \dots \circ \mathbf{f}_1)(\mathbf{x}) \]
-    \end{block}
-
     \begin{itemize}
-        \item La profundidad permite la extracción jerárquica de características complejas.
+        \item \textbf{Red Superficial (Shallow):} Arquitectura que cuenta con una única capa oculta entre la entrada y la salida.
+        \item \textbf{Red Profunda (Deep):} Composición de múltiples capas ocultas (dos o más), lo que permite aprender representaciones jerárquicas y abstractas.
     \end{itemize}
+
+    \vfill
+    \centering
+    \begin{tikzpicture}[shorten >=1pt,->,draw=black!50, node distance=1cm]
+        \tikzstyle{neuron}=[circle,fill=black!25,minimum size=12pt,inner sep=0pt]
+        \tikzstyle{input neuron}=[neuron, fill=green!50];
+        \tikzstyle{output neuron}=[neuron, fill=red!50];
+        \tikzstyle{hidden neuron}=[neuron, fill=blue!50];
+
+        % Input Layer (2 neurons)
+        \foreach \name / \y in {1,2}
+            \node[input neuron] (I-\name) at (0,-\y-0.5) {};
+
+        % Hidden Layer 1 (3 neurons)
+        \foreach \name / \y in {1,2,3}
+            \node[hidden neuron] (H1-\name) at (1.5,-\y) {};
+
+        % Hidden Layer 2 (3 neurons)
+        \foreach \name / \y in {1,2,3}
+            \node[hidden neuron] (H2-\name) at (3.0,-\y) {};
+
+        % Output Layer (1 neuron)
+        \node[output neuron] (O) at (4.5,-2) {};
+
+        % Connections I -> H1
+        \foreach \source in {1,2}
+            \foreach \dest in {1,2,3}
+                \path (I-\source) edge (H1-\dest);
+
+        % Connections H1 -> H2
+        \foreach \source in {1,2,3}
+            \foreach \dest in {1,2,3}
+                \path (H1-\source) edge (H2-\dest);
+
+        % Connections H2 -> O
+        \foreach \source in {1,2,3}
+            \path (H2-\source) edge (O);
+            
+        % Labels (Same color as arrows, smaller)
+        \node[below of=I-2, node distance=0.6cm, text=black!50] {\tiny Entrada};
+        \node[below of=H1-3, node distance=0.4cm, text=black!50] {\tiny Oculta 1};
+        \node[below of=H2-3, node distance=0.4cm, text=black!50] {\tiny Oculta 2};
+        \node[below of=O, node distance=1.4cm, text=black!50] {\tiny Salida};
+    \end{tikzpicture}
 \end{frame}
 
 \begin{frame}{Redes Neuronales Convolucionales (CNN)}
     Especializadas en datos con estructura espacial, utilizan la operación de convolución para extraer características jerárquicas.
 
-    \begin{block}{Operación de Convolución Discreta 2D}
-        Para una entrada $\mathbf{x}$ y un núcleo (kernel) $\mathbf{w}$ de tamaño $k \times k$:
-        \[ z_{i,j} = \sum_{m=0}^{k-1} \sum_{n=0}^{k-1} w_{m,n} \cdot x_{i+m, j+n} + b \]
-    \end{block}
-
     \begin{itemize}
-        \item \textbf{Mapas de Características:} El resultado $z$ captura patrones locales (bordes, texturas).
         \item \textbf{Propiedades:} Invarianza espacial y compartición de pesos (reduce parámetros).
         \item \textbf{Capas:} Combinación de convoluciones, \textit{Pooling} y activaciones.
     \end{itemize}
+
+    \vfill
+    \centering
+    \begin{tikzpicture}[scale=0.6]
+        % Entrada 4x4
+        \draw[step=1cm, black!20, thin] (0,0) grid (4,4);
+        \node[above, black!50] at (2,4) {\tiny Entrada ($x$)};
+        
+        % Resaltar región local
+        \fill[blue!20, opacity=0.5] (0,2) rectangle (2,4);
+        \draw[blue!50, thick] (0,2) rectangle (2,4);
+
+        % Kernel 2x2
+        \begin{scope}[shift={(5.5,2)}]
+            \draw[step=1cm, black!20, thin] (0,0) grid (2,2);
+            \fill[orange!20, opacity=0.5] (0,0) rectangle (2,2);
+            \draw[orange!50, thick] (0,0) rectangle (2,2);
+            \node[above, black!50] at (1,2) {\tiny Kernel ($w$)};
+        \end{scope}
+
+        % Flechas de operación
+        \draw[->, black!30, thick] (2.1,3) -- (5.4,3);
+        \draw[->, black!30, thick] (7.6,3) -- (9.9,3);
+
+        % Salida 3x3
+        \begin{scope}[shift={(10,1)}]
+            \draw[step=1cm, black!20, thin] (0,0) grid (3,3);
+            \fill[green!20, opacity=0.5] (0,2) rectangle (1,3);
+            \draw[green!50, thick] (0,2) rectangle (1,3);
+            \node[above, black!50] at (1.5,3) {\tiny Salida ($z$)};
+        \end{scope}
+        
+        % Ecuación resumida abajo (Bigger as requested)
+        \node[below, black!50] at (6,-1) {\large $z_{i,j} = \sum \sum w_{m,n} \cdot x_{i+m, j+n}$};
+    \end{tikzpicture}
 \end{frame}

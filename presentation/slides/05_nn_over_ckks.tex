@@ -2,26 +2,56 @@
 \section{Inferencia Privada con CKKS}
 
 \begin{frame}{Inferencia Privada}
-    En el contexto de FHE, el cifrado se aplica generalmente al proceso de inferencia ya que los pesos del modelo suelen ser públicos, mientras que los datos del usuario son sensibles.
-    \begin{itemize}
-        \item \textbf{Flujo:} Cliente cifra entrada $\rightarrow$ Servidor evalúa homomórficamente $\rightarrow$ Cliente descifra.
-        \item \textbf{Ventaja:} El servidor realiza el cómputo intensivo sin conocer los datos ni el resultado.
-        \item \textbf{Limitación del Entrenamiento:} Actualizar pesos requiere retropropagación y cálculo de gradientes, lo cual es prohibitivo en FHE debido al crecimiento del ruido y la profundidad del circuito.
-    \end{itemize}
     \begin{center}
-        \includegraphics[width=0.7\textwidth]{fhe_on_ml.png}
+        \includegraphics[width=0.85\textwidth]{fhe_on_ml.png}
     \end{center}
 \end{frame}
 
 \begin{frame}{Multiplicación Matriz-Vector y Diagonalización}
-    \begin{itemize}
-        \item Operación lineal costosa en el dominio homomórfico.
-        \item Técnica de Diagonalización (Halevi y Shoup) para minimizar rotaciones.
-        \item Optimiza el uso de la estructura SIMD.
-    \end{itemize}
-    \begin{center}
-        \includegraphics[width=0.8\textwidth]{matrix_vec_mul.png}
-    \end{center}
+    Optimización para minimizar rotaciones homomórficas mediante la descomposición de la matriz en diagonales.
+
+    \vfill
+    \centering
+    \begin{tikzpicture}[scale=0.75, every node/.style={font=\tiny}]
+        % Matriz Original con diagonales de colores
+        \draw[thick] (0,0) rectangle (2.1,2.1);
+        \node at (1.05, 2.3) {Matriz de Pesos $W$};
+        
+        % Diagonal 0 (Azul)
+        \fill[blue!30] (0,1.4) rectangle (0.7,2.1);
+        \fill[blue!30] (0.7,0.7) rectangle (1.4,1.4);
+        \fill[blue!30] (1.4,0) rectangle (2.1,0.7);
+        
+        % Diagonal 1 (Naranja)
+        \fill[orange!30] (0.7,1.4) rectangle (1.4,2.1);
+        \fill[orange!30] (1.4,0.7) rectangle (2.1,1.4);
+        \fill[orange!30] (0,0) rectangle (0.7,0.7);
+        
+        % Diagonal 2 (Verde)
+        \fill[green!30] (1.4,1.4) rectangle (2.1,2.1);
+        \fill[green!30] (0,0.7) rectangle (0.7,1.4);
+        \fill[green!30] (0.7,0) rectangle (1.4,0.7);
+        
+        \draw[step=0.7cm, black!40] (0,0) grid (2.1,2.1);
+
+        % Flecha de descomposición
+        \draw[->, thick] (2.5,1.05) -- (3.5,1.05);
+
+        % Vectores Diagonal
+        \begin{scope}[shift={(4,0)}]
+            \draw[fill=blue!30] (0,1.4) rectangle (0.5,2.1) node[pos=.5] {$d_0$};
+            \draw[fill=orange!30] (0,0.7) rectangle (0.5,1.4) node[pos=.5] {$d_1$};
+            \draw[fill=green!30] (0,0) rectangle (0.5,0.7) node[pos=.5] {$d_2$};
+            \node at (0.25, 2.3) {Diagonales};
+        \end{scope}
+
+        % Operación Final
+        \begin{scope}[shift={(6,0.5)}]
+            \node[anchor=west] at (0,1.2) {$\text{Resultado} = \sum_{i=0}^{n-1} \text{Rot}(\mathbf{x}, i) \odot \mathbf{d}_i$};
+            \draw[->] (0.5,0.8) -- (0.5,0.2);
+            \node[anchor=west] at (0.2, -0.2) {Minimiza rotaciones homomórficas};
+        \end{scope}
+    \end{tikzpicture}
 \end{frame}
 
 \begin{frame}{Aproximación de Funciones de Activación}
