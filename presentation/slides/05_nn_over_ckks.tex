@@ -8,48 +8,55 @@
 \end{frame}
 
 \begin{frame}{Multiplicación Matriz-Vector y Diagonalización}
-    Optimización para minimizar rotaciones homomórficas mediante la descomposición de la matriz en diagonales.
+    Optimización para minimizar rotaciones homomórficas (Halevi-Shoup).
 
     \vfill
     \centering
-    \begin{tikzpicture}[scale=0.75, every node/.style={font=\tiny}]
-        % Matriz Original con diagonales de colores
-        \draw[thick] (0,0) rectangle (2.1,2.1);
-        \node at (1.05, 2.3) {Matriz de Pesos $W$};
+    \begin{tikzpicture}[scale=0.65, every node/.style={font=\tiny}]
+        % VECTOR x MATRIZ (Estándar)
+        \node at (1, 3.5) {\textbf{Cómputo Estándar}};
+        \draw[fill=gray!10] (0,0.5) rectangle (0.5,2.6);
+        \node at (0.25, 1.55) {$\mathbf{x}$};
+        \node at (0.75, 1.55) {$\times$};
         
-        % Diagonal 0 (Azul)
-        \fill[blue!30] (0,1.4) rectangle (0.7,2.1);
-        \fill[blue!30] (0.7,0.7) rectangle (1.4,1.4);
-        \fill[blue!30] (1.4,0) rectangle (2.1,0.7);
-        
-        % Diagonal 1 (Naranja)
-        \fill[orange!30] (0.7,1.4) rectangle (1.4,2.1);
-        \fill[orange!30] (1.4,0.7) rectangle (2.1,1.4);
-        \fill[orange!30] (0,0) rectangle (0.7,0.7);
-        
-        % Diagonal 2 (Verde)
-        \fill[green!30] (1.4,1.4) rectangle (2.1,2.1);
-        \fill[green!30] (0,0.7) rectangle (0.7,1.4);
-        \fill[green!30] (0.7,0) rectangle (1.4,0.7);
-        
-        \draw[step=0.7cm, black!40] (0,0) grid (2.1,2.1);
-
-        % Flecha de descomposición
-        \draw[->, thick] (2.5,1.05) -- (3.5,1.05);
-
-        % Vectores Diagonal
-        \begin{scope}[shift={(4,0)}]
-            \draw[fill=blue!30] (0,1.4) rectangle (0.5,2.1) node[pos=.5] {$d_0$};
-            \draw[fill=orange!30] (0,0.7) rectangle (0.5,1.4) node[pos=.5] {$d_1$};
-            \draw[fill=green!30] (0,0) rectangle (0.5,0.7) node[pos=.5] {$d_2$};
-            \node at (0.25, 2.3) {Diagonales};
+        \begin{scope}[shift={(1,0.5)}]
+            \draw[thick] (0,0) rectangle (2.1,2.1);
+            \fill[blue!30] (0,1.4) rectangle (0.7,2.1); \fill[blue!30] (0.7,0.7) rectangle (1.4,1.4); \fill[blue!30] (1.4,0) rectangle (2.1,0.7);
+            \fill[orange!30] (0.7,1.4) rectangle (1.4,2.1); \fill[orange!30] (1.4,0.7) rectangle (2.1,1.4); \fill[orange!30] (0,0) rectangle (0.7,0.7);
+            \fill[green!30] (1.4,1.4) rectangle (2.1,2.1); \fill[green!30] (0,0.7) rectangle (0.7,1.4); \fill[green!30] (0.7,0) rectangle (1.4,0.7);
+            \draw[step=0.7cm, black!40] (0,0) grid (2.1,2.1);
+            \node at (1.05, -0.4) {Matriz $\mathbf{W}$};
         \end{scope}
 
-        % Operación Final
-        \begin{scope}[shift={(6,0.5)}]
-            \node[anchor=west] at (0,1.2) {$\text{Resultado} = \sum_{i=0}^{n-1} \text{Rot}(\mathbf{x}, i) \odot \mathbf{d}_i$};
-            \draw[->] (0.5,0.8) -- (0.5,0.2);
-            \node[anchor=west] at (0.2, -0.2) {Minimiza rotaciones homomórficas};
+        % Flecha de Equivalencia
+        \node at (4.5, 1.55) {\Huge $\equiv$};
+
+        % DIAGONALIZACIÓN (Optimizado)
+        \begin{scope}[shift={(6,0)}]
+            \node at (3, 3.5) {\textbf{Cómputo Optimizado (CKKS)}};
+            
+            % Fila 0
+            \draw[fill=gray!10] (0,2.5) rectangle (0.4,3.2) node[pos=.5] {$\mathbf{x}$};
+            \node at (0.7, 2.85) {$\odot$};
+            \draw[fill=blue!30] (1,2.5) rectangle (1.4,3.2) node[pos=.5] {$\mathbf{d}_0$};
+            
+            % Fila 1
+            \draw[fill=gray!10] (0,1.5) rectangle (0.4,2.2) node[pos=.5] {$\mathbf{x}_{rot1}$};
+            \node at (0.7, 1.85) {$\odot$};
+            \draw[fill=orange!30] (1,1.5) rectangle (1.4,2.2) node[pos=.5] {$\mathbf{d}_1$};
+            
+            % Fila 2
+            \draw[fill=gray!10] (0,0.5) rectangle (0.4,1.2) node[pos=.5] {$\mathbf{x}_{rot2}$};
+            \node at (0.7, 0.85) {$\odot$};
+            \draw[fill=green!30] (1,0.5) rectangle (1.4,1.2) node[pos=.5] {$\mathbf{d}_2$};
+
+            % Suma y Resultado
+            \draw[thick] (2,0.5) -- (2,3.2);
+            \node at (2.5, 1.85) {\Huge $+$};
+            \draw[->, thick] (3.5, 1.85) -- (4.5, 1.85);
+            \draw[fill=gray!20] (4.8, 1.3) rectangle (5.3, 2.4) node[pos=.5] {$\mathbf{y}$};
+            
+            \node[below] at (2.5, 0) {$\sum_{i=0}^{n-1} \text{Rot}(\mathbf{x}, i) \odot \mathbf{d}_i$};
         \end{scope}
     \end{tikzpicture}
 \end{frame}
