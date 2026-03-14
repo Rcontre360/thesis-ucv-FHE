@@ -1,4 +1,4 @@
-% --- Part 4: Neural Networks Fundamentals (Slides 14-17) ---
+% --- Part 4: Neural Networks Fundamentals ---
 \section{Fundamentos de Redes Neuronales}
 
 \begin{frame}{Neurona Artificial y Capas}
@@ -10,30 +10,34 @@
 \end{frame}
 
 \begin{frame}{Redes Superficiales vs. Profundas}
+    \begin{block}{Red Superficial (Shallow NN)}
+        Consiste en una única capa oculta entre la entrada y la salida:
+        \[ \hat{y} = \sigma(\mathbf{W}^{(2)} \cdot \sigma(\mathbf{W}^{(1)} \mathbf{x} + \mathbf{b}^{(1)}) + \mathbf{b}^{(2)}) \]
+    \end{block}
+
+    \begin{block}{Red Profunda (Deep NN)}
+        Composición de múltiples transformaciones lineales y no lineales:
+        \[ \mathbf{h}^{(l)} = \sigma(\mathbf{W}^{(l)} \mathbf{h}^{(l-1)} + \mathbf{b}^{(l)}) \]
+        donde la salida final es la composición:
+        \[ \hat{y} = (\mathbf{f}_L \circ \mathbf{f}_{L-1} \circ \dots \circ \mathbf{f}_1)(\mathbf{x}) \]
+    \end{block}
+
     \begin{itemize}
-        \item \textbf{Superficiales:} Una sola capa oculta.
-        \item \textbf{Profundas (DNN):} Múltiples capas ocultas interconectadas.
-        \item Mayor jerarquía permite aprender representaciones más abstractas de los datos.
+        \item La profundidad permite la extracción jerárquica de características complejas.
     \end{itemize}
-    \begin{figure}
-        \centering
-        \subfigure[Superficial]{\includegraphics[width=0.4\textwidth]{shallow_network.png}}
-        \subfigure[Profunda]{\includegraphics[width=0.4\textwidth]{deep_network.png}}
-    \end{figure}
 \end{frame}
 
 \begin{frame}{Redes Neuronales Convolucionales (CNN)}
-    \begin{itemize}
-        \item Especializadas en datos con estructura espacial (imágenes).
-        \item Operaciones clave: Convolución y Agrupamiento (\textit{Pooling}).
-        \item Aprovechan la invarianza espacial y compartición de parámetros.
-    \end{itemize}
-\end{frame}
+    Especializadas en datos con estructura espacial, utilizan la operación de convolución para extraer características jerárquicas.
 
-\begin{frame}{Entrenamiento vs. Inferencia}
+    \begin{block}{Operación de Convolución Discreta 2D}
+        Para una entrada $\mathbf{x}$ y un núcleo (kernel) $\mathbf{w}$ de tamaño $k \times k$:
+        \[ z_{i,j} = \sum_{m=0}^{k-1} \sum_{n=0}^{k-1} w_{m,n} \cdot x_{i+m, j+n} + b \]
+    \end{block}
+
     \begin{itemize}
-        \item \textbf{Entrenamiento:} Ajuste de parámetros mediante retropropagación (muy costoso en FHE).
-        \item \textbf{Inferencia:} Aplicación del modelo entrenado a nuevos datos.
-        \item Foco del trabajo: Optimizar la inferencia sobre datos cifrados con pesos públicos.
+        \item \textbf{Mapas de Características:} El resultado $z$ captura patrones locales (bordes, texturas).
+        \item \textbf{Propiedades:} Invarianza espacial y compartición de pesos (reduce parámetros).
+        \item \textbf{Capas:} Combinación de convoluciones, \textit{Pooling} y activaciones.
     \end{itemize}
 \end{frame}

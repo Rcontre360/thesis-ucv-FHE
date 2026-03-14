@@ -1,4 +1,4 @@
-% --- Part 3: The CKKS Scheme in Depth (Slides 9-13) ---
+% --- Part 3: The CKKS Scheme in Depth ---
 \section{El Esquema CKKS}
 
 \begin{frame}{Introducción al Esquema CKKS}
@@ -6,48 +6,111 @@
 
     \begin{itemize}
         \item \textbf{Propósito:} Habilitar aritmética aproximada de punto flotante de manera homomórfica.
-        \item \textbf{Innovación:} Trata el ruido inherente del cifrado como un error de redondeo controlado, similar al cálculo numérico estándar.
-        \item \textbf{Aplicabilidad:} Es el esquema de elección para tareas de Machine Learning y procesamiento de señales debido a su eficiencia en operaciones de alta precisión.
+        \item \textbf{Innovación:} Trata el ruido inherente como un error de redondeo controlado.
+        \item \textbf{SIMD Nativo:} Permite empaquetar un vector de $n/2$ valores en un solo criptograma.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Parámetros Críticos en CKKS}
-    \begin{itemize}
-        \item \textbf{Grado del Polinomio ($N$):} Define el número de ranuras y el nivel de seguridad.
-        \item \textbf{Módulo ($Q$):} Determina el "presupuesto de ruido" para operaciones.
-        \item \textbf{Factor de Escala ($\Delta$):} Define la precisión de la representación decimal.
-    \end{itemize}
+\begin{frame}{Parámetros y Llaves}
+    \begin{columns}
+        \column{0.5\textwidth}
+        \textbf{Parámetros Algebraicos:}
+        \begin{itemize}
+            \item \textbf{Grado ($N$):} Potencia de 2. Define seguridad y ranuras.
+            \item \textbf{Módulo ($Q$):} Cadena de primos $q_L \cdot \dots \cdot q_0$.
+            \item \textbf{Distribución ($\sigma, h$):} Controlan el ruido inicial.
+            \item \textbf{Seguridad ($\lambda$):} Resistencia en bits.
+        \end{itemize}
+        
+        \column{0.5\textwidth}
+        \textbf{Conjunto de Llaves:}
+        \begin{itemize}
+            \item \textbf{Secreta ($sk$):} Vector $s$ para descifrado.
+            \item \textbf{Pública ($pk$):} Par $(b, a)$ para cifrado.
+            \item \textbf{Relinearización ($rlk$):} Reduce tamaño tras mult.
+            \item \textbf{Rotación ($galk$):} Permite mover datos SIMD.
+        \end{itemize}
+    \end{columns}
 \end{frame}
 
-\begin{frame}{Codificación y SIMD}
+\begin{frame}{Codificación CKKS}
+    La codificación transforma un vector de números complejos $z \in \mathbb{C}^{n/2}$ en un polinomio $m(x) \in R$.
     \begin{itemize}
-        \item Inmersión Canónica para empaquetar $N/2$ números en un solo polinomio.
-        \item Ventaja SIMD (\textit{Single Instruction, Multiple Data}).
-        \item Una operación homomórfica afecta a todo el vector simultáneamente.
+        \item \textbf{Raíces de la Unidad:} Se utilizan las raíces primitivas $2n$-ésimas: $\zeta_j = e^{i \frac{2\pi j}{2n}}$.
+        \item \textbf{Inmersión Canónica ($\sigma$):} Mapea el polinomio a evaluaciones:
+        \[ \sigma(p(x)) = (p(\zeta_1), p(\zeta_3), \dots, p(\zeta_{2n-1})) \]
+        \item \textbf{Codificación ($\sigma^{-1}$):} Encuentra el polinomio $p(x)$ tal que $\sigma(p(x))$ sea el vector original (biyectivo).
     \end{itemize}
     \begin{center}
-        \includegraphics[width=0.4\textwidth]{roots_unity.png}
+        \includegraphics[width=0.3\textwidth]{roots_unity.png}
     \end{center}
 \end{frame}
 
-\begin{frame}{CKKS por Niveles (Leveled)}
+\begin{frame}{Escalado y Discretización}
+    Para representar números reales en un anillo de coeficientes enteros sin perder precisión:
+    \begin{enumerate}
+        \item \textbf{Escalado:} Se multiplica por un factor $\Delta > 0$: $z \rightarrow \Delta \cdot z$.
+        \item \textbf{Proyección:} Se aplica la inmersión inversa $\sigma^{-1}(\Delta \cdot z)$.
+        \item \textbf{Discretización:} Redondeo al entero más cercano:
+        \[ m(x) = \lfloor \sigma^{-1}(\Delta \cdot z) \rceil \]
+    \end{enumerate}
     \begin{itemize}
-        \item Cadena de módulos: $Q_L > Q_{L-1} > \dots > Q_0$.
-        \item \textbf{Reescalado:} Reduce el módulo para gestionar el ruido tras multiplicaciones.
-        \item Permite configurar parámetros para circuitos de profundidad fija.
+        \item El factor $\Delta$ desplaza la parte decimal fuera de la zona contaminada por el ruido.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Decodificación CKKS}
+    Es el proceso inverso para recuperar los datos tras el descifrado:
+    \begin{itemize}
+        \item Se obtiene el polinomio $m'(x)$ escalado por $\Delta$.
+        \item Se aplica la inmersión canónica directa evaluando en las raíces $\zeta_j$.
+        \item Se consideran solo $n/2$ componentes por simetría.
+        \item \textbf{Recuperación:} División por $\Delta$ y redondeo final.
+        \[ \text{Decodificar}(m'(x)) = \lfloor \Delta^{-1} \cdot \sigma(m'(x)) \rceil \]
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Operaciones: Suma y Multiplicación}
+    \begin{itemize}
+        \item \textbf{Adición:} Lineal y directa.
+        \[ ct_{add} = (c_{1,0} + c_{2,0}, c_{1,1} + c_{2,1}) \pmod q \]
+        \item \textbf{Multiplicación:} Genera un texto cifrado cuadrático de tamaño 3:
+        \[ ct_{mult} = (d_0, d_1, d_2) \]
+        donde $d_2$ es el término que acompaña a $s^2$.
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=0.6\textwidth]{ckks_mult.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Operaciones: Rotaciones Homomórficas}
+    Permiten permutar cíclicamente los elementos dentro de las ranuras SIMD.
+    \begin{itemize}
+        \item \textbf{Mecánica:} Basada en los automorfismos de Galois: $\phi_k: p(x) \mapsto p(x^k)$.
+        \item \textbf{El Reto:} El texto cifrado queda bajo una clave transformada $s(x^k)$.
+        \item \textbf{Solución:} Cambio de clave (\textit{KeySwitching}) usando las \textbf{Llaves de Galois} para volver a la clave secreta $s(x)$ original.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Gestión: Relinearización y Reescalado}
+    \begin{itemize}
+        \item \textbf{Relinearización:} Reduce el tamaño del criptograma de 3 a 2 polinomios usando la clave $rlk$.
+        \[ ct_{relin} = (d_0, d_1) + \lfloor P^{-1} \cdot d_2 \cdot rlk \rceil \pmod q \]
+        \item \textbf{Reescalado:} Divide los coeficientes por un primo $q_\ell$ de la cadena.
+        \[ ct_{rescaled} = \lfloor q_\ell^{-1} \cdot ct_{relin} \rceil \pmod{q_{\ell-1}} \]
+        \item \textbf{Efecto:} Devuelve el factor de escala a $\Delta$ y elimina los bits de ruido menos significativos.
     \end{itemize}
 \end{frame}
 
 \begin{frame}{Bootstrapping en CKKS}
-    \begin{itemize}
-        \item Evaluación homomórfica del circuito de descifrado.
-        \item Refresco del texto cifrado para reducir el ruido acumulado.
-        \item Permite realizar un número arbitrario de operaciones (FHE).
-    \end{itemize}
-    \vfill
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.7\textwidth]{bootstrap.png}
-        \caption{Diagrama esquemático del proceso de Bootstrapping.}
-    \end{figure}
+    Proceso para "refrescar" el ruido evaluando el descifrado homomórficamente.
+    \begin{enumerate}
+        \item \textbf{Elevación del Módulo:} Pasar de $q$ pequeño a $Q$ grande.
+        \item \textbf{Coeficientes a Ranuras:} Mover coeficientes del polinomio a ranuras SIMD.
+        \item \textbf{Evaluación Modular:} Aproximación de la reducción modular mediante funciones sinusoidales.
+        \item \textbf{Ranuras a Coeficientes:} Reconstruir el polinomio limpio.
+    \end{enumerate}
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{bootstrap.png}
+    \end{center}
 \end{frame}

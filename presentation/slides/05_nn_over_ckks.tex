@@ -1,14 +1,15 @@
-% --- Part 5: Neural Networks over CKKS (Slides 18-21) ---
+% --- Part 5: Neural Networks over CKKS ---
 \section{Inferencia Privada con CKKS}
 
-\begin{frame}{Flujo de Trabajo para Inferencia Privada}
+\begin{frame}{Inferencia Privada}
+    En el contexto de FHE, el cifrado se aplica generalmente al proceso de inferencia ya que los pesos del modelo suelen ser públicos, mientras que los datos del usuario son sensibles.
     \begin{itemize}
-        \item Cliente cifra datos $ct_x$.
-        \item Servidor evalúa el modelo homomórficamente sobre $ct_x$.
-        \item Cliente descifra el resultado final.
+        \item \textbf{Flujo:} Cliente cifra entrada $\rightarrow$ Servidor evalúa homomórficamente $\rightarrow$ Cliente descifra.
+        \item \textbf{Ventaja:} El servidor realiza el cómputo intensivo sin conocer los datos ni el resultado.
+        \item \textbf{Limitación del Entrenamiento:} Actualizar pesos requiere retropropagación y cálculo de gradientes, lo cual es prohibitivo en FHE debido al crecimiento del ruido y la profundidad del circuito.
     \end{itemize}
     \begin{center}
-        \includegraphics[width=0.8\textwidth]{fhe_on_ml.png}
+        \includegraphics[width=0.7\textwidth]{fhe_on_ml.png}
     \end{center}
 \end{frame}
 
@@ -25,9 +26,16 @@
 
 \begin{frame}{Aproximación de Funciones de Activación}
     \begin{itemize}
-        \item El esquema CKKS solo soporta sumas y multiplicaciones.
-        \item Activaciones no lineales (ReLU, Sigmoid) no pueden evaluarse directamente.
-        \item \textbf{Solución:} Aproximación por polinomios (p.ej., Series de Taylor o $x^2$).
+        \item El esquema CKKS solo soporta sumas y multiplicaciones polinomiales.
+        \item \textbf{Desafío:} Funciones no lineales (ReLU, Sigmoid) no pueden evaluarse directamente.
+        \item \textbf{Soluciones de Aproximación:}
+        \begin{itemize}
+            \item \textbf{Series de Taylor:} Útiles para funciones suaves (Sigmoid, Tanh).
+            \[ \text{Sigmoid}(x) \approx \frac{1}{2} + \frac{1}{4}x - \frac{1}{48}x^3 + \dots \]
+            \item \textbf{Polinomios de Bajo Grado:} Reducen la profundidad del circuito.
+            \[ \text{ReLU}(x) \approx x^2 \text{ (CryptoNets)} \quad \text{o} \quad ax^2 + bx + c \]
+            \item \textbf{Mínimos Cuadrados:} Ajuste óptimo en un intervalo definido.
+        \end{itemize}
     \end{itemize}
 \end{frame}
 
