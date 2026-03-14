@@ -9,10 +9,8 @@
 \usepackage{hyperref}
 \usepackage{subfigure}
 
-% --- Tema Visual (Limpio y Profesional) ---
-\usetheme{Madrid} 
-\usecolortheme{whale} % Azul profesional
-\setbeamertemplate{navigation symbols}{} % Quitar iconos feos de navegación
+% --- Tema Visual Personalizado (UCV basado en UASLP1) ---
+\usetheme{UCV}
 
 % --- Ruta de Imágenes ---
 \graphicspath{{../doc/images/}}
@@ -27,7 +25,7 @@
 \begin{document}
 
 % Portada
-\begin{frame}
+\begin{frame}[plain,t]
     \titlepage
 \end{frame}
 
@@ -36,7 +34,7 @@
     \tableofcontents
 \end{frame}
 
-% --- Carga de Secciones Modulares (26 slides en total) ---
+% --- Carga de Secciones Modulares ---
 \include{slides/01_intro}
 \include{slides/02_fundamentos}
 \include{slides/03_ckks_depth}
@@ -45,11 +43,6 @@
 \include{slides/06_proposed_library}
 
 % Diapositiva Final
-\begin{frame}
-    \centering
-    \Huge ¿Preguntas?
-    \vfill
-    \large \textbf{Contacto:} \\ rafael.contreras@ciens.ucv.ve
-\end{frame}
+\ThankYouFrame
 
 \end{document}
