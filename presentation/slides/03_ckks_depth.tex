@@ -103,14 +103,11 @@
 \end{frame}
 
 \begin{frame}{Bootstrapping en CKKS}
-    Proceso para "refrescar" el ruido evaluando el descifrado homomórficamente.
+    Proceso para reducir el ruido evaluando el descifrado homomórficamente.
     \begin{enumerate}
         \item \textbf{Elevación del Módulo:} Pasar de $q$ pequeño a $Q$ grande.
         \item \textbf{Coeficientes a Ranuras:} Mover coeficientes del polinomio a ranuras SIMD.
         \item \textbf{Evaluación Modular:} Aproximación de la reducción modular mediante funciones sinusoidales.
         \item \textbf{Ranuras a Coeficientes:} Reconstruir el polinomio limpio.
     \end{enumerate}
-    \begin{center}
-        \includegraphics[width=0.5\textwidth]{bootstrap.png}
-    \end{center}
 \end{frame}

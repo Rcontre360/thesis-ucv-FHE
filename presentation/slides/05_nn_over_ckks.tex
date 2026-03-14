@@ -106,6 +106,12 @@
 \begin{frame}{Convoluciones Homomórficas e Im2Col}
     Transformación de vecindades espaciales en estructuras lineales.
     
+    \begin{itemize}
+        \item \textbf{Mecánica:} El parche de la imagen y el kernel se "aplanan" en vectores.
+        \item \textbf{Propiedad:} La convolución se reduce a un \textbf{producto punto}.
+        \item \textbf{Eficiencia:} Permite resolver la capa mediante una única multiplicación de matrices (Diagonalización).
+    \end{itemize}
+
     \vfill
     \centering
     \begin{tikzpicture}[scale=0.6, every node/.style={font=\tiny}]
@@ -158,10 +164,4 @@
             \node[above] at (0.7, 1.4) {Salida};
         \end{scope}
     \end{tikzpicture}
-    
-    \begin{itemize}
-        \item \textbf{Mecánica:} El parche de la imagen y el kernel se "aplanan" en vectores.
-        \item \textbf{Propiedad:} La convolución se reduce a un \textbf{producto punto}.
-        \item \textbf{Eficiencia:} Permite resolver la capa mediante una única multiplicación de matrices (Diagonalización).
-    \end{itemize}
 \end{frame}
