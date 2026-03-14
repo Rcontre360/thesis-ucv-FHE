@@ -47,17 +47,37 @@
 
 \begin{frame}{Aprendizaje con Errores (LWE)}
     \begin{itemize}
-        \item \textbf{Naturaleza:} Técnica de criptografía asimétrica basada en la dureza de problemas de retículos.
-        \item \textbf{Parámetros:} Grado $n$, módulo $q$ y distribución de error $\chi$.
-        \item \textbf{Generación de Claves:}
-        \begin{itemize}
-            \item \textbf{Privada ($sk$):} Vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$.
-            \item \textbf{Pública ($pk$):} Par $(\mathbf{A}, \mathbf{b})$, donde $\mathbf{b} = \mathbf{As} + \mathbf{e} \pmod q$.
-        \end{itemize}
+        \item \textbf{Naturaleza:} Técnica asimétrica basada en problemas de retículos.
+        \item \textbf{Clave Pública ($pk$):} Par $(\mathbf{A}, \mathbf{b})$ donde $\mathbf{b} = \mathbf{As} + \mathbf{e} \pmod q$.
     \end{itemize}
-    \begin{center}
-        \includegraphics[width=0.4\textwidth]{lwe.png}
-    \end{center}
+    
+    \begin{block}{Ejemplo de Estructura}
+        \[
+        \underbrace{
+        \begin{pmatrix} b_1 \\ b_2 \\ \vdots \\ b_m \end{pmatrix}
+        }_{\mathbf{b} \in \mathbb{Z}_q^m}
+        =
+        \underbrace{
+        \begin{pmatrix} 
+        a_{11} & \dots & a_{1n} \\
+        \vdots & \ddots & \vdots \\
+        a_{m1} & \dots & a_{mn} 
+        \end{pmatrix}
+        }_{\mathbf{A} \in \mathbb{Z}_q^{m \times n}}
+        \cdot
+        \underbrace{
+        \begin{pmatrix} s_1 \\ \vdots \\ s_n \end{pmatrix}
+        }_{\mathbf{s} \in \mathbb{Z}_q^n}
+        +
+        \underbrace{
+        \begin{pmatrix} e_1 \\ \vdots \\ e_m \end{pmatrix}
+        }_{\mathbf{e} \in \chi^m} \pmod q
+        \]
+    \end{block}
+    
+    \begin{itemize}
+        \item \textbf{Parámetros:} $n$ (seguridad), $m$ (muestras), $q$ (módulo), $\mathbf{e}$ (pequeño error).
+    \end{itemize}
 \end{frame}
 
 \begin{frame}{Cifrado con LWE}
@@ -87,8 +107,10 @@
 \end{frame}
 
 \begin{frame}{Aprendizaje con Errores en Anillos (RLWE)}
+    El problema RLWE es una variante algebraica de LWE que traslada las operaciones de vectores y matrices a anillos de polinomios, donde la seguridad reside en la dificultad de distinguir muestras ruidosas de muestras aleatorias uniformes en el anillo.
+
     \begin{itemize}
-        \item Extensión de LWE a anillos polinomiales: $R_q = \mathbb{Z}_q[x] / \langle x^n + 1 \rangle$.
+        \item \textbf{Estructura:} Definido sobre el anillo $R_q = \mathbb{Z}_q[x] / \langle x^n + 1 \rangle$.
         \item \textbf{Ventajas:}
         \begin{itemize}
             \item Mayor eficiencia: Multiplicación vía \textbf{NTT}.
@@ -99,9 +121,21 @@
 \end{frame}
 
 \begin{frame}{Esquemas FHE Modernos (Comparativa)}
+    \begin{table}
+        \centering
+        \resizebox{\textwidth}{!}{
+        \begin{tabular}{|l|l|l|l|}
+            \hline
+            \textbf{Característica} & \textbf{BGV / BFV} & \textbf{CKKS} & \textbf{TFHE} \\ \hline
+            \textbf{Tipo de Dato} & Enteros exactos & Reales / Complejos & Bits / Enteros cortos \\ \hline
+            \textbf{Gestión de Ruido} & Modulus/Scale switching & Reescalado & Bootstrapping rápido \\ \hline
+            \textbf{Unidad de Cómputo} & Vectores (SIMD) & Vectores (SIMD) & Puertas Lógicas / LUT \\ \hline
+            \textbf{Precisión} & Absoluta & Aproximada & Absoluta (Binaria) \\ \hline
+        \end{tabular}
+        }
+    \end{table}
+    \vfill
     \begin{itemize}
-        \item \textbf{BGV / BFV:} Aritmética exacta sobre enteros. Gestión vía \textit{Modulus/Scale switching}.
-        \item \textbf{TFHE:} Bootstrapping rápido, operación bit a bit. Ideal para lógica booleana.
-        \item \textbf{CKKS:} Aritmética aproximada para números reales y complejos.
+        \item \textbf{CKKS:} Seleccionado para este trabajo por su soporte nativo de aritmética aproximada, ideal para Redes Neuronales.
     \end{itemize}
 \end{frame}

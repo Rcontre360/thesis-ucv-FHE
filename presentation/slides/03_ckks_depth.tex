@@ -1,11 +1,13 @@
 % --- Part 3: The CKKS Scheme in Depth (Slides 9-13) ---
 \section{El Esquema CKKS}
 
-\begin{frame}{Paradigma: Aritmética Aproximada}
+\begin{frame}{Introducción al Esquema CKKS}
+    Propuesto por Cheon, Kim, Kim y Song en 2017, el esquema CKKS representa un avance fundamental diseñado específicamente para el cómputo sobre números reales y complejos.
+
     \begin{itemize}
-        \item Cambio de paradigma respecto a BGV/BFV (enteros).
-        \item Maneja de forma nativa números reales y complejos.
-        \item El ruido se trata como el error de redondeo del cálculo numérico convencional.
+        \item \textbf{Propósito:} Habilitar aritmética aproximada de punto flotante de manera homomórfica.
+        \item \textbf{Innovación:} Trata el ruido inherente del cifrado como un error de redondeo controlado, similar al cálculo numérico estándar.
+        \item \textbf{Aplicabilidad:} Es el esquema de elección para tareas de Machine Learning y procesamiento de señales debido a su eficiencia en operaciones de alta precisión.
     \end{itemize}
 \end{frame}
 
