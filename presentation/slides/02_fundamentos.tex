@@ -3,10 +3,34 @@
 
 \begin{frame}{Orígenes y Evolución}
     \begin{itemize}
-        \item Propuesto en 1978 como \textit{"Privacy Homomorphisms"}.
-        \item Evolución desde Cifrado Parcialmente Homomórfico (PHE) como RSA y Paillier.
-        \item Hacia el Cifrado Totalmente Homomórfico (FHE).
+        \item \textbf{1978:} Rivest, Adleman y Dertouzos proponen \textit{"Privacy Homomorphisms"}.
+        \[ E(m_1 \otimes m_2) = E(m_1) \otimes E(m_2) \]
+        \item \textbf{Cifrado Parcialmente Homomórfico (PHE):}
+        \begin{itemize}
+            \item \textbf{RSA (Multiplicativo):}
+            \[ c_1 \cdot c_2 = m_1^e \cdot m_2^e = (m_1 \cdot m_2)^e \pmod n \]
+            \item \textbf{Paillier (Aditivo):}
+            \[ g^{m_1} r_1^n \cdot g^{m_2} r_2^n = g^{m_1+m_2} (r_1 r_2)^n \pmod{n^2} \]
+        \end{itemize}
     \end{itemize}
+\end{frame}
+
+\begin{frame}{Hacia el Cifrado Total (FHE)}
+    \begin{itemize}
+        \item \textbf{2009: Craig Gentry} presenta el primer esquema Totalmente Homomórfico (FHE).
+        \item \textbf{Leveled FHE:} Esquemas diseñados para evaluar circuitos de una profundidad máxima predefinida.
+        \item \textbf{Bootstrapping:} La gran innovación de Gentry.
+        \begin{itemize}
+            \item Proceso de "refresco" del texto cifrado para reducir el ruido.
+            \item Evaluación homomórfica del propio circuito de descifrado.
+        \end{itemize}
+    \end{itemize}
+    \vfill
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.6\textwidth]{bootstrap.png}
+        \caption{Diagrama esquemático del proceso de Bootstrapping.}
+    \end{figure}
 \end{frame}
 
 \begin{frame}{El Problema del "Ruido"}
@@ -21,29 +45,63 @@
     \end{center}
 \end{frame}
 
-\begin{frame}{Esquemas FHE Modernos (Comparativa)}
-    \begin{itemize}
-        \item \textbf{BGV / BFV:} Aritmética exacta sobre enteros. Gestión vía \textit{Modulus/Scale switching}.
-        \item \textbf{TFHE:} Bootstrapping rápido, operación bit a bit. Ideal para lógica booleana.
-        \item \textbf{CKKS:} Aritmética aproximada para números reales y complejos.
-    \end{itemize}
-\end{frame}
-
 \begin{frame}{Aprendizaje con Errores (LWE)}
     \begin{itemize}
-        \item Base matemática de la seguridad moderna en criptografía de retículos.
-        \item Dificultad de encontrar un vector secreto en un sistema lineal ruidoso.
-        \item \[ t = \langle \mathbf{a}, \mathbf{s} \rangle / q + e \]
+        \item \textbf{Naturaleza:} Técnica de criptografía asimétrica basada en la dureza de problemas de retículos.
+        \item \textbf{Parámetros:} Grado $n$, módulo $q$ y distribución de error $\chi$.
+        \item \textbf{Generación de Claves:}
+        \begin{itemize}
+            \item \textbf{Privada ($sk$):} Vector secreto $\mathbf{s} \in \mathbb{Z}_q^n$.
+            \item \textbf{Pública ($pk$):} Par $(\mathbf{A}, \mathbf{b})$, donde $\mathbf{b} = \mathbf{As} + \mathbf{e} \pmod q$.
+        \end{itemize}
     \end{itemize}
     \begin{center}
         \includegraphics[width=0.4\textwidth]{lwe.png}
     \end{center}
 \end{frame}
 
+\begin{frame}{Cifrado con LWE}
+    Para cifrar un bit $m \in \{0, 1\}$ usando la clave pública $(\mathbf{A}, \mathbf{b})$:
+    \begin{itemize}
+        \item Seleccionar un vector aleatorio de muestreo $\mathbf{r}$.
+        \item \textbf{Componentes del Criptograma $(c_1, c_2)$:}
+        \[ \mathbf{c_1} = \mathbf{rA} \pmod q \]
+        \[ c_2 = \mathbf{rb} + m\lfloor q/2 \rfloor \pmod q \]
+        \item El mensaje se "esconde" desplazándolo a la mitad del módulo.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Descifrado con LWE}
+    Para recuperar el mensaje $m$ usando la clave privada $\mathbf{s}$:
+    \begin{itemize}
+        \item \textbf{Operación de Descifrado:}
+        \[ \mu = c_2 - \langle \mathbf{c_1}, \mathbf{s} \rangle \pmod q \]
+        \item \textbf{Decisión:}
+        \[ m = 
+        \begin{cases} 
+        0 & \text{si } \mu \text{ está más cerca de } 0 \\
+        1 & \text{si } \mu \text{ está más cerca de } q/2 
+        \end{cases} \]
+        \item El descifrado es exitoso si el ruido acumulado es pequeño.
+    \end{itemize}
+\end{frame}
+
 \begin{frame}{Aprendizaje con Errores en Anillos (RLWE)}
     \begin{itemize}
         \item Extensión de LWE a anillos polinomiales: $R_q = \mathbb{Z}_q[x] / \langle x^n + 1 \rangle$.
-        \item Eficiencia mejorada: Multiplicación vía \textbf{Transformada de Teoría de Números (NTT)}.
-        \item Habilita operaciones paralelas nativas (\textbf{SIMD}).
+        \item \textbf{Ventajas:}
+        \begin{itemize}
+            \item Mayor eficiencia: Multiplicación vía \textbf{NTT}.
+            \item Estructura compacta: Claves y textos cifrados más pequeños.
+            \item Habilita operaciones paralelas nativas (\textbf{SIMD}).
+        \end{itemize}
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Esquemas FHE Modernos (Comparativa)}
+    \begin{itemize}
+        \item \textbf{BGV / BFV:} Aritmética exacta sobre enteros. Gestión vía \textit{Modulus/Scale switching}.
+        \item \textbf{TFHE:} Bootstrapping rápido, operación bit a bit. Ideal para lógica booleana.
+        \item \textbf{CKKS:} Aritmética aproximada para números reales y complejos.
     \end{itemize}
 \end{frame}
