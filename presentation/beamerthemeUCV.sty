@@ -12,7 +12,7 @@
 \useoutertheme[width=.15\paperwidth]{sidebar}
 
 % Define height of head regular frames (Increased for logo space)
-\setlength{\beamer@headheight}{.18\paperheight}
+\setlength{\beamer@headheight}{.215\paperheight}
 
 % Declare Images (Using UCV Logo and actual corner decorations)
 \pgfdeclareimage[width=.12\paperwidth]{small-logo}{logoucv.png}
@@ -57,7 +57,7 @@
 \pgfsetcolor{UCVBlue}
 \pgfusepath{stroke}
 % Image on top-left (Adjusted size and position)
-\pgftext[at=\pgfpoint{.075\paperwidth}{-.10\paperheight},center,base]{\pgfuseimage{small-logo}}
+\pgftext[at=\pgfpoint{.075\paperwidth}{-.215\paperheight},center,base]{\pgfuseimage{small-logo}}
 \end{pgfpicture}%
 \vskip-25pt%
 }
@@ -93,7 +93,7 @@
 \pgfusepath{fill}
 
 % Logo
-\pgftext[at=\pgfpoint{.024\paperwidth}{-.15\paperheight},left,base]{\pgfuseimage{type-logo}}
+\pgftext[at=\pgfpoint{-.0205\paperwidth}{-.195\paperheight},left,base]{\pgfuseimage{type-logo}}
 
 % short bar on left (Orange Accent)
 \pgfpathrectanglecorners{\pgfpoint{0pt}{-.17\paperheight}}{\pgfpoint{.15\paperwidth}{-.19\paperheight}}
@@ -132,7 +132,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usecolortheme{rose}
 \setbeamercolor{title page}{fg=white}
-\setbeamercolor{logo}{bg=UCVGrey}
+\setbeamercolor{logo}{bg=white}
 \setbeamercolor{frametitle}{fg=white,bg=UCVBlue}
 \setbeamercolor{section in sidebar}{fg=black,bg=UCVGrey}
 \setbeamercolor{subsection in sidebar}{fg=black,bg=UCVGrey}
@@ -142,6 +142,8 @@
 \setbeamercolor{itemize item}{fg=UCVBlue}
 \setbeamercolor{structure}{fg=UCVBlue!80}
 \setbeamercolor{title}{fg=white}
+
+\pgfdeclareimage[width=.41\paperwidth]{type-logo}{ciencs-ucv.png}
 
 \newcommand\ThankYouFrame{
 \begin{frame}[plain,t]
