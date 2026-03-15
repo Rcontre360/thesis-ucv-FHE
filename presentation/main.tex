@@ -8,9 +8,24 @@
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage{subfigure}
+\usepackage{tikz}
+\usetikzlibrary{matrix,chains,positioning,arrows,calc}
 
 % --- Tema Visual Personalizado (UCV basado en UASLP1) ---
 \usetheme{UCV}
+
+% Comando para Diapositivas de Transición de Sección
+\newcommand{\SectionTransitionFrame}[1]{
+    \begin{frame}[plain,t]
+        \begin{pgfpicture}
+            \pgf@relevantforpicturesizefalse
+            \pgftransformxshift{-\Gm@lmargin}
+            \pgftransformyshift{5.5pt}
+            \DoPurpleBackground
+            \pgftext[at=\pgfpoint{.5\paperwidth}{-.5\paperheight},center,center]{\huge\textcolor{white}{#1}}
+        \end{pgfpicture}
+    \end{frame}
+}
 
 % --- Ruta de Imágenes ---
 \graphicspath{{../doc/images/}}
