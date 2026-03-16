@@ -4,8 +4,9 @@
 
 \begin{frame}{Introducción al Esquema CKKS}
     Propuesto por Cheon, Kim, Kim y Song en 2017, el esquema CKKS representa un avance fundamental diseñado específicamente para el cómputo sobre números reales y complejos.
-
+    \vspace{0.3cm}
     \begin{itemize}
+        \setlength{\itemsep}{10pt}
         \item \textbf{Propósito:} Habilitar operaciones homomórficas con aritmética aproximada de punto flotante.
         \item \textbf{Innovación:} Trata el ruido inherente como un error de redondeo controlado.
         \item \textbf{SIMD:} Permite empaquetar un vector de $n/2$ valores en un solo polinomio.
@@ -36,7 +37,9 @@
 
 \begin{frame}{Codificación CKKS}
     La codificación transforma un vector de números complejos $z \in \mathbb{C}^{n/2}$ en un polinomio $m(x) \in R$.
+    \vspace{10pt}
     \begin{itemize}
+        \setlength{\itemsep}{10pt}
         \item \textbf{Raíces de la Unidad:} Buscamos un polinomio $p(x)$ tal que, al ser evaluado en las raíces de la unidad ($\zeta_j$), el resultado sea nuestro vector de datos original.
         \item \textbf{Inmersión Canónica ($\sigma$):} Define una correspondencia $\sigma: R \to \mathbb{C}^{n}$ que toma un polinomio $p(x)$ del anillo $R$ y lo transforma en un vector de números complejos.
         \item \textbf{Codificación ($\sigma^{-1}$):} se utiliza la inversa de la inmersión canónica, $\sigma^{-1}$. Para vector de $n/2$ números complejos y encuentra un polinomio $p(x) \in R$ tal que, al evaluar $p(x)$ en las raíces de la unidad, se obtenga el vector original.
@@ -45,18 +48,23 @@
 
 \begin{frame}{Escalado y Discretización}
     Para representar números reales en un anillo de coeficientes enteros sin perder precisión:
+    \vspace{10pt}
     \begin{enumerate}
+        \setlength{\itemsep}{10pt}
         \item \textbf{Escalado:} Se multiplica el vector por un factor $\Delta > 0$: $z \rightarrow \Delta \cdot z$.
         \item \textbf{Proyección:} Se aplica la inmersión inversa $\sigma^{-1}(\Delta \cdot z)$.
         \item \textbf{Discretización:} Ya que se usan polinomios con coeficientes enteros, redondeamos al entero mas cercano:
         \[ m(x) = \lfloor \sigma^{-1}(\Delta \cdot z) \rceil \]
     \end{enumerate}
+    \vspace{10pt}
     El factor $\Delta$ desplaza la parte decimal fuera de la zona contaminada por el ruido.
 \end{frame}
 
 \begin{frame}{Decodificación CKKS}
     Es el proceso inverso para recuperar los datos tras el descifrado:
+    \vspace{10pt}
     \begin{itemize}
+        \setlength{\itemsep}{10pt}
         \item El polinomio descifrado $m'(x)$ escalado por $\Delta$.
         \item Se aplica la inmersión canónica directa evaluando en las raíces $\zeta_j$.
         \item Se divide el resultado por $\Delta$ y se aplica el redondeo final.
@@ -66,6 +74,7 @@
 
 \begin{frame}{Operaciones: Suma y Multiplicación}
     \begin{itemize}
+        \setlength{\itemsep}{12pt}
         \item \textbf{Adición:} Lineal y directa, el resultado no requiere transformaciones.
         \item \textbf{Multiplicación:} Genera un texto cifrado cuadrático que requiere gestión de escala y tamaño.
     \end{itemize}
@@ -81,7 +90,9 @@
 
 \begin{frame}{Operaciones: Rotaciones Homomórficas}
     Permiten permutar cíclicamente los elementos dentro de las ranuras SIMD.
+    \vspace{12pt}
     \begin{itemize}
+        \setlength{\itemsep}{12pt}
         \item \textbf{Mecánica:} Basada en los automorfismos de Galois: $\phi_k: p(x) \mapsto p(x^k)$. Se aplica esta operacion para rotar las posiciones del vector cifrado.
         \item \textbf{El Reto:} El texto cifrado queda bajo una clave transformada $s(x^k)$ debido a la operacion.
         \item \textbf{Solución:} Se realiza un cambio de clave usando las \textbf{Llaves de Galois} para volver a la clave secreta $s(x)$ original.
@@ -90,6 +101,7 @@
 
 \begin{frame}{Operación: Relinearización y Reescalado}
     \begin{itemize}
+        \setlength{\itemsep}{12pt}
         \item \textbf{Relinearización:} Reduce el tamaño del cifrado de 3 a 2 polinomios usando la clave $rlk$.
         \[ ct_{relin} = (d_0, d_1) + \lfloor P^{-1} \cdot d_2 \cdot rlk \rceil \pmod q \]
         \item \textbf{Reescalado:} Divide los coeficientes por un primo $q_\ell$ de la cadena.
@@ -101,7 +113,9 @@
 
 \begin{frame}{Bootstrapping en CKKS}
     El principal desafío del \textit{bootstrapping} en CKKS es evaluar homomórficamente su propia función de descifrado. Esta función es $\text{Dec}(c) = [\langle c, sk \rangle]_q$.
+    \vspace{12pt}
     \begin{enumerate}
+        \setlength{\itemsep}{12pt}
         \item \textbf{Elevación del Módulo:} Pasar de un modulo $q$ pequeño a $Q$ grande. Esto es necesario para poder volver a hacer multiplicaciones por niveles.
         \item \textbf{Coeficientes a Ranuras:} El bootstrapping requiere aplicar la funcion seno (aproximación) sobre los coeficientes del polinomio, no sobre los valores cifrados.
         \item \textbf{Evaluación Modular:} Aproximación de la reducción modular mediante funciones sinusoidales.

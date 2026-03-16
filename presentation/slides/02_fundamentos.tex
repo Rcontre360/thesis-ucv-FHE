@@ -18,6 +18,7 @@
 
 \begin{frame}{Cifrado completamente homomorfico}
     \begin{itemize}
+        \setlength{\itemsep}{12pt}
         \item \textbf{Craig Gentry} en 2009 presenta el primer esquema completamente homomórfico (FHE o ``Fully homomorphic encryption``).
         \item \textbf{Innovación:} Gentry demostró que es posible computar cualquier función arbitraria sobre datos cifrados si se logra gestionar el crecimiento del ruido.
         \item \textbf{Bootstrapping:} La innovación lograda por Craig fue el desarrollo de una tecnica que permite continuar las operaciones de cifrado sin importar su cantidad.
@@ -25,8 +26,8 @@
 \end{frame}
 
 \begin{frame}{Aprendizaje con Errores (LWE)}
+       El aprendizaje con errores es una tecnica de cifrado asimétrico basada en problemas de retículos.
     \begin{itemize}
-        \item \textbf{Naturaleza:} Técnica asimétrica basada en problemas de retículos.
         \item \textbf{Clave Secreta ($sk$):} Un vector $\mathbf{s}$ generado de forma aleatoria. 
         \item \textbf{Clave Pública ($pk$):} Par $(\mathbf{A}, \mathbf{b})$ donde $\mathbf{b} = \mathbf{As} + \mathbf{e} \pmod q$.
         \item \textbf{Parámetros:} $n$ (seguridad), $m$ (muestras), $q$ (módulo), $\mathbf{e}$ (pequeño error).
@@ -57,7 +58,9 @@
 
 \begin{frame}{Cifrado con LWE}
     Para cifrar un bit de mensaje $\mu \in \{0, 1\}$ usando la clave pública $(\mathbf{A}, \mathbf{b})$:
+    \vspace{0.3cm}
     \begin{enumerate}
+        \setlength{\itemsep}{12pt}
         \item Se elige un subconjunto aleatorio de las filas de la matriz $\mathbf{A}$. Denotemos los índices de estas filas por el vector $\mathbf{x} \in \{0, 1\}^m$.
         \item El texto cifrado es un par $(\mathbf{u}, v) \in \mathbb{Z}_q^n \times \mathbb{Z}_q$, calculado como:
         \begin{align}
@@ -70,23 +73,28 @@
 
 \begin{frame}{Descifrado con LWE}
     \begin{enumerate}
-    \item Se calcula la diferencia: $d = v - \langle \mathbf{u}, \mathbf{s} \rangle \pmod{q}$.
-    \item Se comprueba a qué valor está más cercano $d$: a $0$ o a $\lfloor q/2 \rfloor$.
-    \begin{itemize}
-        \item Si $d$ está más cerca de $0$, el mensaje descifrado es $0$.
-        \item Si $d$ está más cerca de $\lfloor q/2 \rfloor$, el mensaje descifrado es $1$.
-    \end{itemize}
-\end{enumerate}
-La corrección del descifrado se basa en que $d = \mu \cdot \lfloor q/2 \rfloor + \mathbf{x}^T\mathbf{e}$. Mientras el término de ruido acumulado $\mathbf{x}^T\mathbf{e}$ sea pequeño (menor que $q/4$), el valor de $d$ estará más cerca del múltiplo de $\lfloor q/2 \rfloor$ correspondiente al mensaje original.
+        \setlength{\itemsep}{12pt}
+        \item Se calcula la diferencia: $d = v - \langle \mathbf{u}, \mathbf{s} \rangle \pmod{q}$.
+        \item Se comprueba a qué valor está más cercano $d$: a $0$ o a $\lfloor q/2 \rfloor$.
+        \begin{itemize}
+            \setlength{\itemsep}{12pt}
+            \item Si $d$ está más cerca de $0$, el mensaje descifrado es $0$.
+            \item Si $d$ está más cerca de $\lfloor q/2 \rfloor$, el mensaje descifrado es $1$.
+        \end{itemize}
+        \item La corrección del descifrado se basa en que $d = \mu \cdot \lfloor q/2 \rfloor + \mathbf{x}^T\mathbf{e}$. Mientras el término de ruido acumulado $\mathbf{x}^T\mathbf{e}$ sea pequeño, el valor de $d$ estará más cerca del múltiplo de $\lfloor q/2 \rfloor$ correspondiente al mensaje original.
+    \end{enumerate}
 \end{frame}
 
 \begin{frame}{Aprendizaje con Errores en Anillos (RLWE)}
     El problema RLWE es una variante algebraica de LWE que traslada las operaciones de vectores y matrices a anillos de polinomios, donde la seguridad reside en la dificultad de distinguir muestras ruidosas de muestras aleatorias uniformes en el anillo.
+    \vspace{0.3cm}
 
     \begin{itemize}
+        \setlength{\itemsep}{12pt}
         \item \textbf{Estructura:} Definido sobre el anillo $R_q = \mathbb{Z}_q[x] / \langle x^n + 1 \rangle$.
         \item \textbf{Ventajas:}
         \begin{itemize}
+            \setlength{\itemsep}{8pt}
             \item Mayor eficiencia: Multiplicación vía \textbf{NTT}.
             \item Estructura compacta: Claves y textos cifrados más pequeños.
             \item Habilita operaciones paralelas nativas (\textbf{SIMD}).
@@ -119,7 +127,8 @@ La corrección del descifrado se basa en que $d = \mu \cdot \lfloor q/2 \rfloor 
 \end{frame}
 
 
-\begin{frame}{Esquemas FHE Modernos (Comparativa)}
+\begin{frame}{Esquemas FHE Modernos}
+    El esquema CKKS es seleccionado para este trabajo por su soporte nativo de aritmética aproximada, ideal para Redes Neuronales.
     \begin{table}
         \centering
         \resizebox{\textwidth}{!}{
@@ -134,7 +143,4 @@ La corrección del descifrado se basa en que $d = \mu \cdot \lfloor q/2 \rfloor 
         }
     \end{table}
     \vfill
-    \begin{itemize}
-        \item \textbf{CKKS:} Seleccionado para este trabajo por su soporte nativo de aritmética aproximada, ideal para Redes Neuronales.
-    \end{itemize}
 \end{frame}
