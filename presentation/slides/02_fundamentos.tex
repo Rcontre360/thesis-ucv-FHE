@@ -19,39 +19,19 @@
 \begin{frame}{Cifrado completamente homomorfico}
     \begin{itemize}
         \item \textbf{Craig Gentry} en 2009 presenta el primer esquema completamente homomórfico (FHE o ``Fully homomorphic encryption``).
-        \item \textbf{FHE por niveles:} Esquemas diseñados para evaluar circuitos de una profundidad predefinida.
-        \item \textbf{Bootstrapping:} La innovación de Gentry.
-        \begin{itemize}
-            \item Evaluación homomórfica del propio circuito de descifrado.
-        \end{itemize}
+        \item \textbf{Innovación:} Gentry demostró que es posible computar cualquier función arbitraria sobre datos cifrados si se logra gestionar el crecimiento del ruido.
+        \item \textbf{Bootstrapping:} La innovación lograda por Craig fue el desarrollo de una tecnica que permite continuar las operaciones de cifrado sin importar su cantidad.
     \end{itemize}
-    \vfill
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.6\textwidth]{bootstrap.png}
-    \end{figure}
-\end{frame}
-
-\begin{frame}{El Problema del "Ruido"}
-    \begin{itemize}
-        \item El cifrado incluye un "error" o ruido para garantizar seguridad.
-        \item El ruido crece con cada operación homomórfica.
-        \item La multiplicación aumenta el ruido mucho más rápido que la suma.
-        \item Si el ruido supera un umbral, el descifrado falla.
-    \end{itemize}
-    \begin{center}
-        \includegraphics[width=0.6\textwidth]{noise.png}
-    \end{center}
 \end{frame}
 
 \begin{frame}{Aprendizaje con Errores (LWE)}
     \begin{itemize}
         \item \textbf{Naturaleza:} Técnica asimétrica basada en problemas de retículos.
         \item \textbf{Clave Pública ($pk$):} Par $(\mathbf{A}, \mathbf{b})$ donde $\mathbf{b} = \mathbf{As} + \mathbf{e} \pmod q$.
+        \item \textbf{Parámetros:} $n$ (seguridad), $m$ (muestras), $q$ (módulo), $\mathbf{e}$ (pequeño error).
     \end{itemize}
     
-    \begin{block}{Ejemplo de Estructura}
-        \[
+    \[
         \underbrace{
         \begin{pmatrix} b_1 \\ b_2 \\ \vdots \\ b_m \end{pmatrix}
         }_{\mathbf{b} \in \mathbb{Z}_q^m}
@@ -71,12 +51,7 @@
         \underbrace{
         \begin{pmatrix} e_1 \\ \vdots \\ e_m \end{pmatrix}
         }_{\mathbf{e} \in \chi^m} \pmod q
-        \]
-    \end{block}
-    
-    \begin{itemize}
-        \item \textbf{Parámetros:} $n$ (seguridad), $m$ (muestras), $q$ (módulo), $\mathbf{e}$ (pequeño error).
-    \end{itemize}
+    \]
 \end{frame}
 
 \begin{frame}{Cifrado con LWE}
@@ -118,6 +93,32 @@
         \end{itemize}
     \end{itemize}
 \end{frame}
+
+\begin{frame}{El Problema del Ruido}
+    \begin{itemize}
+        \item Las tecnicas de cifrado homomórfico agregan error en el texto cifrado para garantizar la seguridad. 
+        \item Este error (o ruido) se acumula con cada operacion.
+        \item La multiplicación aumenta el ruido mucho más rápido que la suma.
+        \item Si el ruido supera un umbral, el descifrado falla.
+    \end{itemize}
+    \begin{center}
+        \includegraphics[width=0.6\textwidth]{noise.png}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Gestión de Ruido: Leveled vs. Bootstrapped}
+    \begin{itemize}
+        \item \textbf{Leveled FHE:} Esquemas diseñados para evaluar circuitos de una profundidad máxima $L$ predefinida. Utilizan una jerarquía de módulos para reducir el ruido tras las operaciones.
+        \item \textbf{Bootstrapping:} Proceso de "refresco" del texto cifrado que reduce el nivel de ruido evaluando el propio circuito de descifrado homomórficamente. Permite profundidad de cómputo infinita.
+    \end{itemize}
+    \vfill
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.6\textwidth]{bootstrap.png}
+        \caption{Diagrama esquemático del proceso de Bootstrapping.}
+    \end{figure}
+\end{frame}
+
 
 \begin{frame}{Esquemas FHE Modernos (Comparativa)}
     \begin{table}
