@@ -2,27 +2,26 @@
 \section{Fundamentos de HE}
 \SectionFrame{Fundamentos de HE}
 
-\begin{frame}{Orígenes y Evolución}
+\begin{frame}{Orígenes}
     \begin{itemize}
-        \item \textbf{1978:} Rivest, Adleman y Dertouzos proponen \textit{"Privacy Homomorphisms"}.
+        \item \textbf{Homomorfismo de privacidad} Rivest, Adleman y Dertouzos en 1978 plantean por primera vez la posibilidad de un sistema que permitiera a un tercero realizar operaciones sobre datos cifrados.
         \[ E(m_1 \otimes m_2) = E(m_1) \otimes E(m_2) \]
-        \item \textbf{Cifrado Parcialmente Homomórfico (PHE):}
+        \item \textbf{Cifrado Parcialmente Homomórfico:}
         \begin{itemize}
-            \item \textbf{RSA (Multiplicativo):}
+            \item \textbf{RSA:} homomorfismo solo en multiplicaciones
             \[ c_1 \cdot c_2 = m_1^e \cdot m_2^e = (m_1 \cdot m_2)^e \pmod n \]
-            \item \textbf{Paillier (Aditivo):}
+            \item \textbf{Paillier:} homomorfismo solo en sumas
             \[ g^{m_1} r_1^n \cdot g^{m_2} r_2^n = g^{m_1+m_2} (r_1 r_2)^n \pmod{n^2} \]
         \end{itemize}
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Hacia el Cifrado Total (FHE)}
+\begin{frame}{Cifrado completamente homomorfico}
     \begin{itemize}
-        \item \textbf{2009: Craig Gentry} presenta el primer esquema Totalmente Homomórfico (FHE).
-        \item \textbf{Leveled FHE:} Esquemas diseñados para evaluar circuitos de una profundidad máxima predefinida.
-        \item \textbf{Bootstrapping:} La gran innovación de Gentry.
+        \item \textbf{Craig Gentry} en 2009 presenta el primer esquema completamente homomórfico (FHE o ``Fully homomorphic encryption``).
+        \item \textbf{FHE por niveles:} Esquemas diseñados para evaluar circuitos de una profundidad predefinida.
+        \item \textbf{Bootstrapping:} La innovación de Gentry.
         \begin{itemize}
-            \item Proceso de "refresco" del texto cifrado para reducir el ruido.
             \item Evaluación homomórfica del propio circuito de descifrado.
         \end{itemize}
     \end{itemize}
@@ -30,7 +29,6 @@
     \begin{figure}
         \centering
         \includegraphics[width=0.6\textwidth]{bootstrap.png}
-        \caption{Diagrama esquemático del proceso de Bootstrapping.}
     \end{figure}
 \end{frame}
 
