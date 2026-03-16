@@ -15,9 +15,9 @@
     Optimización para minimizar rotaciones homomórficas (Halevi-Shoup).
 
     \begin{itemize}
-        \item \textbf{Diagonales} Extracción de las diagonales de la matriz de pesos como vectores independientes.
-        \item \textbf{Rotacion:} Rotación cíclica del vector de entrada y producto de Hadamard con cada diagonal.
-        \item \textbf{Results addition:} Acumulación de los productos parciales.
+        \item \textbf{Diagonales:} Extracción de las diagonales de la matriz de pesos como vectores independientes.
+        \item \textbf{Rotación:} Rotación cíclica del vector de entrada y producto de Hadamard con cada diagonal.
+        \item \textbf{Suma de resultados:} Acumulación de los productos parciales.
     \end{itemize}
 
     \vfill
@@ -96,12 +96,12 @@
     El esquema CKKS solo soporta sumas y multiplicaciones polinomiales.
 
     \begin{itemize}
-        \item \textbf{Problema} Funciones no lineales (ReLU, Sigmoid) no pueden evaluarse directamente.
-        \item \textbf{Solucion:} Aproximar las funciones no lineales usando polinomios en una rango dado.
+        \item \textbf{Problema:} Funciones no lineales (ReLU, Sigmoid) no pueden evaluarse directamente.
+        \item \textbf{Solución:} Aproximar las funciones no lineales usando polinomios en un rango dado.
         \begin{itemize}
             \item \textbf{Series de Taylor:} Útiles para funciones suaves (Sigmoid, Tanh).
             \[ \text{Sigmoid}(x) \approx \frac{1}{2} + \frac{1}{4}x - \frac{1}{48}x^3 + \dots \]
-            \item \textbf{Funcion cuadrada:} el uso de la función cuadrada $f(x) = x^2$ como una alternativa a ReLU de bajo coste computacional.
+            \item \textbf{Función cuadrada:} El uso de la función cuadrada $f(x) = x^2$ como una alternativa a ReLU de bajo coste computacional.
                 \[ \text{ReLU}(x) \approx x^2 \]
         \end{itemize}
     \end{itemize}
@@ -113,7 +113,7 @@
     \begin{itemize}
         \item \textbf{Mecánica:} El parche de la imagen y el kernel se aplanan en vectores.
         \item \textbf{Propiedad:} La convolución se reduce a un \textbf{producto punto} entre dos vectores.
-        \item \textbf{Simplicidad} Permite resolver la capa mediante una única multiplicación de matrices (Diagonalización).
+        \item \textbf{Simplicidad:} Permite resolver la capa mediante una única multiplicación de matrices (Diagonalización).
     \end{itemize}
 
     \vfill

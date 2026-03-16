@@ -16,17 +16,17 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Cifrado completamente homomorfico}
+\begin{frame}{Cifrado completamente homomórfico}
     \begin{itemize}
         \setlength{\itemsep}{12pt}
-        \item \textbf{Craig Gentry} en 2009 presenta el primer esquema completamente homomórfico (FHE o ``Fully homomorphic encryption``).
+        \item \textbf{Craig Gentry} en 2009 presenta el primer esquema completamente homomórfico (FHE o ``Fully Homomorphic Encryption'').
         \item \textbf{Innovación:} Gentry demostró que es posible computar cualquier función arbitraria sobre datos cifrados si se logra gestionar el crecimiento del ruido.
-        \item \textbf{Bootstrapping:} La innovación lograda por Craig fue el desarrollo de una tecnica que permite continuar las operaciones de cifrado sin importar su cantidad.
+        \item \textbf{Bootstrapping:} La innovación lograda por Craig fue el desarrollo de una técnica que permite continuar las operaciones de cifrado sin importar su cantidad.
     \end{itemize}
 \end{frame}
 
 \begin{frame}{Aprendizaje con Errores (LWE)}
-       El aprendizaje con errores es una tecnica de cifrado asimétrico basada en problemas de retículos.
+       El aprendizaje con errores es una técnica de cifrado asimétrico basada en problemas de retículos.
     \begin{itemize}
         \item \textbf{Clave Secreta ($sk$):} Un vector $\mathbf{s}$ generado de forma aleatoria. 
         \item \textbf{Clave Pública ($pk$):} Par $(\mathbf{A}, \mathbf{b})$ donde $\mathbf{b} = \mathbf{As} + \mathbf{e} \pmod q$.
@@ -104,8 +104,8 @@
 
 \begin{frame}{El Problema del Ruido}
     \begin{itemize}
-        \item Las tecnicas de cifrado homomórfico agregan error en el texto cifrado para garantizar la seguridad. 
-        \item Este error (o ruido) se acumula con cada operacion.
+        \item Las técnicas de cifrado homomórfico agregan error en el texto cifrado para garantizar la seguridad. 
+        \item Este error (o ruido) se acumula con cada operación.
         \item La multiplicación aumenta el ruido mucho más rápido que la suma.
         \item Si el ruido supera un umbral, el descifrado falla.
     \end{itemize}
@@ -117,7 +117,7 @@
 \begin{frame}{Gestión de Ruido: Leveled vs. Bootstrapped}
     \begin{itemize}
         \item \textbf{FHE por niveles:} Esquemas diseñados para evaluar circuitos de una profundidad máxima $L$ predefinida. Utilizan una jerarquía de módulos para reducir el ruido tras las operaciones.
-        \item \textbf{Bootstrapping:} Proceso de reduccion de ruido del texto cifrado que reduce el nivel de ruido evaluando el propio circuito de descifrado homomórficamente. Permite profundidad de cómputo infinita.
+        \item \textbf{Bootstrapping:} Proceso de reducción de ruido del texto cifrado que reduce el nivel de ruido evaluando el propio circuito de descifrado homomórficamente. Permite profundidad de cómputo infinita.
     \end{itemize}
     \vfill
     \begin{figure}

@@ -20,7 +20,7 @@
         \begin{itemize}
             \item \textbf{Grado del polinomio ($N$):} Potencia de 2, define seguridad y ranuras.
             \item \textbf{Módulo ($Q$):} Cadena de primos $q_L \cdot \dots \cdot q_0$.
-            \item \textbf{Distribución ($\sigma, h$):} Distribucion de probabilidad usada en los parametros generados.
+            \item \textbf{Distribución ($\sigma, h$):} Distribución de probabilidad usada en los parámetros generados.
             \item \textbf{Seguridad ($\lambda$):} Resistencia en bits.
         \end{itemize}
         
@@ -42,7 +42,7 @@
         \setlength{\itemsep}{10pt}
         \item \textbf{Raíces de la Unidad:} Buscamos un polinomio $p(x)$ tal que, al ser evaluado en las raíces de la unidad ($\zeta_j$), el resultado sea nuestro vector de datos original.
         \item \textbf{Inmersión Canónica ($\sigma$):} Define una correspondencia $\sigma: R \to \mathbb{C}^{n}$ que toma un polinomio $p(x)$ del anillo $R$ y lo transforma en un vector de números complejos.
-        \item \textbf{Codificación ($\sigma^{-1}$):} se utiliza la inversa de la inmersión canónica, $\sigma^{-1}$. Para vector de $n/2$ números complejos y encuentra un polinomio $p(x) \in R$ tal que, al evaluar $p(x)$ en las raíces de la unidad, se obtenga el vector original.
+        \item \textbf{Codificación ($\sigma^{-1}$):} Se utiliza la inversa de la inmersión canónica, $\sigma^{-1}$. Para un vector de $n/2$ números complejos, encuentra un polinomio $p(x) \in R$ tal que, al evaluar $p(x)$ en las raíces de la unidad, se obtenga el vector original.
     \end{itemize}
 \end{frame}
 
@@ -53,7 +53,7 @@
         \setlength{\itemsep}{10pt}
         \item \textbf{Escalado:} Se multiplica el vector por un factor $\Delta > 0$: $z \rightarrow \Delta \cdot z$.
         \item \textbf{Proyección:} Se aplica la inmersión inversa $\sigma^{-1}(\Delta \cdot z)$.
-        \item \textbf{Discretización:} Ya que se usan polinomios con coeficientes enteros, redondeamos al entero mas cercano:
+        \item \textbf{Discretización:} Ya que se usan polinomios con coeficientes enteros, redondeamos al entero más cercano:
         \[ m(x) = \lfloor \sigma^{-1}(\Delta \cdot z) \rceil \]
     \end{enumerate}
     \vspace{10pt}
@@ -93,8 +93,8 @@
     \vspace{12pt}
     \begin{itemize}
         \setlength{\itemsep}{12pt}
-        \item \textbf{Mecánica:} Basada en los automorfismos de Galois: $\phi_k: p(x) \mapsto p(x^k)$. Se aplica esta operacion para rotar las posiciones del vector cifrado.
-        \item \textbf{El Reto:} El texto cifrado queda bajo una clave transformada $s(x^k)$ debido a la operacion.
+        \item \textbf{Mecánica:} Basada en los automorfismos de Galois: $\phi_k: p(x) \mapsto p(x^k)$. Se aplica esta operación para rotar las posiciones del vector cifrado.
+        \item \textbf{El Reto:} El texto cifrado queda bajo una clave transformada $s(x^k)$ debido a la operación.
         \item \textbf{Solución:} Se realiza un cambio de clave usando las \textbf{Llaves de Galois} para volver a la clave secreta $s(x)$ original.
     \end{itemize}
 \end{frame}
@@ -116,8 +116,8 @@
     \vspace{12pt}
     \begin{enumerate}
         \setlength{\itemsep}{12pt}
-        \item \textbf{Elevación del Módulo:} Pasar de un modulo $q$ pequeño a $Q$ grande. Esto es necesario para poder volver a hacer multiplicaciones por niveles.
-        \item \textbf{Coeficientes a Ranuras:} El bootstrapping requiere aplicar la funcion seno (aproximación) sobre los coeficientes del polinomio, no sobre los valores cifrados.
+        \item \textbf{Elevación del Módulo:} Pasar de un módulo $q$ pequeño a $Q$ grande. Esto es necesario para poder volver a realizar multiplicaciones por niveles.
+        \item \textbf{Coeficientes a Ranuras:} El bootstrapping requiere aplicar la función seno (aproximación) sobre los coeficientes del polinomio, no sobre los valores cifrados.
         \item \textbf{Evaluación Modular:} Aproximación de la reducción modular mediante funciones sinusoidales.
         \item \textbf{Ranuras a Coeficientes:} Reconstruir el polinomio limpio y con el ruido inicial.
     \end{enumerate}

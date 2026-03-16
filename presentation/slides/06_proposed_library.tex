@@ -17,21 +17,21 @@
         \item \textbf{Abstracción:} Ocultar la complejidad del esquema de cifrado tras una interfaz tipo NumPy/PyTorch.
         \item \textbf{Stack Tecnológico:}
         \begin{itemize}
-            \item \textbf{FIDESlib:} Libreria con soporte para CUDA. Implementa el esquema CKKS en C++/CUDA.
-            \item \textbf{OpenFHE-Python:} Interface oficial de OpenFHE para facilitar la creacion de bindings a python.
+            \item \textbf{FIDESlib:} Librería con soporte para CUDA. Implementa el esquema CKKS en C++/CUDA.
+            \item \textbf{OpenFHE-Python:} Interfaz oficial de OpenFHE para facilitar la creación de bindings a Python.
             \item \textbf{Pybind11:} Gestión de memoria y bindings entre C++ y Python.
         \end{itemize}
     \end{itemize}
 \end{frame}
 
 \begin{frame}{Casos de Uso y Benchmarking}
-    Se implementaran varios modelos de redes neuronales con distintas bibliotecas cuyo fin sea facilitar la implementacion de redes neuronales con FHE. Entre estas estan Concrete (TFHE) y TenSEAL (CKKS).
+    Se implementarán varios modelos de redes neuronales con distintas bibliotecas cuyo fin sea facilitar la implementación de redes neuronales con FHE. Entre estas están Concrete (TFHE) y TenSEAL (CKKS).
     \vspace{12pt}
 
     \begin{itemize}
         \setlength{\itemsep}{12pt}
         \item \textbf{Rendimiento Temporal:} Tiempo total de inferencia.
         \item \textbf{Uso de Recursos:} Consumo de VRAM vs. Memoria RAM convencional.
-        \item \textbf{Precisión Numérica:} Impacto sobre la precisión y efectividad de los modelos, las metricas exactas dependeran del modelo evaluado.
+        \item \textbf{Precisión Numérica:} Impacto sobre la precisión y efectividad de los modelos; las métricas exactas dependerán del modelo evaluado.
     \end{itemize}
 \end{frame}
