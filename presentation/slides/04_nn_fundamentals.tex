@@ -2,19 +2,12 @@
 \section{Fundamentos de Redes Neuronales}
 \SectionFrame{Fundamentos de Redes Neuronales}
 
-\begin{frame}{Neurona Artificial y Capas}
-    \begin{itemize}
-        \item Estructura básica: Entrada, Pesos, Sesgo y Función de Activación.
-        \item Organización en capas: Entrada, Ocultas y Salida.
-        \item Operación fundamental: $h = a[\beta + \Omega x]$.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Redes Superficiales vs. Profundas}
-    \begin{itemize}
-        \item \textbf{Red Superficial (Shallow):} Arquitectura que cuenta con una única capa oculta entre la entrada y la salida.
-        \item \textbf{Red Profunda (Deep):} Composición de múltiples capas ocultas (dos o más), lo que permite aprender representaciones jerárquicas y abstractas.
-    \end{itemize}
+\begin{frame}{Redes Neuronales y Redes Superficiales}
+    Las \textbf{Redes Neuronales Artificiales (RNA)} son modelos computacionales diseñados para aprender patrones y relaciones complejas a partir de datos. Las \textbf{Redes Superficiales} representan la arquitectura más sencilla, caracterizada por tener una única capa oculta entre la entrada y la salida:
+    
+    \begin{equation*}
+        y = a_2 \left[ \beta_2 + \Omega_2 (a_1 [\beta_1 + \Omega_1 x]) \right]
+    \end{equation*}
 
     \vfill
     \centering
@@ -24,36 +17,75 @@
         \tikzstyle{output neuron}=[neuron, fill=red!50];
         \tikzstyle{hidden neuron}=[neuron, fill=blue!50];
 
-        % Input Layer (2 neurons)
+        % Input Layer
         \foreach \name / \y in {1,2}
             \node[input neuron] (I-\name) at (0,-\y-0.5) {};
 
-        % Hidden Layer 1 (3 neurons)
+        % Hidden Layer
+        \foreach \name / \y in {1,2,3}
+            \node[hidden neuron] (H-\name) at (2,-\y) {};
+
+        % Output Layer
+        \node[output neuron] (O) at (4,-2) {};
+
+        % Connections
+        \foreach \source in {1,2}
+            \foreach \dest in {1,2,3}
+                \path (I-\source) edge (H-\dest);
+        \foreach \source in {1,2,3}
+            \path (H-\source) edge (O);
+            
+        \node[below of=I-2, node distance=0.6cm, text=black!50] {\tiny Entrada};
+        \node[below of=H-3, node distance=0.4cm, text=black!50] {\tiny Oculta};
+        \node[below of=O, node distance=1.4cm, text=black!50] {\tiny Salida};
+    \end{tikzpicture}
+\end{frame}
+
+\begin{frame}{Componentes de la Neurona}
+    La unidad fundamental de procesamiento en una red es la neurona, cuya operación $h = a[\beta + \Omega x]$ se basa en los siguientes elementos:
+    \begin{itemize}
+        \item \textbf{Pesos ($\Omega$):} Parámetros que determinan la importancia o fuerza de cada señal de entrada.
+        \item \textbf{Sesgo ($\beta$):} Valor independiente que permite desplazar la función de activación para ajustar el umbral de respuesta.
+        \item \textbf{Función de Activación ($a$):} Función (usualmente no lineal) que transforma la suma ponderada en la salida final de la neurona.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Redes Neuronales Profundas}
+    Las \textbf{Redes Neuronales Profundas (DNN)} se caracterizan por poseer dos o más capas ocultas. Esta profundidad permite al modelo aprender representaciones jerárquicas y abstractas de los datos, resolviendo problemas de mayor complejidad y dimensionalidad.
+
+    \vfill
+    \centering
+    \begin{tikzpicture}[shorten >=1pt,->,draw=black!50, node distance=1cm]
+        \tikzstyle{neuron}=[circle,fill=black!25,minimum size=12pt,inner sep=0pt]
+        \tikzstyle{input neuron}=[neuron, fill=green!50];
+        \tikzstyle{output neuron}=[neuron, fill=red!50];
+        \tikzstyle{hidden neuron}=[neuron, fill=blue!50];
+
+        % Input Layer
+        \foreach \name / \y in {1,2}
+            \node[input neuron] (I-\name) at (0,-\y-0.5) {};
+
+        % Hidden Layer 1
         \foreach \name / \y in {1,2,3}
             \node[hidden neuron] (H1-\name) at (1.5,-\y) {};
 
-        % Hidden Layer 2 (3 neurons)
+        % Hidden Layer 2
         \foreach \name / \y in {1,2,3}
             \node[hidden neuron] (H2-\name) at (3.0,-\y) {};
 
-        % Output Layer (1 neuron)
+        % Output Layer
         \node[output neuron] (O) at (4.5,-2) {};
 
-        % Connections I -> H1
+        % Connections
         \foreach \source in {1,2}
             \foreach \dest in {1,2,3}
                 \path (I-\source) edge (H1-\dest);
-
-        % Connections H1 -> H2
         \foreach \source in {1,2,3}
             \foreach \dest in {1,2,3}
                 \path (H1-\source) edge (H2-\dest);
-
-        % Connections H2 -> O
         \foreach \source in {1,2,3}
             \path (H2-\source) edge (O);
             
-        % Labels (Same color as arrows, smaller)
         \node[below of=I-2, node distance=0.6cm, text=black!50] {\tiny Entrada};
         \node[below of=H1-3, node distance=0.4cm, text=black!50] {\tiny Oculta 1};
         \node[below of=H2-3, node distance=0.4cm, text=black!50] {\tiny Oculta 2};
