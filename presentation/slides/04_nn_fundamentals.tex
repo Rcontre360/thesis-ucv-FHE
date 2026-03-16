@@ -94,16 +94,17 @@
 \end{frame}
 
 \begin{frame}{Redes Neuronales Convolucionales (CNN)}
-    Especializadas en datos con estructura espacial, utilizan la operación de convolución para extraer características jerárquicas.
-
+    Especializadas en datos con estructura espacial, las CNN utilizan la operación de convolución para extraer características jerárquicas mediante los siguientes parámetros clave:
     \begin{itemize}
-        \item \textbf{Propiedades:} Invarianza espacial y compartición de pesos (reduce parámetros).
-        \item \textbf{Capas:} Combinación de convoluciones, \textit{Pooling} y activaciones.
+        \item \textbf{Filtros:} Matrices que extraen patrones locales.
+        \item \textbf{Stride:} Define el desplazamiento del filtro sobre la entrada.
+        \item \textbf{Padding:} Borde añadido para controlar las dimensiones de salida.
+        \item \textbf{Canales:} Profundidad de los datos (ej. RGB o mapas de características).
     \end{itemize}
 
     \vfill
     \centering
-    \begin{tikzpicture}[scale=0.6]
+    \begin{tikzpicture}[scale=0.4]
         % Entrada 4x4
         \draw[step=1cm, black!20, thin] (0,0) grid (4,4);
         \node[above, black!50] at (2,4) {\tiny Entrada ($x$)};
@@ -121,7 +122,7 @@
         \end{scope}
 
         % Flechas de operación
-        \draw[->, black!30, thick] (2.1,3) -- (5.4,3);
+        \draw[->, black!30, thick] (4,3) -- (5.4,3);
         \draw[->, black!30, thick] (7.6,3) -- (9.9,3);
 
         % Salida 3x3
@@ -131,8 +132,5 @@
             \draw[green!50, thick] (0,2) rectangle (1,3);
             \node[above, black!50] at (1.5,3) {\tiny Salida ($z$)};
         \end{scope}
-        
-        % Ecuación resumida abajo (Bigger as requested)
-        \node[below, black!50] at (6,-1) {\large $z_{i,j} = \sum \sum w_{m,n} \cdot x_{i+m, j+n}$};
     \end{tikzpicture}
 \end{frame}

@@ -15,8 +15,8 @@
     Optimización para minimizar rotaciones homomórficas (Halevi-Shoup).
 
     \begin{itemize}
-        \item \textbf{Diagonal extraction:} Extracción de las diagonales de la matriz de pesos como vectores independientes.
-        \item \textbf{Input rotation and multiplication:} Rotación cíclica del vector de entrada y producto de Hadamard con cada diagonal.
+        \item \textbf{Diagonales} Extracción de las diagonales de la matriz de pesos como vectores independientes.
+        \item \textbf{Rotacion:} Rotación cíclica del vector de entrada y producto de Hadamard con cada diagonal.
         \item \textbf{Results addition:} Acumulación de los productos parciales.
     \end{itemize}
 
@@ -93,16 +93,16 @@
 \end{frame}
 
 \begin{frame}{Aproximación de Funciones de Activación}
+    El esquema CKKS solo soporta sumas y multiplicaciones polinomiales.
+
     \begin{itemize}
-        \item El esquema CKKS solo soporta sumas y multiplicaciones polinomiales.
-        \item \textbf{Desafío:} Funciones no lineales (ReLU, Sigmoid) no pueden evaluarse directamente.
-        \item \textbf{Soluciones de Aproximación:}
+        \item \textbf{Problema} Funciones no lineales (ReLU, Sigmoid) no pueden evaluarse directamente.
+        \item \textbf{Solucion:} Aproximar las funciones no lineales usando polinomios en una rango dado.
         \begin{itemize}
             \item \textbf{Series de Taylor:} Útiles para funciones suaves (Sigmoid, Tanh).
             \[ \text{Sigmoid}(x) \approx \frac{1}{2} + \frac{1}{4}x - \frac{1}{48}x^3 + \dots \]
-            \item \textbf{Polinomios de Bajo Grado:} Reducen la profundidad del circuito.
-            \[ \text{ReLU}(x) \approx x^2 \text{ (CryptoNets)} \quad \text{o} \quad ax^2 + bx + c \]
-            \item \textbf{Mínimos Cuadrados:} Ajuste óptimo en un intervalo definido.
+            \item \textbf{Funcion cuadrada:} el uso de la función cuadrada $f(x) = x^2$ como una alternativa a ReLU de bajo coste computacional.
+                \[ \text{ReLU}(x) \approx x^2 \]
         \end{itemize}
     \end{itemize}
 \end{frame}
@@ -111,9 +111,9 @@
     Transformación de vecindades espaciales en estructuras lineales.
     
     \begin{itemize}
-        \item \textbf{Mecánica:} El parche de la imagen y el kernel se "aplanan" en vectores.
-        \item \textbf{Propiedad:} La convolución se reduce a un \textbf{producto punto}.
-        \item \textbf{Eficiencia:} Permite resolver la capa mediante una única multiplicación de matrices (Diagonalización).
+        \item \textbf{Mecánica:} El parche de la imagen y el kernel se aplanan en vectores.
+        \item \textbf{Propiedad:} La convolución se reduce a un \textbf{producto punto} entre dos vectores.
+        \item \textbf{Simplicidad} Permite resolver la capa mediante una única multiplicación de matrices (Diagonalización).
     \end{itemize}
 
     \vfill

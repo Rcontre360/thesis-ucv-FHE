@@ -2,31 +2,34 @@
 \section{Propuesta de Trabajo}
 \SectionFrame{Propuesta de Trabajo}
 
+\begin{frame}{Problemática Actual}
+    A pesar del avance en el cifrado homomórfico, las herramientas actuales presentan limitaciones significativas para el aprendizaje automático:
+    \begin{itemize}
+        \item \textbf{Falta soporte para GPU:} La mayoría de las bibliotecas que implementan CKKS (como SEAL o OpenFHE) dependen exclusivamente de la CPU, lo que genera cuellos de botella en operaciones tensoriales.
+        \item \textbf{TFHE y el soporte GPU:} Existen bibliotecas con soporte GPU para el esquema TFHE (ej. Concrete); sin embargo, este esquema está diseñado para operaciones booleanas y de enteros, no para la aritmética de punto flotante necesaria en redes neuronales.
+        \item \textbf{Necesidad:} No existen bibliotecas para el desarrollo de redes neuronales que combinen la precisión de CKKS para números reales con el alto rendimiento de la GPU.
+    \end{itemize}
+\end{frame}
+
 \begin{frame}{Objetivos y Stack Tecnológico}
     \begin{itemize}
         \item \textbf{Objetivo:} Desarrollar una biblioteca Python para tensores cifrados (CKKS) acelerada por GPU (CUDA).
-        \item \textbf{Abstracción:} Ocultar la complejidad criptográfica (Relinearización, Reescalado) tras una interfaz tipo NumPy/PyTorch.
+        \item \textbf{Abstracción:} Ocultar la complejidad del esquema de cifrado tras una interfaz tipo NumPy/PyTorch.
         \item \textbf{Stack Tecnológico:}
         \begin{itemize}
-            \item \textbf{FIDESlib:} Backend optimizado en CUDA/C++ para el esquema CKKS.
-            \item \textbf{OpenFHE-Python:} Interface oficial de OpenFHE.
+            \item \textbf{FIDESlib:} Libreria con soporte para CUDA. Implementa el esquema CKKS en C++/CUDA.
+            \item \textbf{OpenFHE-Python:} Interface oficial de OpenFHE para facilitar la creacion de bindings a python.
             \item \textbf{Pybind11:} Gestión de memoria y bindings entre C++ y Python.
         \end{itemize}
     \end{itemize}
 \end{frame}
 
 \begin{frame}{Casos de Uso y Benchmarking}
-    Para validar la funcionalidad y el rendimiento, se implementarán y evaluarán los siguientes modelos:
+    Se implementaran varios modelos de redes neuronales con distintas bibliotecas cuyo fin sea facilitar la implementacion de redes neuronales con FHE. Entre estas estan Concrete (TFHE) y TenSEAL (CKKS).
+
     \begin{itemize}
-        \item \textbf{Modelos DNN:} Redes totalmente conectadas para tareas de regresión y clasificación.
-        \item \textbf{Modelos CNN:} Red neuronal convolucional para clasificación de imágenes.
+        \item \textbf{Rendimiento Temporal:} Tiempo total de inferencia.
+        \item \textbf{Uso de Recursos:} Consumo de VRAM vs. Memoria RAM convencional.
+        \item \textbf{Precisión Numérica:} Impacto sobre la precisión y efectividad de los modelos, las metricas exactas dependeran del modelo evaluado.
     \end{itemize}
-    
-    \begin{block}{Métricas de Comparación (vs. TenSEAL CPU)}
-        \begin{enumerate}
-            \item \textbf{Rendimiento Temporal:} Tiempo total de inferencia (Latencia).
-            \item \textbf{Uso de Recursos:} Consumo de VRAM vs. Memoria RAM convencional.
-            \item \textbf{Precisión Numérica:} Impacto de las aproximaciones polinómicas y el error de redondeo de CKKS frente al modelo en texto plano.
-        \end{enumerate}
-    \end{block}
 \end{frame}
