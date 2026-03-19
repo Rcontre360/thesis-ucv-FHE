@@ -31,11 +31,12 @@
     \vspace{0.2cm}
     \begin{itemize}
         \item \textbf{Cadena de Módulos:} $Q_L \rightarrow Q_{L-1} \rightarrow \dots \rightarrow Q_0$.
+        \item Cada multiplicación consume un nivel (modulo) mediante el \textbf{reescalado}.
     \end{itemize}
     
     \begin{center}
         \begin{tikzpicture}[scale=0.8, every node/.style={font=\small}]
-            \node[draw, rectangle, fill=blue!10, minimum width=2.5cm] (L3) at (0,3) {$Q_L$ (Máximo Ruido)};
+            \node[draw, rectangle, fill=blue!10, minimum width=2.5cm] (L3) at (0,3) {$Q_L$ (Inicio)};
             \node[draw, rectangle, fill=blue!10, minimum width=2.5cm] (L2) at (0,2) {$Q_{L-1}$};
             \node[draw, rectangle, fill=blue!10, minimum width=2.5cm] (L1) at (0,1) {$\dots$};
             \node[draw, rectangle, fill=red!10, minimum width=2.5cm] (L0) at (0,0) {$Q_0$ (Límite)};
@@ -44,22 +45,20 @@
             \draw[->, thick] (L2) -- (L1) node[midway, right] {$\times$};
             \draw[->, thick] (L1) -- (L0) node[midway, right] {$\times$};
             
-            \node[right=1cm of L3, text width=4cm] {Cada multiplicación consume un nivel mediante el \textbf{reescalado}.};
         \end{tikzpicture}
     \end{center}
 \end{frame}
 
 \begin{frame}{Bootstrapping}
-    El \textit{bootstrapping} es el proceso que permite realizar cómputos de profundidad infinita.
+    El \textit{bootstrapping} es el proceso que permite realizar cómputos de profundidad indefinida, sin conocer la cantidad de operaciones.
     \vspace{0.3cm}
     \begin{itemize}
-        \setlength{\itemsep}{12pt}
         \item \textbf{Refresco de ruido:} Toma un texto cifrado con mucho ruido y genera uno nuevo con ruido mínimo.
         \item \textbf{Descifrado homomórfico:} Se evalúa homomórficamente la propia función de descifrado del esquema.
     \end{itemize}
     \vfill
     \begin{figure}
         \centering
-        \includegraphics[width=0.7\textwidth]{bootstrap.png}
+        \includegraphics[width=0.6\textwidth]{bootstrap.png}
     \end{figure}
 \end{frame}

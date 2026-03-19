@@ -7,13 +7,13 @@
     \vspace{0.3cm}
     \begin{itemize}
         \setlength{\itemsep}{12pt}
-        \item \textbf{Limitado por CPU:} Las bibliotecas de CKKS más robustas son extremadamente lentas al escalar a modelos profundos debido a su dependencia de la CPU.
-        \item \textbf{Incompatibilidad de GPU:} Herramientas actuales aceleradas por hardware no suelen usar CKKS, limitando la precisión de los modelos.
-        \item \textbf{Coste Computacional:} El overhead de FHE puede ser drásticamente superior al de texto plano sin la optimización adecuada.
+        \item \textbf{Limitado por CPU:} Las bibliotecas de CKKS más robustas son extremadamente lentas al escalar a modelos complejos debido a su dependencia de la CPU.
+        \item \textbf{Incompatibilidad de GPU:} Herramientas actuales aceleradas por GPU no usan CKKS, limitando la precisión de los modelos.
+        \item \textbf{Falta de herramientas:} Ausencia de bibliotecas que permitan construir modelos de redes neuronales abstrayendo la complejidad técnica de FHE para el desarrollador.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Propuesta: Biblioteca de Tensores Cifrados}
+\begin{frame}{Propuesta}
     \begin{itemize}
         \setlength{\itemsep}{12pt}
         \item \textbf{Objetivo:} Desarrollar una biblioteca Python para tensores cifrados (CKKS) que delegue el cómputo intensivo a la GPU vía CUDA.
@@ -23,7 +23,7 @@
             \item \textbf{OpenFHE-Python:} Interfaz oficial de OpenFHE para la gestión criptográfica.
             \item \textbf{Pybind11:} Para crear enlaces eficientes entre el código en C++/CUDA y la interfaz de Python.
         \end{itemize}
-        \item \textbf{Abstracción:} Interfaz similar a NumPy o PyTorch, permitiendo el uso de objetos tipo `TensorCifrado` de manera intuitiva.
+        \item \textbf{Abstracción:} Interfaz similar a NumPy o PyTorch, permitiendo el uso de objetos tipo `TensorCifrado` sin la complejidad de los parametros del esquema.
     \end{itemize}
 \end{frame}
 

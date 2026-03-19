@@ -1,5 +1,5 @@
 % --- Part 4: Redes Neuronales y Cifrado Homomórfico ---
-\section{Redes Neuronales y Cifrado Homomórfico}
+\section{Redes Neuronales y FHE}
 \SectionFrame{Redes Neuronales y Cifrado Homomórfico}
 
 \begin{frame}{Operaciones en el espacio cifrado}
@@ -7,7 +7,7 @@
     \vspace{0.4cm}
     \begin{itemize}
         \setlength{\itemsep}{12pt}
-        \item \textbf{Multiplicación Matriz-Vector:} Se optimiza mediante la diagonalización de pesos, minimizando las rotaciones homomórficas costosas.
+        \item \textbf{Multiplicación Matriz-Vector:} Se realiza mediante la técnica de diagonalización desarrollada por Halevi y Shoup.
         \item \textbf{Convoluciones:} Se transforman en productos matriciales eficientes mediante la técnica \textbf{Im2Col} sobre los datos cifrados.
         \item \textbf{Funciones de Activación:} Dado que FHE solo permite sumas y productos, activaciones como ReLU o Sigmoid se sustituyen por \textbf{aproximaciones polinomiales} (ej. $f(x) = x^2$).
     \end{itemize}
