@@ -27,13 +27,12 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Plan de Evaluación y Comparativa}
-    Para validar la biblioteca, se implementarán modelos de referencia (MLP y CNN) y se evaluarán en tres dimensiones:
+\begin{frame}{Evaluación y Comparativa}
+    Se comparará la biblioteca propuesta frente a \textbf{TenSEAL} (CKKS en CPU) y \textbf{Concrete ML} (TFHE en GPU) utilizando modelos de referencia (MLP y CNN) bajo los siguientes criterios:
     \vspace{0.3cm}
     \begin{itemize}
         \setlength{\itemsep}{12pt}
         \item \textbf{Precisión Numérica:} Medir el impacto de las aproximaciones polinomiales y la gestión del ruido frente a modelos en texto plano.
-        \item \textbf{Latencia y Rendimiento:} Comparar directamente contra \textbf{TenSEAL} para cuantificar la aceleración obtenida por la GPU.
-        \item \textbf{Comparativa de Esquemas:} Analizar el comportamiento frente a \textbf{Concrete ML} (TFHE/GPU) para contrastar la eficiencia entre aritmética aproximada y exacta.
+        \item \textbf{Rendimiento computacional:} Evaluación del tiempo de ejecución y el uso de memoria (RAM/VRAM) para cuantificar la eficiencia de la aceleración por GPU.
     \end{itemize}
 \end{frame}
