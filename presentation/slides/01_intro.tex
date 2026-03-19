@@ -1,24 +1,24 @@
-% --- Part 1: Introduction & Motivation (Slides 1-3) ---
+% --- Part 1: Introducción y Motivación ---
 \section{Introducción y Motivación}
+\SectionFrame{Introducción y Motivación}
 
 \begin{frame}{Introducción y Motivación}
     \begin{itemize}
         \item \textbf{Adopción Masiva:} Las redes neuronales artificiales han transformado industrias clave como la medicina, las finanzas y la ciberseguridad.
-        \item \textbf{Procesamiento de Datos Sensibles:} El éxito de estos modelos depende del acceso a grandes volúmenes de información, a menudo de carácter privado o confidencial.
-        \item \textbf{El Desafío de la Confianza:} El uso de servicios en la nube para inferencia plantea riesgos de exposición de datos ante terceros no autorizados.
-        \item \textbf{Necesidad de Privacidad:} Es imperativo desarrollar soluciones que permitan el cómputo de modelos complejos sin comprometer la integridad ni el secreto de la información del usuario.
+        \item \textbf{Inferencia:} Para usar estos modelos es necesario que estos tengan acceso a los datos del usuario con los cuales realizar el proceso de inferencia.
+        \item \textbf{Datos privados:} En muchos casos, por temas de cumplimiento legal o necesidad de privacidad, el cliente no puede usar estos modelos de ML. En caso de usarlos, también se arriesga al acceso de estos datos por terceros.
+        \item \textbf{Necesidad:} Es imperativo desarrollar soluciones que permitan el cómputo de modelos complejos sin comprometer la integridad ni el secreto de la información del usuario.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Cifrado Homomórfico (HE) como Solución}
-    \begin{itemize}
-        \item \textbf{Definición:} Computar directamente sobre datos cifrados.
-        \item \textbf{Propiedad:} El resultado, una vez descifrado, coincide con el obtenido en texto plano.
-        \item \textbf{Beneficio:} El servidor nunca tiene acceso a la información sensible.
-    \end{itemize}
+\begin{frame}{Cifrado Totalmente Homomórfico}
+    El Cifrado Totalmente Homomórfico (FHE) es una tecnología criptográfica que permite realizar operaciones matemáticas sobre datos cifrados sin necesidad de descifrarlos previamente.
     \vfill
-    \begin{figure}
-        \centering
+    \begin{itemize}
+        \item Permite evaluar una función sobre datos cifrados delegando el cómputo a terceros mientras se mantiene la privacidad absoluta.
+        \item Esto hace posible que un tercero procese información sensible y genere resultados útiles sin tener acceso al contenido original de los datos.
+    \end{itemize}
+    \begin{center}
         \includegraphics[width=0.6\textwidth]{fhe_on_ml.png}
-    \end{figure}
+    \end{center}
 \end{frame}

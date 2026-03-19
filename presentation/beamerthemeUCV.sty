@@ -63,9 +63,13 @@
 
 \addtobeamertemplate{title page}{%
 \usebeamertemplate{title background}%
-\vskip .20\paperheight%
+\vskip .30\paperheight%
+\hspace*{-0.19\paperwidth} % Desplazamiento mayor a la izquierda
+\begin{minipage}{\paperwidth}
+\centering
+}{%
+\end{minipage}
 }
-{}
 
 %% Title template background
 \newcommand\DoPurpleBackground{%
@@ -103,13 +107,6 @@
 \pgfpathrectanglecorners{\pgfpoint{.15\paperwidth}{-.17\paperheight}}{\pgfpoint{\paperwidth}{-.19\paperheight}}
 \pgfsetfillcolor{UCVGrey}
 \pgfusepath{fill}
-
-% A stroke down the middle
-\pgfpathmoveto{\pgfpoint{.15\paperwidth}{-.21\paperheight}}
-\pgfpathlineto{\pgfpoint{.15\paperwidth}{-.93\paperheight}}
-\pgfsetlinewidth{1pt}
-\pgfsetcolor{white}
-\pgfusepath{stroke}
 \end{pgfpicture}%
 }
 
@@ -151,9 +148,19 @@
 \pgftransformxshift{-\Gm@lmargin}
 \pgftransformyshift{5.5pt}
 \DoPurpleBackground
-\pgftext[at=\pgfpoint{.5\paperwidth}{-.5\paperheight},center,center]{\pgfuseimage{white-logo}}
-\pgftext[at=\pgfpoint{.5\paperwidth}{-.2\paperheight},center,center]{\huge\textcolor{white}{Gracias.}}
-\pgftext[at=\pgfpoint{.3\paperwidth}{-.9\paperheight},center,center]{\small\textcolor{white}{\insertshortauthor}}
+\pgftext[at=\pgfpoint{.5\paperwidth}{-.5\paperheight},center,center]{\huge\textcolor{white}{GRACIAS}}
+\end{pgfpicture}
+\end{frame}
+}
+
+\newcommand{\SectionFrame}[1]{
+\begin{frame}[plain,t]
+\begin{pgfpicture}
+\pgf@relevantforpicturesizefalse
+\pgftransformxshift{-\Gm@lmargin}
+\pgftransformyshift{5.5pt}
+\DoPurpleBackground
+\pgftext[at=\pgfpoint{.5\paperwidth}{-.5\paperheight},center,center]{\huge\textcolor{white}{#1}}
 \end{pgfpicture}
 \end{frame}
 }

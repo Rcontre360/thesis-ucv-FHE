@@ -1,43 +1,53 @@
-% --- Part 5: Neural Networks over CKKS (Slides 18-21) ---
-\section{Inferencia Privada con CKKS}
+% --- Part 5: Problemática y Propuesta ---
+\section{Problemática y Propuesta}
+\SectionFrame{Problemática y Propuesta}
 
-\begin{frame}{Flujo de Trabajo para Inferencia Privada}
+\begin{frame}{Limitaciones Actuales}
+    A pesar de la madurez de CKKS, existe una brecha crítica entre la teoría y la aplicación real en RNAs:
+    \vspace{0.3cm}
     \begin{itemize}
-        \item Cliente cifra datos $ct_x$.
-        \item Servidor evalúa el modelo homomórficamente sobre $ct_x$.
-        \item Cliente descifra el resultado final.
-    \end{itemize}
-    \begin{center}
-        \includegraphics[width=0.8\textwidth]{fhe_on_ml.png}
-    \end{center}
-\end{frame}
-
-\begin{frame}{Multiplicación Matriz-Vector y Diagonalización}
-    \begin{itemize}
-        \item Operación lineal costosa en el dominio homomórfico.
-        \item Técnica de Diagonalización (Halevi y Shoup) para minimizar rotaciones.
-        \item Optimiza el uso de la estructura SIMD.
-    \end{itemize}
-    \begin{center}
-        \includegraphics[width=0.8\textwidth]{matrix_vec_mul.png}
-    \end{center}
-\end{frame}
-
-\begin{frame}{Aproximación de Funciones de Activación}
-    \begin{itemize}
-        \item El esquema CKKS solo soporta sumas y multiplicaciones.
-        \item Activaciones no lineales (ReLU, Sigmoid) no pueden evaluarse directamente.
-        \item \textbf{Solución:} Aproximación por polinomios (p.ej., Series de Taylor o $x^2$).
+        \setlength{\itemsep}{12pt}
+        \item \textbf{Limitado por CPU:} Las bibliotecas de CKKS más robustas son extremadamente lentas al escalar a modelos complejos debido a su dependencia de la CPU.
+        \item \textbf{Incompatibilidad de GPU:} Herramientas actuales aceleradas por GPU no usan CKKS, limitando la precisión de los modelos.
+        \item \textbf{Falta de herramientas:} Ausencia de bibliotecas que permitan construir modelos de redes neuronales abstrayendo la complejidad técnica de FHE para el desarrollador.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Convoluciones Homomórficas e Im2Col}
+\begin{frame}{Objetivos}
+    \textbf{Objetivo General:}
     \begin{itemize}
-        \item Transformación del tensor de entrada y filtros mediante \textit{Im2Col}.
-        \item La convolución se convierte en una multiplicación matriz-vector optimizada.
-        \item Permite aprovechar el paralelismo SIMD del esquema.
+        \item Desarrollar una biblioteca de código abierto en Python para el cómputo de operaciones tensoriales, utilizando el esquema CKKS y aprovechando la GPU.
     \end{itemize}
+    \vspace{0.2cm}
+    \textbf{Objetivos Específicos:}
+    \begin{itemize}
+        \item Diseñar una interfaz en Python para interactuar con FIDESlib y OpenFHE.
+        \item Implementar módulos para operaciones de tensores y matrices, abstrayendo la complejidad de CKKS.
+        \item Crear casos de uso para inferencia privada en modelos de aprendizaje automático.
+        \item Comparar el rendimiento frente a otras bibliotecas de cifrado homomórfico.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Tecnologías}
+    \begin{itemize}
+        \setlength{\itemsep}{10pt}
+        \item \textbf{Python y CUDA:} Lógica de alto nivel en Python y optimización de operaciones no nativas en CUDA.
+        \item \textbf{FIDESlib:} Implementación eficiente del esquema CKKS acelerada por GPU.
+        \item \textbf{OpenFHE-Python:} Puente principal (\textit{bindings}) para la gestión de las primitivas criptográficas.
+        \item \textbf{Pybind11:} Creación de \textit{bindings} personalizados para la comunicación eficiente entre C++ y Python.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Evaluación y Comparativa}
+    Se comparará la biblioteca propuesta frente a \textbf{TenSEAL} (CKKS en CPU) y \textbf{Concrete ML} (TFHE en GPU) utilizando modelos de referencia (MLP y CNN) bajo los siguientes criterios:
+    \vspace{0.3cm}
+    \begin{itemize}
+        \setlength{\itemsep}{12pt}
+        \item \textbf{Precisión Numérica:} Medir el impacto de las aproximaciones polinomiales y la gestión del ruido frente a modelos en texto plano. Se evaluará la efectividad de los modelos dado el error introducido por las operaciones cifradas.
+        \item \textbf{Rendimiento computacional:} Evaluación del tiempo de ejecución y el uso de memoria (RAM/VRAM) para cuantificar la eficiencia de la aceleración por GPU.
+    \end{itemize}
+    \vfill
     \begin{center}
-        \includegraphics[width=0.4\textwidth]{img2conv.png}
+        \small La biblioteca será publicada de forma abierta en un repositorio público (GitHub).
     \end{center}
 \end{frame}

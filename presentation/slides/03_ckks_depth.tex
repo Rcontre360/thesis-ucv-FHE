@@ -1,53 +1,64 @@
-% --- Part 3: The CKKS Scheme in Depth (Slides 9-13) ---
+% --- Part 3: El Esquema CKKS ---
 \section{El Esquema CKKS}
+\SectionFrame{El Esquema CKKS}
 
-\begin{frame}{Introducción al Esquema CKKS}
-    Propuesto por Cheon, Kim, Kim y Song en 2017, el esquema CKKS representa un avance fundamental diseñado específicamente para el cómputo sobre números reales y complejos.
-
+\begin{frame}{¿Por qué el Esquema CKKS?}
+    Propuesto en 2017, CKKS es un esquema diseñado para el cómputo sobre números reales y complejos.
+    \vspace{0.3cm}
     \begin{itemize}
-        \item \textbf{Propósito:} Habilitar aritmética aproximada de punto flotante de manera homomórfica.
-        \item \textbf{Innovación:} Trata el ruido inherente del cifrado como un error de redondeo controlado, similar al cálculo numérico estándar.
-        \item \textbf{Aplicabilidad:} Es el esquema de elección para tareas de Machine Learning y procesamiento de señales debido a su eficiencia en operaciones de alta precisión.
+        \setlength{\itemsep}{12pt}
+        \item \textbf{Aritmética Aproximada:} CKKS trata el ruido inherente como un ``error de redondeo controlado''.
+        \item \textbf{Mayor precisión:} Permite procesar datos decimales de forma nativa sin necesidad de cuantizar los datos cifrados.
+        \item \textbf{Ideal para Redes Neuronales:} Las RNAs son inherentemente robustas a pequeños errores de precisión, lo que hace que CKKS sea la elección natural para este dominio.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Parámetros Críticos en CKKS}
+\begin{frame}{Operaciones fundamentales en CKKS}
     \begin{itemize}
-        \item \textbf{Grado del Polinomio ($N$):} Define el número de ranuras y el nivel de seguridad.
-        \item \textbf{Módulo ($Q$):} Determina el "presupuesto de ruido" para operaciones.
-        \item \textbf{Factor de Escala ($\Delta$):} Define la precisión de la representación decimal.
+        \setlength{\itemsep}{12pt}
+        \item \textbf{Adición:} Operación lineal directa; el consumo de presupuesto de ruido es despreciable.
+        \item \textbf{Multiplicación:} Operación cuadrática que consume niveles del esquema.
+        \begin{itemize}
+            \item \textbf{Relinearización:} Reduce el tamaño del texto cifrado tras la multiplicación.
+            \item \textbf{Reescalado:} Gestiona el factor de escala y elimina bits de ruido residual.
+        \end{itemize}
+        \item \textbf{Rotación:} Permite permutar los elementos dentro de los vectores cifrados, permitiendo realizar operaciones de álgebra lineal de forma eficiente.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Codificación y SIMD}
+\begin{frame}{Cifrado por niveles}
+    Permite realizar cómputos de profundidad fija predefiniendo los parámetros del esquema.
+    \vspace{0.2cm}
     \begin{itemize}
-        \item Inmersión Canónica para empaquetar $N/2$ números en un solo polinomio.
-        \item Ventaja SIMD (\textit{Single Instruction, Multiple Data}).
-        \item Una operación homomórfica afecta a todo el vector simultáneamente.
+        \item \textbf{Cadena de Módulos:} $Q_L \rightarrow Q_{L-1} \rightarrow \dots \rightarrow Q_0$.
+        \item Cada multiplicación consume un nivel (modulo) mediante el \textbf{reescalado}.
     \end{itemize}
+    
     \begin{center}
-        \includegraphics[width=0.4\textwidth]{roots_unity.png}
+        \begin{tikzpicture}[scale=0.8, every node/.style={font=\small}]
+            \node[draw, rectangle, fill=blue!10, minimum width=2.5cm] (L3) at (0,3) {$Q_L$ (Inicio)};
+            \node[draw, rectangle, fill=blue!10, minimum width=2.5cm] (L2) at (0,2) {$Q_{L-1}$};
+            \node[draw, rectangle, fill=blue!10, minimum width=2.5cm] (L1) at (0,1) {$\dots$};
+            \node[draw, rectangle, fill=red!10, minimum width=2.5cm] (L0) at (0,0) {$Q_0$ (Límite)};
+            
+            \draw[->, thick] (L3) -- (L2) node[midway, right] {$\times$};
+            \draw[->, thick] (L2) -- (L1) node[midway, right] {$\times$};
+            \draw[->, thick] (L1) -- (L0) node[midway, right] {$\times$};
+            
+        \end{tikzpicture}
     \end{center}
 \end{frame}
 
-\begin{frame}{CKKS por Niveles (Leveled)}
+\begin{frame}{Bootstrapping}
+    El \textit{bootstrapping} es el proceso que permite realizar cómputos de profundidad indefinida, sin conocer la cantidad de operaciones.
+    \vspace{0.3cm}
     \begin{itemize}
-        \item Cadena de módulos: $Q_L > Q_{L-1} > \dots > Q_0$.
-        \item \textbf{Reescalado:} Reduce el módulo para gestionar el ruido tras multiplicaciones.
-        \item Permite configurar parámetros para circuitos de profundidad fija.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Bootstrapping en CKKS}
-    \begin{itemize}
-        \item Evaluación homomórfica del circuito de descifrado.
-        \item Refresco del texto cifrado para reducir el ruido acumulado.
-        \item Permite realizar un número arbitrario de operaciones (FHE).
+        \item \textbf{Refresco de ruido:} Toma un texto cifrado con mucho ruido y genera uno nuevo con ruido mínimo.
+        \item \textbf{Descifrado homomórfico:} Se evalúa homomórficamente la propia función de descifrado del esquema.
     \end{itemize}
     \vfill
     \begin{figure}
         \centering
-        \includegraphics[width=0.7\textwidth]{bootstrap.png}
-        \caption{Diagrama esquemático del proceso de Bootstrapping.}
+        \includegraphics[width=0.6\textwidth]{bootstrap.png}
     \end{figure}
 \end{frame}
