@@ -15,15 +15,16 @@
 
 \begin{frame}{Propuesta}
     \begin{itemize}
-        \setlength{\itemsep}{12pt}
+        \setlength{\itemsep}{8pt}
         \item \textbf{Objetivo:} Desarrollar una biblioteca Python para tensores cifrados (CKKS) que delegue el cómputo intensivo a la GPU vía CUDA.
         \item \textbf{Arquitectura Tecnológica:}
         \begin{itemize}
+            \item \textbf{Python y CUDA:} Uso de Python para la lógica de la biblioteca y CUDA para implementar operaciones no nativas en las librerías de CKKS existentes.
             \item \textbf{FIDESlib:} Implementación eficiente de CKKS en el GPU.
-            \item \textbf{OpenFHE-Python:} Interfaz oficial de OpenFHE para la gestión criptográfica.
-            \item \textbf{Pybind11:} Para crear enlaces eficientes entre el código en C++/CUDA y la interfaz de Python.
+            \item \textbf{OpenFHE-Python:} Actúa como puente (\textit{bindings}) entre la lógica de la biblioteca y las primitivas de OpenFHE.
+            \item \textbf{Pybind11:} Implementación de \textit{bindings} adicionales personalizados para optimizar la comunicación entre C++/CUDA y Python.
         \end{itemize}
-        \item \textbf{Abstracción:} Interfaz similar a NumPy o PyTorch, permitiendo el uso de objetos tipo `TensorCifrado` sin la complejidad de los parametros del esquema.
+        \item \textbf{Abstracción:} Interfaz similar a NumPy o PyTorch, permitiendo el uso de objetos tipo `TensorCifrado` sin la complejidad de los parámetros del esquema.
     \end{itemize}
 \end{frame}
 
@@ -32,7 +33,7 @@
     \vspace{0.3cm}
     \begin{itemize}
         \setlength{\itemsep}{12pt}
-        \item \textbf{Precisión Numérica:} Medir el impacto de las aproximaciones polinomiales y la gestión del ruido frente a modelos en texto plano.
+        \item \textbf{Precisión Numérica:} Medir el impacto de las aproximaciones polinomiales y la gestión del ruido frente a modelos en texto plano. Se evaluará la efectividad de los modelos dado el error introducido por las operaciones cifradas.
         \item \textbf{Rendimiento computacional:} Evaluación del tiempo de ejecución y el uso de memoria (RAM/VRAM) para cuantificar la eficiencia de la aceleración por GPU.
     \end{itemize}
 \end{frame}
