@@ -13,18 +13,28 @@
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Propuesta}
+\begin{frame}{Objetivos}
+    \textbf{Objetivo General:}
     \begin{itemize}
-        \setlength{\itemsep}{8pt}
-        \item \textbf{Objetivo:} Desarrollar una biblioteca Python para tensores cifrados (CKKS) que delegue el cómputo intensivo a la GPU vía CUDA.
-        \item \textbf{Arquitectura Tecnológica:}
-        \begin{itemize}
-            \item \textbf{Python y CUDA:} Uso de Python para la lógica de la biblioteca y CUDA para implementar operaciones no nativas en las librerías de CKKS existentes.
-            \item \textbf{FIDESlib:} Implementación eficiente de CKKS en el GPU.
-            \item \textbf{OpenFHE-Python:} Actúa como puente (\textit{bindings}) entre la lógica de la biblioteca y las primitivas de OpenFHE.
-            \item \textbf{Pybind11:} Implementación de \textit{bindings} adicionales personalizados para optimizar la comunicación entre C++/CUDA y Python.
-        \end{itemize}
-        \item \textbf{Abstracción:} Interfaz similar a NumPy o PyTorch, permitiendo el uso de objetos tipo `TensorCifrado` sin la complejidad de los parámetros del esquema.
+        \item Desarrollar una biblioteca de código abierto en Python para el cómputo de operaciones tensoriales, utilizando el esquema CKKS y aprovechando la GPU.
+    \end{itemize}
+    \vspace{0.2cm}
+    \textbf{Objetivos Específicos:}
+    \begin{itemize}
+        \item Diseñar una interfaz en Python para interactuar con FIDESlib y OpenFHE.
+        \item Implementar módulos para operaciones de tensores y matrices, abstrayendo la complejidad de CKKS.
+        \item Crear casos de uso para inferencia privada en modelos de aprendizaje automático.
+        \item Comparar el rendimiento frente a otras bibliotecas de cifrado homomórfico.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Tecnologías}
+    \begin{itemize}
+        \setlength{\itemsep}{10pt}
+        \item \textbf{Python y CUDA:} Lógica de alto nivel en Python y optimización de operaciones no nativas en CUDA.
+        \item \textbf{FIDESlib:} Implementación eficiente del esquema CKKS acelerada por GPU.
+        \item \textbf{OpenFHE-Python:} Puente principal (\textit{bindings}) para la gestión de las primitivas criptográficas.
+        \item \textbf{Pybind11:} Creación de \textit{bindings} personalizados para la comunicación eficiente entre C++ y Python.
     \end{itemize}
 \end{frame}
 
@@ -36,4 +46,8 @@
         \item \textbf{Precisión Numérica:} Medir el impacto de las aproximaciones polinomiales y la gestión del ruido frente a modelos en texto plano. Se evaluará la efectividad de los modelos dado el error introducido por las operaciones cifradas.
         \item \textbf{Rendimiento computacional:} Evaluación del tiempo de ejecución y el uso de memoria (RAM/VRAM) para cuantificar la eficiencia de la aceleración por GPU.
     \end{itemize}
+    \vfill
+    \begin{center}
+        \small La biblioteca será publicada de forma abierta en un repositorio público (GitHub).
+    \end{center}
 \end{frame}
