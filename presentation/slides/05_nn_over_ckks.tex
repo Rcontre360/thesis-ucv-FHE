@@ -1,171 +1,39 @@
-% --- Part 5: Neural Networks over CKKS ---
-\section{Inferencia Privada con CKKS}
-\SectionFrame{Inferencia Privada con CKKS}
+% --- Part 5: Problemática y Propuesta ---
+\section{Problemática y Propuesta}
+\SectionFrame{Problemática y Propuesta}
 
-\begin{frame}{Inferencia Privada}
-    La inferencia privada permite que un cliente utilice un modelo de aprendizaje automático alojado en un servidor remoto sin revelar sus datos de entrada ni el resultado de la predicción. Mediante el uso de cifrado homomórfico, el servidor puede ejecutar el modelo directamente sobre los datos cifrados, garantizando que la información sensible nunca sea expuesta durante el proceso de cómputo.
-
-    \vfill
-    \begin{center}
-        \includegraphics[width=0.65\textwidth]{fhe_on_ml.png}
-    \end{center}
-\end{frame}
-
-\begin{frame}{Multiplicación Matriz-Vector y Diagonalización}
-    Optimización para minimizar rotaciones homomórficas (Halevi-Shoup).
-
+\begin{frame}{Limitaciones Actuales}
+    A pesar de la madurez de CKKS, existe una brecha crítica entre la teoría y la aplicación real en RNAs:
+    \vspace{0.3cm}
     \begin{itemize}
-        \item \textbf{Diagonales:} Extracción de las diagonales de la matriz de pesos como vectores independientes.
-        \item \textbf{Rotación:} Rotación cíclica del vector de entrada y producto de Hadamard con cada diagonal.
-        \item \textbf{Suma de resultados:} Acumulación de los productos parciales.
+        \setlength{\itemsep}{12pt}
+        \item \textbf{Limitado por CPU:} Las bibliotecas de CKKS más robustas son extremadamente lentas al escalar a modelos profundos debido a su dependencia de la CPU.
+        \item \textbf{Incompatibilidad de GPU:} Herramientas actuales aceleradas por hardware no suelen usar CKKS, limitando la precisión de los modelos.
+        \item \textbf{Coste Computacional:} El overhead de FHE puede ser drásticamente superior al de texto plano sin la optimización adecuada.
     \end{itemize}
-
-    \vfill
-    \centering
-    \begin{tikzpicture}[scale=0.6, every node/.style={font=\tiny}]
-        % VECTOR x MATRIZ (Estándar)
-        \node at (1, 3.5) {\textbf{Cómputo Estándar}};
-        
-        % Vector x [a,b,c] vertical
-        \draw[fill=gray!20] (0,0.5) rectangle (0.5,1.2) node[pos=.5] {$c$};
-        \draw[fill=gray!20] (0,1.2) rectangle (0.5,1.9) node[pos=.5] {$b$};
-        \draw[fill=gray!20] (0,1.9) rectangle (0.5,2.6) node[pos=.5] {$a$};
-        
-        \node at (0.75, 1.55) {$\times$};
-        
-        \begin{scope}[shift={(1,0.5)}]
-            \draw[thick] (0,0) rectangle (2.1,2.1);
-            \fill[blue!30] (0,1.4) rectangle (0.7,2.1); \fill[blue!30] (0.7,0.7) rectangle (1.4,1.4); \fill[blue!30] (1.4,0) rectangle (2.1,0.7);
-            \fill[orange!30] (0.7,1.4) rectangle (1.4,2.1); \fill[orange!30] (1.4,0.7) rectangle (2.1,1.4); \fill[orange!30] (0,0) rectangle (0.7,0.7);
-            \fill[green!30] (1.4,1.4) rectangle (2.1,2.1); \fill[green!30] (0,0.7) rectangle (0.7,1.4); \fill[green!30] (0.7,0) rectangle (1.4,0.7);
-            \draw[step=0.7cm, black!40] (0,0) grid (2.1,2.1);
-            \node at (1.05, -0.4) {Matriz $\mathbf{W}$};
-        \end{scope}
-
-        % Flecha de Equivalencia
-        \node at (4.5, 1.55) {\Huge $\equiv$};
-
-        % DIAGONALIZACIÓN (Optimizado)
-        \begin{scope}[shift={(6,0)}]
-            \node at (3, 3.5) {\textbf{Cómputo Optimizado (CKKS)}};
-            
-            % Fila 0: [a, b, c] . [Azul]
-            \draw[fill=gray!20] (0,2.5) rectangle (0.4,3.0) node[pos=.5] {$a$};
-            \draw[fill=gray!20] (0.4,2.5) rectangle (0.8,3.0) node[pos=.5] {$b$};
-            \draw[fill=gray!20] (0.8,2.5) rectangle (1.2,3.0) node[pos=.5] {$c$};
-            \node at (1.4, 2.75) {$\odot$};
-            \draw[fill=blue!30] (1.6,2.5) rectangle (2.0,3.0);
-            \draw[fill=blue!30] (2.0,2.5) rectangle (2.4,3.0);
-            \draw[fill=blue!30] (2.4,2.5) rectangle (2.8,3.0);
-            
-            % Fila 1: [b, c, a] . [Naranja]
-            \draw[fill=gray!20] (0,1.5) rectangle (0.4,2.0) node[pos=.5] {$b$};
-            \draw[fill=gray!20] (0.4,1.5) rectangle (0.8,2.0) node[pos=.5] {$c$};
-            \draw[fill=gray!20] (0.8,1.5) rectangle (1.2,2.0) node[pos=.5] {$a$};
-            \node at (1.4, 1.75) {$\odot$};
-            \draw[fill=orange!30] (1.6,1.5) rectangle (2.0,2.0);
-            \draw[fill=orange!30] (2.0,1.5) rectangle (2.4,2.0);
-            \draw[fill=orange!30] (2.4,1.5) rectangle (2.8,2.0);
-            
-            % Fila 2: [c, a, b] . [Verde]
-            \draw[fill=gray!20] (0,0.5) rectangle (0.4,1.0) node[pos=.5] {$c$};
-            \draw[fill=gray!20] (0.4,0.5) rectangle (0.8,1.0) node[pos=.5] {$a$};
-            \draw[fill=gray!20] (0.8,0.5) rectangle (1.2,1.0) node[pos=.5] {$b$};
-            \node at (1.4, 0.75) {$\odot$};
-            \draw[fill=green!30] (1.6,0.5) rectangle (2.0,1.0);
-            \draw[fill=green!30] (2.0,0.5) rectangle (2.4,1.0);
-            \draw[fill=green!30] (2.4,0.5) rectangle (2.8,1.0);
-
-            % Suma y Resultado
-            \draw[thick] (3.1,0.5) -- (3.1,3.0);
-            \node at (3.4, 1.75) {$+$};
-            \draw[->, thick] (3.8, 1.75) -- (4.5, 1.75);
-            
-            % Vector Resultado vertical
-            \draw[fill=gray!30] (4.8, 1.0) rectangle (5.3, 1.5);
-            \draw[fill=gray!30] (4.8, 1.5) rectangle (5.3, 2.0);
-            \draw[fill=gray!30] (4.8, 2.0) rectangle (5.3, 2.5) node[pos=.5] {$\mathbf{y}$};
-        \end{scope}
-        
-        % Fórmula centrada abajo (Adjusted position and size)
-        \node[below, black!70] at (6,-0.2) {\normalsize $\mathbf{y} = \sum_{i=0}^{n-1} \text{Rot}(\mathbf{x}, i) \odot \mathbf{d}_i$};
-    \end{tikzpicture}
 \end{frame}
 
-\begin{frame}{Aproximación de Funciones de Activación}
-    El esquema CKKS solo soporta sumas y multiplicaciones polinomiales.
-
+\begin{frame}{Propuesta: Biblioteca de Tensores Cifrados}
     \begin{itemize}
-        \item \textbf{Problema:} Funciones no lineales (ReLU, Sigmoid) no pueden evaluarse directamente.
-        \item \textbf{Solución:} Aproximar las funciones no lineales usando polinomios en un rango dado.
+        \setlength{\itemsep}{12pt}
+        \item \textbf{Objetivo:} Desarrollar una biblioteca Python para tensores cifrados (CKKS) que delegue el cómputo intensivo a la GPU vía CUDA.
+        \item \textbf{Arquitectura Tecnológica:}
         \begin{itemize}
-            \item \textbf{Series de Taylor:} Útiles para funciones suaves (Sigmoid, Tanh).
-            \[ \text{Sigmoid}(x) \approx \frac{1}{2} + \frac{1}{4}x - \frac{1}{48}x^3 + \dots \]
-            \item \textbf{Función cuadrada:} El uso de la función cuadrada $f(x) = x^2$ como una alternativa a ReLU de bajo coste computacional.
-                \[ \text{ReLU}(x) \approx x^2 \]
+            \item \textbf{FIDESlib:} Implementación eficiente de CKKS en el GPU.
+            \item \textbf{OpenFHE-Python:} Interfaz oficial de OpenFHE para la gestión criptográfica.
+            \item \textbf{Pybind11:} Para crear enlaces eficientes entre el código en C++/CUDA y la interfaz de Python.
         \end{itemize}
+        \item \textbf{Abstracción:} Interfaz similar a NumPy o PyTorch, permitiendo el uso de objetos tipo `TensorCifrado` de manera intuitiva.
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Convoluciones Homomórficas e Im2Col}
-    Transformación de vecindades espaciales en estructuras lineales.
-    
+\begin{frame}{Plan de Evaluación y Comparativa}
+    Para validar la biblioteca, se implementarán modelos de referencia (MLP y CNN) y se evaluarán en tres dimensiones:
+    \vspace{0.3cm}
     \begin{itemize}
-        \item \textbf{Mecánica:} El parche de la imagen y el kernel se aplanan en vectores.
-        \item \textbf{Propiedad:} La convolución se reduce a un \textbf{producto punto} entre dos vectores.
-        \item \textbf{Simplicidad:} Permite resolver la capa mediante una única multiplicación de matrices (Diagonalización).
+        \setlength{\itemsep}{12pt}
+        \item \textbf{Precisión Numérica:} Medir el impacto de las aproximaciones polinomiales y la gestión del ruido frente a modelos en texto plano.
+        \item \textbf{Latencia y Rendimiento:} Comparar directamente contra \textbf{TenSEAL} para cuantificar la aceleración obtenida por la GPU.
+        \item \textbf{Comparativa de Esquemas:} Analizar el comportamiento frente a \textbf{Concrete ML} (TFHE/GPU) para contrastar la eficiencia entre aritmética aproximada y exacta.
     \end{itemize}
-
-    \vfill
-    \centering
-    \begin{tikzpicture}[scale=0.75, every node/.style={font=\tiny}]
-        % KERNEL (Arriba)
-        \begin{scope}[shift={(0,2.5)}]
-            \draw[step=0.7cm, gray!60, thin] (0,0) grid (1.4,1.4);
-            \fill[orange!20, opacity=0.5] (0,0) rectangle (1.4,1.4);
-            \node at (0.35, 1.05) {$w_1$}; \node at (1.05, 1.05) {$w_2$};
-            \node at (0.35, 0.35) {$w_3$}; \node at (1.05, 0.35) {$w_4$};
-            \node[left] at (-0.2, 0.7) {Kernel};
-        \end{scope}
-
-        % ENTRADA (Abajo)
-        \begin{scope}[shift={(0,0)}]
-            \draw[step=0.7cm, gray!60, thin] (0,0) grid (2.1,2.1);
-            \fill[blue!20, opacity=0.5] (0,0.7) rectangle (1.4,2.1);
-            \node at (0.35, 1.75) {$x_1$}; \node at (1.05, 1.75) {$x_2$};
-            \node at (0.35, 1.05) {$x_4$}; \node at (1.05, 1.05) {$x_5$};
-            \node[left] at (-0.2, 1.05) {Entrada};
-        \end{scope}
-
-        % Flechas RECTAS y más cortas
-        \draw[->, gray!60, thick] (1.6, 3.2) -- (2.6, 3.2);
-        \draw[->, gray!60, thick] (2.3, 1.05) -- (2.6, 1.05);
-
-        % VECTORES
-        \begin{scope}[shift={(2.8,3)}]
-            \draw[gray!60, fill=orange!20] (0,0) rectangle (0.5,0.45) node[pos=.5, text=black] {$w_1$};
-            \draw[gray!60, fill=orange!20] (0.5,0) rectangle (1.0,0.45) node[pos=.5, text=black] {$w_2$};
-            \draw[gray!60, fill=orange!20] (1.0,0) rectangle (1.5,0.45) node[pos=.5, text=black] {$w_3$};
-            \draw[gray!60, fill=orange!20] (1.5,0) rectangle (2.0,0.45) node[pos=.5, text=black] {$w_4$};
-        \end{scope}
-
-        \node at (3.8, 2.1) {\normalsize $\cdot$};
-
-        \begin{scope}[shift={(2.8,0.8)}]
-            \draw[gray!60, fill=blue!20] (0,0) rectangle (0.5,0.45) node[pos=.5, text=black] {$x_1$};
-            \draw[gray!60, fill=blue!20] (0.5,0) rectangle (1.0,0.45) node[pos=.5, text=black] {$x_2$};
-            \draw[gray!60, fill=blue!20] (1.0,0) rectangle (1.5,0.45) node[pos=.5, text=black] {$x_4$};
-            \draw[gray!60, fill=blue!20] (1.5,0) rectangle (2.0,0.45) node[pos=.5, text=black] {$x_5$};
-        \end{scope}
-
-        % Flecha hacia resultado
-        \draw[->, gray!60, thick] (5.0, 2.1) -- (5.8, 2.1);
-
-        % MATRIZ DE SALIDA
-        \begin{scope}[shift={(6.0,1.4)}]
-            \draw[step=0.7cm, gray!60, thin] (0,0) grid (1.4,1.4);
-            \draw[gray!60, fill=orange!30] (0,0.7) rectangle (0.7,1.4) node[pos=.5, text=black] {$z_{1,1}$};
-            \node[above] at (0.7, 1.4) {Salida};
-        \end{scope}
-    \end{tikzpicture}
 \end{frame}

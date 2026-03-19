@@ -1,138 +1,50 @@
-% --- Part 4: Neural Networks Fundamentals ---
-\section{Fundamentos de Redes Neuronales}
-\SectionFrame{Fundamentos de Redes Neuronales}
+% --- Part 4: Redes Neuronales y Cifrado Homomórfico ---
+\section{Redes Neuronales y Cifrado Homomórfico}
+\SectionFrame{Redes Neuronales y Cifrado Homomórfico}
 
-\begin{frame}{Redes Neuronales y Redes Superficiales}
-    Las \textbf{Redes Neuronales Artificiales (RNA)} son modelos computacionales diseñados para aprender patrones y relaciones complejas a partir de datos. Las \textbf{Redes Superficiales} representan la arquitectura más sencilla, caracterizada por tener una única capa oculta entre la entrada y la salida:
-    
-    \begin{equation*}
-        y = a_2 \left[ \beta_2 + \Omega_2 (a_1 [\beta_1 + \Omega_1 x]) \right]
-    \end{equation*}
-
-    \vfill
-    \centering
-    \begin{tikzpicture}[shorten >=1pt,->,draw=black!50, node distance=1cm]
-        \tikzstyle{neuron}=[circle,fill=black!25,minimum size=12pt,inner sep=0pt]
-        \tikzstyle{input neuron}=[neuron, fill=green!50];
-        \tikzstyle{output neuron}=[neuron, fill=red!50];
-        \tikzstyle{hidden neuron}=[neuron, fill=blue!50];
-
-        % Input Layer
-        \foreach \name / \y in {1,2}
-            \node[input neuron] (I-\name) at (0,-\y-0.5) {};
-
-        % Hidden Layer
-        \foreach \name / \y in {1,2,3}
-            \node[hidden neuron] (H-\name) at (2,-\y) {};
-
-        % Output Layer
-        \node[output neuron] (O) at (4,-2) {};
-
-        % Connections
-        \foreach \source in {1,2}
-            \foreach \dest in {1,2,3}
-                \path (I-\source) edge (H-\dest);
-        \foreach \source in {1,2,3}
-            \path (H-\source) edge (O);
-            
-        \node[below of=I-2, node distance=0.6cm, text=black!50] {\tiny Entrada};
-        \node[below of=H-3, node distance=0.4cm, text=black!50] {\tiny Oculta};
-        \node[below of=O, node distance=1.4cm, text=black!50] {\tiny Salida};
-    \end{tikzpicture}
-\end{frame}
-
-\begin{frame}{Componentes de la Neurona}
-    La unidad fundamental de procesamiento en una red es la neurona, cuya operación $h = a[\beta + \Omega x]$ se basa en los siguientes elementos:
-    \vspace{12pt}
+\begin{frame}{Operaciones en el espacio cifrado}
+    La ejecución de RNAs sobre FHE requiere traducir las operaciones tensoriales al dominio de polinomios:
+    \vspace{0.4cm}
     \begin{itemize}
         \setlength{\itemsep}{12pt}
-        \item \textbf{Pesos ($\Omega$):} Parámetros que determinan la importancia o fuerza de cada señal de entrada.
-        \item \textbf{Sesgo ($\beta$):} Valor independiente que permite desplazar la función de activación para ajustar el umbral de respuesta.
-        \item \textbf{Función de Activación ($a$):} Función (usualmente no lineal) que transforma la suma ponderada en la salida final de la neurona.
+        \item \textbf{Multiplicación Matriz-Vector:} Se optimiza mediante la diagonalización de pesos, minimizando las rotaciones homomórficas costosas.
+        \item \textbf{Convoluciones:} Se transforman en productos matriciales eficientes mediante la técnica \textbf{Im2Col} sobre los datos cifrados.
+        \item \textbf{Funciones de Activación:} Dado que FHE solo permite sumas y productos, activaciones como ReLU o Sigmoid se sustituyen por \textbf{aproximaciones polinomiales} (ej. $f(x) = x^2$).
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Redes Neuronales Profundas}
-    Las \textbf{Redes Neuronales Profundas (DNN)} se caracterizan por poseer dos o más capas ocultas. Esta profundidad permite al modelo aprender representaciones jerárquicas y abstractas de los datos, resolviendo problemas de mayor complejidad y dimensionalidad.
-
-    \vfill
-    \centering
-    \begin{tikzpicture}[shorten >=1pt,->,draw=black!50, node distance=1cm]
-        \tikzstyle{neuron}=[circle,fill=black!25,minimum size=12pt,inner sep=0pt]
-        \tikzstyle{input neuron}=[neuron, fill=green!50];
-        \tikzstyle{output neuron}=[neuron, fill=red!50];
-        \tikzstyle{hidden neuron}=[neuron, fill=blue!50];
-
-        % Input Layer
-        \foreach \name / \y in {1,2}
-            \node[input neuron] (I-\name) at (0,-\y-0.5) {};
-
-        % Hidden Layer 1
-        \foreach \name / \y in {1,2,3}
-            \node[hidden neuron] (H1-\name) at (1.5,-\y) {};
-
-        % Hidden Layer 2
-        \foreach \name / \y in {1,2,3}
-            \node[hidden neuron] (H2-\name) at (3.0,-\y) {};
-
-        % Output Layer
-        \node[output neuron] (O) at (4.5,-2) {};
-
-        % Connections
-        \foreach \source in {1,2}
-            \foreach \dest in {1,2,3}
-                \path (I-\source) edge (H1-\dest);
-        \foreach \source in {1,2,3}
-            \foreach \dest in {1,2,3}
-                \path (H1-\source) edge (H2-\dest);
-        \foreach \source in {1,2,3}
-            \path (H2-\source) edge (O);
-            
-        \node[below of=I-2, node distance=0.6cm, text=black!50] {\tiny Entrada};
-        \node[below of=H1-3, node distance=0.4cm, text=black!50] {\tiny Oculta 1};
-        \node[below of=H2-3, node distance=0.4cm, text=black!50] {\tiny Oculta 2};
-        \node[below of=O, node distance=1.4cm, text=black!50] {\tiny Salida};
-    \end{tikzpicture}
-\end{frame}
-
-\begin{frame}{Redes Neuronales Convolucionales (CNN)}
-    Especializadas en datos con estructura espacial, las CNN utilizan la operación de convolución para extraer características jerárquicas mediante los siguientes parámetros clave:
+\begin{frame}{Redes de interés}
     \begin{itemize}
-        \item \textbf{Filtros:} Matrices que extraen patrones locales.
-        \item \textbf{Stride:} Define el desplazamiento del filtro sobre la entrada.
-        \item \textbf{Padding:} Borde añadido para controlar las dimensiones de salida.
-        \item \textbf{Canales:} Profundidad de los datos (ej. RGB o mapas de características).
+        \item \textbf{Capa Lineal ($y = Wx + b$):} Base de los Perceptrones Multicapa (MLP), resolvemos mediante productos punto paralelos.
+        \item \textbf{Capa Convolucional:} Fundamental para visión artificial, procesa regiones espaciales locales.
     \end{itemize}
-
     \vfill
     \centering
-    \begin{tikzpicture}[scale=0.4]
-        % Entrada 4x4
-        \draw[step=1cm, black!20, thin] (0,0) grid (4,4);
-        \node[above, black!50] at (2,4) {\tiny Entrada ($x$)};
-        
-        % Resaltar región local
-        \fill[blue!20, opacity=0.5] (0,2) rectangle (2,4);
-        \draw[blue!50, thick] (0,2) rectangle (2,4);
-
-        % Kernel 2x2
-        \begin{scope}[shift={(5.5,2)}]
-            \draw[step=1cm, black!20, thin] (0,0) grid (2,2);
-            \fill[orange!20, opacity=0.5] (0,0) rectangle (2,2);
-            \draw[orange!50, thick] (0,0) rectangle (2,2);
-            \node[above, black!50] at (1,2) {\tiny Kernel ($w$)};
+    \begin{tikzpicture}[scale=0.6, every node/.style={font=\tiny}]
+        % ENTRADA
+        \begin{scope}[shift={(0,0)}]
+            \draw[step=0.7cm, gray!60, thin] (0,0) grid (2.1,2.1);
+            \fill[blue!20, opacity=0.5] (0,0.7) rectangle (1.4,2.1);
+            \node at (0.35, 1.75) {$x_1$}; \node at (1.05, 1.75) {$x_2$};
+            \node at (0.35, 1.05) {$x_4$}; \node at (1.05, 1.05) {$x_5$};
+            \node[below] at (1.05, 0) {Entrada};
         \end{scope}
-
-        % Flechas de operación
-        \draw[->, black!30, thick] (4,3) -- (5.4,3);
-        \draw[->, black!30, thick] (7.6,3) -- (9.9,3);
-
-        % Salida 3x3
-        \begin{scope}[shift={(10,1)}]
-            \draw[step=1cm, black!20, thin] (0,0) grid (3,3);
-            \fill[green!20, opacity=0.5] (0,2) rectangle (1,3);
-            \draw[green!50, thick] (0,2) rectangle (1,3);
-            \node[above, black!50] at (1.5,3) {\tiny Salida ($z$)};
+        % KERNEL
+        \begin{scope}[shift={(3.5,0.35)}]
+            \draw[step=0.7cm, gray!60, thin] (0,0) grid (1.4,1.4);
+            \fill[orange!20, opacity=0.5] (0,0) rectangle (1.4,1.4);
+            \node at (0.35, 1.05) {$w_1$}; \node at (1.05, 1.05) {$w_2$};
+            \node at (0.35, 0.35) {$w_3$}; \node at (1.05, 0.35) {$w_4$};
+            \node[below] at (0.7, 0) {Kernel};
+        \end{scope}
+        \draw[->, thick, gray!60] (2.2, 1.05) -- (3.4, 1.05);
+        \draw[->, thick, gray!60] (5.0, 1.05) -- (6.2, 1.05);
+        % SALIDA
+        \begin{scope}[shift={(6.5,0.7)}]
+            \draw[step=0.7cm, gray!60, thin] (0,0) grid (0.7,0.7);
+            \fill[green!20] (0,0) rectangle (0.7,0.7);
+            \node at (0.35, 0.35) {$z_{1,1}$};
+            \node[below] at (0.35, 0) {Salida};
         \end{scope}
     \end{tikzpicture}
 \end{frame}

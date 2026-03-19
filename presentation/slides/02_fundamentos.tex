@@ -1,38 +1,27 @@
-% --- Part 2: Fundamentals of HE & Modern Schemes (Slides 4-8) ---
-\section{Fundamentos de HE}
-\SectionFrame{Fundamentos de HE}
+% --- Part 2: Cifrado Homomórfico ---
+\section{Cifrado Homomórfico}
+\SectionFrame{Cifrado Homomórfico}
 
-\begin{frame}{Orígenes}
+\begin{frame}{Cifrado Homomórfico}
     \begin{itemize}
-        \item \textbf{Homomorfismo de privacidad} Rivest, Adleman y Dertouzos en 1978 plantean por primera vez la posibilidad de un sistema que permitiera a un tercero realizar operaciones sobre datos cifrados.
-        \[ E(m_1 \otimes m_2) = E(m_1) \otimes E(m_2) \]
-        \item \textbf{Cifrado Parcialmente Homomórfico:}
+        \setlength{\itemsep}{10pt}
+        \item \textbf{Orígenes}
         \begin{itemize}
-            \item \textbf{RSA:} homomorfismo solo en multiplicaciones
-            \[ c_1 \cdot c_2 = m_1^e \cdot m_2^e = (m_1 \cdot m_2)^e \pmod n \]
-            \item \textbf{Paillier:} homomorfismo solo en sumas
-            \[ g^{m_1} r_1^n \cdot g^{m_2} r_2^n = g^{m_1+m_2} (r_1 r_2)^n \pmod{n^2} \]
+            \item \textbf{1978:} Rivest, Adleman y Dertouzos plantean el concepto de ``Homomorfismo de Privacidad''.
+            \item \textbf{Hito Gentry (2009):} Primer esquema completamente homomórfico (FHE), demostrando que el problema era soluble.
+        \end{itemize}
+        \item \textbf{Propiedades}
+        \begin{itemize}
+            \item \textbf{Suma Homomórfica:} $E(m_1) \oplus E(m_2) = E(m_1 + m_2)$.
+            \item \textbf{Multiplicación Homomórfica:} $E(m_1) \otimes E(m_2) = E(m_1 \cdot m_2)$.
+            \item \textbf{Cómputo Indefinido:} Capacidad teórica de realizar un numero operaciones de forma ilimitada sobre datos cifrados.
         \end{itemize}
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Cifrado completamente homomórfico}
-    \begin{itemize}
-        \setlength{\itemsep}{12pt}
-        \item \textbf{Craig Gentry} en 2009 presenta el primer esquema completamente homomórfico (FHE o ``Fully Homomorphic Encryption'').
-        \item \textbf{Innovación:} Gentry demostró que es posible computar cualquier función arbitraria sobre datos cifrados si se logra gestionar el crecimiento del ruido.
-        \item \textbf{Bootstrapping:} La innovación lograda por Craig fue el desarrollo de una técnica que permite continuar las operaciones de cifrado sin importar su cantidad.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Aprendizaje con Errores (LWE)}
-       El aprendizaje con errores es una técnica de cifrado asimétrico basada en problemas de retículos.
-    \begin{itemize}
-        \item \textbf{Clave Secreta ($sk$):} Un vector $\mathbf{s}$ generado de forma aleatoria. 
-        \item \textbf{Clave Pública ($pk$):} Par $(\mathbf{A}, \mathbf{b})$ donde $\mathbf{b} = \mathbf{As} + \mathbf{e} \pmod q$.
-        \item \textbf{Parámetros:} $n$ (seguridad), $m$ (muestras), $q$ (módulo), $\mathbf{e}$ (pequeño error).
-    \end{itemize}
-    
+\begin{frame}{Aprendizaje con Errores}
+    El aprendizaje con errores (LWE o ``Learning With Errors``) es la base de seguridad de FHE. Se basa en que resolver sistemas de ecuaciones lineales es fácil, pero se vuelve computacionalmente imposible si se agrega un pequeño ruido a cada ecuación.
+    \vspace{0.3cm}
     \[
         \underbrace{
         \begin{pmatrix} b_1 \\ b_2 \\ \vdots \\ b_m \end{pmatrix}
@@ -54,93 +43,24 @@
         \begin{pmatrix} e_1 \\ \vdots \\ e_m \end{pmatrix}
         }_{\mathbf{e} \in \chi^m} \pmod q
     \]
+    \begin{itemize}
+        \item \textbf{Llave Secreta ($sk$):} Un vector $\mathbf{s}$ generado de forma aleatoria.
+        \item \textbf{Llave Pública ($pk$):} El par $(\mathbf{A}, \mathbf{b})$ donde $\mathbf{b} = \mathbf{As} + \mathbf{e} \pmod q$.
+    \end{itemize}
 \end{frame}
 
-\begin{frame}{Cifrado con LWE}
-    Para cifrar un bit de mensaje $\mu \in \{0, 1\}$ usando la clave pública $(\mathbf{A}, \mathbf{b})$:
+\begin{frame}{El Problema del Ruido y Crecimiento de Error}
+    Debido a la naturaleza de LWE, cada vez que operamos sobre un dato cifrado, el ruido inherente se acumula. 
     \vspace{0.3cm}
-    \begin{enumerate}
-        \setlength{\itemsep}{12pt}
-        \item Se elige un subconjunto aleatorio de las filas de la matriz $\mathbf{A}$. Denotemos los índices de estas filas por el vector $\mathbf{x} \in \{0, 1\}^m$.
-        \item El texto cifrado es un par $(\mathbf{u}, v) \in \mathbb{Z}_q^n \times \mathbb{Z}_q$, calculado como:
-        \begin{align}
-            \mathbf{u} &= \mathbf{x}^T \mathbf{A} \pmod{q} \\
-            v &= \mathbf{x}^T \mathbf{b} + \mu \cdot \lfloor q/2 \rfloor \pmod{q}
-        \end{align}
-    \end{enumerate}
-\end{frame}
-
-
-\begin{frame}{Descifrado con LWE}
-    \begin{enumerate}
-        \setlength{\itemsep}{12pt}
-        \item Se calcula la diferencia: $d = v - \langle \mathbf{u}, \mathbf{s} \rangle \pmod{q}$.
-        \item Se comprueba a qué valor está más cercano $d$: a $0$ o a $\lfloor q/2 \rfloor$.
-        \begin{itemize}
-            \setlength{\itemsep}{12pt}
-            \item Si $d$ está más cerca de $0$, el mensaje descifrado es $0$.
-            \item Si $d$ está más cerca de $\lfloor q/2 \rfloor$, el mensaje descifrado es $1$.
-        \end{itemize}
-        \item La corrección del descifrado se basa en que $d = \mu \cdot \lfloor q/2 \rfloor + \mathbf{x}^T\mathbf{e}$. Mientras el término de ruido acumulado $\mathbf{x}^T\mathbf{e}$ sea pequeño, el valor de $d$ estará más cerca del múltiplo de $\lfloor q/2 \rfloor$ correspondiente al mensaje original.
-    \end{enumerate}
-\end{frame}
-
-\begin{frame}{Aprendizaje con Errores en Anillos (RLWE)}
-    El problema RLWE es una variante algebraica de LWE que traslada las operaciones de vectores y matrices a anillos de polinomios, donde la seguridad reside en la dificultad de distinguir muestras ruidosas de muestras aleatorias uniformes en el anillo.
-    \vspace{0.3cm}
-
     \begin{itemize}
         \setlength{\itemsep}{12pt}
-        \item \textbf{Estructura:} Definido sobre el anillo $R_q = \mathbb{Z}_q[x] / \langle x^n + 1 \rangle$.
-        \item \textbf{Ventajas:}
+        \item \textbf{Suma:} El ruido crece linealmente y es la suma del ruido de los operandos.
+        \item \textbf{Multiplicación:} El ruido crece exponencialmente. El nivel de crecimiento depende del esquema de cifrado usado.
+        \item \textbf{Gestión de ruido:}
         \begin{itemize}
             \setlength{\itemsep}{8pt}
-            \item Mayor eficiencia: Multiplicación vía \textbf{NTT}.
-            \item Estructura compacta: Claves y textos cifrados más pequeños.
-            \item Habilita operaciones paralelas nativas (\textbf{SIMD}).
+            \item \textbf{Cifrado por niveles:} Configuración de parámetros para soportar una profundidad de cómputo predefinida.
+            \item \textbf{Bootstrapping:} Proceso que reduce el ruido del texto cifrado, permitiendo una mayor profundidad de cómputo. Es una operación costosa.
         \end{itemize}
     \end{itemize}
-\end{frame}
-
-\begin{frame}{El Problema del Ruido}
-    \begin{itemize}
-        \item Las técnicas de cifrado homomórfico agregan error en el texto cifrado para garantizar la seguridad. 
-        \item Este error (o ruido) se acumula con cada operación.
-        \item La multiplicación aumenta el ruido mucho más rápido que la suma.
-        \item Si el ruido supera un umbral, el descifrado falla.
-    \end{itemize}
-    \begin{center}
-        \includegraphics[width=0.5\textwidth]{noise.png}
-    \end{center}
-\end{frame}
-
-\begin{frame}{Gestión de Ruido: Leveled vs. Bootstrapped}
-    \begin{itemize}
-        \item \textbf{FHE por niveles:} Esquemas diseñados para evaluar circuitos de una profundidad máxima $L$ predefinida. Utilizan una jerarquía de módulos para reducir el ruido tras las operaciones.
-        \item \textbf{Bootstrapping:} Proceso de reducción de ruido del texto cifrado que reduce el nivel de ruido evaluando el propio circuito de descifrado homomórficamente. Permite profundidad de cómputo infinita.
-    \end{itemize}
-    \vfill
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.7\textwidth]{bootstrap.png}
-    \end{figure}
-\end{frame}
-
-
-\begin{frame}{Esquemas FHE Modernos}
-    El esquema CKKS es seleccionado para este trabajo por su soporte nativo de aritmética aproximada, ideal para Redes Neuronales.
-    \begin{table}
-        \centering
-        \resizebox{\textwidth}{!}{
-        \begin{tabular}{|l|l|l|l|}
-            \hline
-            \textbf{Característica} & \textbf{BGV / BFV} & \textbf{CKKS} & \textbf{TFHE} \\ \hline
-            \textbf{Tipo de Dato} & Enteros exactos & Reales / Complejos & Bits / Enteros cortos \\ \hline
-            \textbf{Gestión de Ruido} & Modulus/Scale switching & Reescalado & Bootstrapping rápido \\ \hline
-            \textbf{Unidad de Cómputo} & Vectores (SIMD) & Vectores (SIMD) & Puertas Lógicas / LUT \\ \hline
-            \textbf{Precisión} & Absoluta & Aproximada & Absoluta (Binaria) \\ \hline
-        \end{tabular}
-        }
-    \end{table}
-    \vfill
 \end{frame}
