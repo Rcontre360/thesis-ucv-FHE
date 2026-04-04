@@ -8,46 +8,55 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SDK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 EXTERNAL_DIR="${SDK_DIR}/external"
 INSTALL_PREFIX="${EXTERNAL_DIR}/install"
-VENV_DIR="${SDK_DIR}/.venv"
 
 mkdir -p "${EXTERNAL_DIR}"
 mkdir -p "${INSTALL_PREFIX}"
 
-# 2. Add FIDESlib as submodule if not already there
+# 2. Ensure FIDESlib is present
 cd "${SDK_DIR}"
 if [ ! -d "external/FIDESlib" ]; then
-    echo "Adding FIDESlib as git submodule..."
-    # Using the GitHub URL found in README
-    git submodule add https://github.com/CAPS-UMU/FIDESlib.git external/FIDESlib
-else
-    echo "FIDESlib directory already exists. Ensuring submodules are up to date..."
-    git submodule update --init --recursive
+    echo "FIDESlib not found."
+    exit 1
 fi
 
-# 3. Build patched OpenFHE (required by FIDESlib)
-echo "Building patched OpenFHE..."
-cd "${EXTERNAL_DIR}/FIDESlib/deps"
-# The script build.sh takes the installation prefix as the first argument
-# It handles cloning openfhe-src and applying the patch.
-./build.sh "${INSTALL_PREFIX}"
+# 3. Build patched OpenFHE (if not already done)
+if [ ! -f "${INSTALL_PREFIX}/lib/libOPENFHEpke.so" ]; then
+    echo "Building patched OpenFHE..."
+    cd "${EXTERNAL_DIR}/FIDESlib/deps"
+    ./build.sh "${INSTALL_PREFIX}"
+else
+    echo "OpenFHE already installed, skipping."
+fi
 
-# 4. Build FIDESlib
-echo "Building FIDESlib..."
+# 4. Apply minimal source fixes to FIDESlib
 cd "${EXTERNAL_DIR}/FIDESlib"
+
+# Fix uint63_t typo in Context.cu
+sed -i 's/uint63_t/uint64_t/g' src/CKKS/Context.cu
+
+# Exclude multi-GPU source (not needed for single-GPU, has nvcc 12.8 parse issues)
+if ! grep -q 'REMOVE_ITEM SOURCE_FILES_CUDA.*LimbPartitionMGPU' CMakeLists.txt; then
+    sed -i '/file(GLOB_RECURSE SOURCE_FILES_CUDA \${SOURCE_DIR}\/\*.cu)/a list(REMOVE_ITEM SOURCE_FILES_CUDA "${SOURCE_DIR}/CKKS/LimbPartitionMGPU.cu")' CMakeLists.txt
+fi
+
+# 5. Build FIDESlib
+echo "Building FIDESlib..."
+rm -rf build
 mkdir -p build
 cd build
+
 cmake -DCMAKE_BUILD_TYPE=Release \
       -DOPENFHE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
       -DFIDESLIB_INSTALL_PREFIX="${INSTALL_PREFIX}" \
       -DFIDESLIB_INSTALL_OPENFHE=OFF \
       -DFIDESLIB_COMPILE_TESTS=OFF \
-      -DFIDESLIB_COMPILE_BENCHMARKS=OFF ..
-make -j$(nproc)
-make install
+      -DFIDESLIB_COMPILE_BENCHMARKS=OFF \
+      -DFIDESLIB_ARCH="86-real" \
+      ..
 
-# 5. Build fideslib-python bindings
-# NOTE: Instead of manual build, we now use 'pip install -e .'
-# However, we need to point CMake to our install prefix for OpenFHE and FIDESlib
-echo "System dependencies installed in ${INSTALL_PREFIX}."
-echo "Now run 'pip install -e .' from the sdk/ directory to install the SDK and build bindings."
-echo "Remember to set CMAKE_PREFIX_PATH=\"${INSTALL_PREFIX}\" if pip cannot find the libraries."
+make -j$(nproc)
+cmake --build . --target install -j
+
+echo "------------------------------------------------"
+echo "FIDESlib built and installed to ${INSTALL_PREFIX}"
+echo "------------------------------------------------"
