@@ -1,6 +1,3 @@
-include README.md
 include docs/INTRO.md
-include PROJECT_STRUCTURE.md
-recursive-include src *.cpp *.hpp *.cu *.cuh CMakeLists.txt
-recursive-include external/FIDESlib *
+recursive-include src *.cu *.cpp *.hpp *.cuh CMakeLists.txt
 include CMakeLists.txt

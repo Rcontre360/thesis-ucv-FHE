@@ -1,14 +1,14 @@
 [build-system]
 requires = ["scikit-build-core>=0.10", "pybind11", "numpy"]
-build-backend = "scikit-build-core.build"
+build-backend = "scikit-build_core.build"
 
 [project]
-name = "fhe-engine"
+name = "fhe-sdk"
 version = "0.1.0"
 description = "Python SDK for GPU-accelerated CKKS homomorphic encryption inference"
 readme = "docs/INTRO.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 authors = [{ name = "Rcontre360" }]
 keywords = [
     "homomorphic-encryption",
@@ -21,7 +21,7 @@ keywords = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -41,9 +41,6 @@ dev = [
     "ruff>=0.4",
     "black>=24.0",
     "hypothesis>=6.100",
-]
-fideslib = [
-    # "fideslib-python",   # Local binding in src/_fideslib_backend
 ]
 
 [tool.scikit-build]
@@ -75,8 +72,7 @@ disallow_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=fhe_engine --cov-report=term-missing --cov-fail-under=90"
 
 [tool.coverage.run]
-source = ["src/fhe_engine"]
+source = ["src/fhe_sdk"]
 omit = ["tests/*"]

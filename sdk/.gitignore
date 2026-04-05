@@ -1,2 +1,7 @@
-temp
 .venv
+build/
+_build/
+external/install/
+*.egg-info/
+__pycache__/
+*.pyc

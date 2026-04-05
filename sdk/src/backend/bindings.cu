@@ -19,7 +19,7 @@ using CKKSEncryptor = HEEncryptor<Scheme::CKKS>;
 using CKKSDecryptor = HEDecryptor<Scheme::CKKS>;
 using CKKSOperator = HEArithmeticOperator<Scheme::CKKS>;
 
-PYBIND11_MODULE(_heongpu_backend, m) {
+PYBIND11_MODULE(_backend, m) {
     m.doc() = "HEonGPU Python bindings for GPU-accelerated CKKS";
 
     // --- Enums ---
