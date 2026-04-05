@@ -1,5 +1,11 @@
 pybind11_add_module(_backend
     bindings.cu
+    bind_enums.cu
+    bind_context.cu
+    bind_keys.cu
+    bind_data.cu
+    bind_crypto.cu
+    bind_operator.cu
 )
 
 target_link_libraries(_backend PRIVATE
