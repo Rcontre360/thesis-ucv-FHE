@@ -3,6 +3,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SDK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PYTHON="$(command -v python3)" || { echo "python3 not found in PATH"; exit 1; }
 
 if [ -z "$1" ]; then
     echo "Usage: $0 <example_name>"
@@ -20,9 +21,9 @@ if [ ! -f "$EXAMPLE" ]; then
 fi
 
 BACKEND_DIR="${SDK_DIR}/build/src/backend"
-INSTALL_LIB="${SDK_DIR}/external/install/lib"
+INSTALL_LIB="${SDK_DIR}/build/heongpu/lib"
 
 export PYTHONPATH="${SDK_DIR}/src:${BACKEND_DIR}:${PYTHONPATH}"
 export LD_LIBRARY_PATH="${INSTALL_LIB}:${LD_LIBRARY_PATH}"
 
-exec "${SDK_DIR}/.venv/bin/python" "$EXAMPLE"
+exec "${PYTHON}" "$EXAMPLE"

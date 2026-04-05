@@ -13,14 +13,12 @@ primitives that require no knowledge of the underlying cryptographic machinery.
 ## Quick Start
 
 ```bash
-# 1. Install system deps and build HEonGPU
+# 1. Install system deps and build HEonGPU into build/heongpu
 ./scripts/install_system_deps.sh
 
-# 2. Build the Python bindings
-mkdir build && cd build
-cmake -DCMAKE_CUDA_ARCHITECTURES=86 ..
-make -j$(nproc)
-cd ..
+# 2. Build the Python bindings into build/
+cmake -S . -B build -DCMAKE_CUDA_ARCHITECTURES=86 -DCMAKE_PREFIX_PATH=build/heongpu
+cmake --build build -j$(nproc)
 
 # 3. Run an example
 ./scripts/run_example.sh ckks_square
