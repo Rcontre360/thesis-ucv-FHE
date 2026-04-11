@@ -1,23 +1,51 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Union
+
+from fhe_sdk._backend import CKKSPlaintext
 
 if TYPE_CHECKING:
     from fhe_sdk.context import FHEContext
-    from fhe_sdk._backend import CKKSPlaintext
+
 
 class Plaintext:
-    def __init__(self, context: "FHEContext", backend_pt: "CKKSPlaintext", original_size: int):
+    _context: "FHEContext"
+    _pt: CKKSPlaintext
+    _n_values: int
+
+    def __init__(self, context: "FHEContext", pt: CKKSPlaintext, n_values: int) -> None:
         self._context = context
-        self._backend_pt = backend_pt
-        self._original_size = original_size
+        self._pt = pt
+        self._n_values = n_values
 
     @property
     def size(self) -> int:
-        """Number of slots (equal to the length of the original values passed to ctx.encode())."""
-        return self._original_size
+        return self._n_values
 
     def decode(self) -> List[float]:
-        """Shorthand for context.decode(self)."""
         return self._context.decode(self)
 
+    def __add__(self, other: Union["Plaintext", List[float], float]) -> "Plaintext":
+        values = other if isinstance(other, list) else [float(other)] * self._n_values
+        result = [a + b for a, b in zip(self.decode(), values)]
+        return self._context.encode(result)
+
+    def __sub__(self, other: Union["Plaintext", List[float], float]) -> "Plaintext":
+        values = other if isinstance(other, list) else [float(other)] * self._n_values
+        result = [a - b for a, b in zip(self.decode(), values)]
+        return self._context.encode(result)
+
+    def __mul__(self, other: Union["Plaintext", List[float], float]) -> "Plaintext":
+        values = other if isinstance(other, list) else [float(other)] * self._n_values
+        result = [a * b for a, b in zip(self.decode(), values)]
+        return self._context.encode(result)
+
+    def __radd__(self, other: Union["Plaintext", List[float], float]) -> "Plaintext":
+        return self.__add__(other)
+
+    def __rsub__(self, other: Union["Plaintext", List[float], float]) -> "Plaintext":
+        return (self * -1).__add__(other)
+
+    def __rmul__(self, other: Union["Plaintext", List[float], float]) -> "Plaintext":
+        return self.__mul__(other)
+
     def __repr__(self) -> str:
-        return f"Plaintext(size={self._original_size}, depth={self._backend_pt.depth})"
+        return f"Plaintext(size={self._n_values}, depth={self._pt.depth})"
