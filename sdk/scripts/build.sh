@@ -4,7 +4,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SDK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CMAKE="$(command -v cmake)" || { echo "cmake not found in PATH"; exit 1; }
-PYTHON="$(command -v python3)" || { echo "python3 not found in PATH"; exit 1; }
+PYTHON="${PYTHON:-$(command -v python3)}" || { echo "python3 not found in PATH"; exit 1; }
 if ! "${PYTHON}" -m pybind11 --cmakedir &>/dev/null; then
     echo "pybind11 not found in the active Python environment ($(${PYTHON} --version))."
     echo "Activate an environment that has pybind11 installed, e.g.:"
