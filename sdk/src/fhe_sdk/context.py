@@ -1,3 +1,4 @@
+import math
 from typing import List, Optional, Union
 
 from fhe_sdk._backend import (
@@ -9,13 +10,14 @@ from fhe_sdk._backend import (
     CKKSSecretkey,
     CKKSPublickey,
     CKKSRelinkey,
+    CKKSGaloiskey,
     CKKSPlaintext,
     CKKSCiphertext,
     CKKSOperator,
 )
 from fhe_sdk.enums import SecurityLevel
-from fhe_sdk.plaintext import Plaintext
-from fhe_sdk.ciphertext import Ciphertext
+from fhe_sdk.plaintext import PlaintextVector
+from fhe_sdk.ciphertext import EncryptedVector
 
 
 class FHEContext:
@@ -35,6 +37,7 @@ class FHEContext:
     _sk: Optional[CKKSSecretkey]
     _pk: Optional[CKKSPublickey]
     _rk: Optional[CKKSRelinkey]
+    _gk: Optional[CKKSGaloiskey]
 
     def __init__(self) -> None:
         self._poly_modulus_degree = None
@@ -53,6 +56,7 @@ class FHEContext:
         self._sk = None
         self._pk = None
         self._rk = None
+        self._gk = None
 
     def _ensure_not_built(self) -> None:
         if self._built:
@@ -89,7 +93,7 @@ class FHEContext:
         self._backend_ctx = create_ckks_context_with_security(self._security_level)
         self._backend_ctx.set_poly_modulus_degree(self._poly_modulus_degree)
 
-        # Last prime is the P prime (key-switching auxiliary modulus).
+        # Last element is the P prime (key-switching auxiliary modulus).
         # One P prime => KEYSWITCHING_METHOD_I (inferred by HEonGPU from P vector size).
         q_bits = self._coeff_modulus_bit_sizes[:-1]
         p_bits = [self._coeff_modulus_bit_sizes[-1]]
@@ -104,6 +108,13 @@ class FHEContext:
         self._rk = CKKSRelinkey(self._backend_ctx)
         self._keygen.generate_relin_key(self._rk, self._sk)
 
+        # Galois key: powers-of-2 shifts from 1 to slot_count.
+        # Covers both _sum_slots (shifts 1..n/2) and _replicate_slot0 (shifts slot_count/2..1).
+        slot_count = self._poly_modulus_degree // 2
+        shifts = [2**k for k in range(int(math.log2(slot_count)) + 1)]
+        self._gk = CKKSGaloiskey(self._backend_ctx, shifts)
+        self._keygen.generate_galois_key(self._gk, self._sk)
+
         self._encoder = CKKSEncoder(self._backend_ctx)
         self._encryptor = CKKSEncryptor(self._backend_ctx, self._pk)
         self._decryptor = CKKSDecryptor(self._backend_ctx, self._sk)
@@ -116,26 +127,44 @@ class FHEContext:
     def default(cls) -> "FHEContext":
         return (
             cls()
-            .set_poly_modulus_degree(8192)
-            .set_coeff_modulus_bit_sizes([60, 40, 40, 60])
+            .set_poly_modulus_degree(16384)
+            .set_coeff_modulus_bit_sizes([60, 40, 40, 40, 40, 60])
             .set_scale(2**40)
             .build()
         )
 
-    def encode(self, values: List[float]) -> Plaintext:
+    # ------------------------------------------------------------------
+    # Rotation
+    # ------------------------------------------------------------------
+
+    def rotate(self, ct: EncryptedVector, k: int) -> EncryptedVector:
+        if not self._built:
+            raise RuntimeError("Context must be built before rotating.")
+        result_ct = self._ops.rotate_rows(ct._ct, self._gk, k)
+        return EncryptedVector(self, result_ct, ct._n_values)
+
+    # ------------------------------------------------------------------
+    # Encode / decode
+    # ------------------------------------------------------------------
+
+    def encode(self, values: List[float]) -> PlaintextVector:
         if not self._built:
             raise RuntimeError("Context must be built before encoding.")
         pt = CKKSPlaintext(self._backend_ctx)
         self._encoder.encode(pt, values, self._scale)
-        return Plaintext(self, pt, len(values))
+        return PlaintextVector(self, pt, len(values))
 
-    def decode(self, plaintext: Plaintext) -> List[float]:
+    def decode(self, plaintext: PlaintextVector) -> List[float]:
         if not self._built:
             raise RuntimeError("Context must be built before decoding.")
         decoded = self._encoder.decode(plaintext._pt)
         return decoded[:plaintext.size]
 
-    def encrypt(self, values: Union[List[float], Plaintext]) -> Ciphertext:
+    # ------------------------------------------------------------------
+    # Encrypt / decrypt
+    # ------------------------------------------------------------------
+
+    def encrypt(self, values: Union[List[float], PlaintextVector]) -> EncryptedVector:
         if not self._built:
             raise RuntimeError("Context must be built before encrypting.")
         if isinstance(values, list):
@@ -144,9 +173,9 @@ class FHEContext:
             plaintext = values
         ct = CKKSCiphertext(self._backend_ctx)
         self._encryptor.encrypt(ct, plaintext._pt)
-        return Ciphertext(self, ct, plaintext.size)
+        return EncryptedVector(self, ct, plaintext.size)
 
-    def decrypt(self, ciphertext: Ciphertext) -> List[float]:
+    def decrypt(self, ciphertext: EncryptedVector) -> List[float]:
         if not self._built:
             raise RuntimeError("Context must be built before decrypting.")
         pt = CKKSPlaintext(self._backend_ctx)

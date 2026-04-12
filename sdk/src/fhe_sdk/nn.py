@@ -2,20 +2,20 @@ from typing import TYPE_CHECKING, List, Optional, Union
 import math
 
 if TYPE_CHECKING:
-    from fhe_sdk.ciphertext import Ciphertext
+    from fhe_sdk.encrypted_vector import EncryptedVector
 
 class Module:
-    def forward(self, x: "Ciphertext") -> "Ciphertext":
+    def forward(self, x: "EncryptedVector") -> "EncryptedVector":
         raise NotImplementedError("Each layer must implement forward()")
 
-    def __call__(self, x: "Ciphertext") -> "Ciphertext":
+    def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
         return self.forward(x)
 
 class Sequential(Module):
     def __init__(self, *layers: Module) -> None:
         self._layers = list(layers)
 
-    def forward(self, x: "Ciphertext") -> "Ciphertext":
+    def forward(self, x: "EncryptedVector") -> "EncryptedVector":
         out = x
         for layer in self._layers:
             out = layer.forward(out)
@@ -48,7 +48,7 @@ class Linear(Module):
             if bias is None: raise ValueError("Bias is required when use_bias=True")
             self.bias = bias
 
-    def forward(self, x: "Ciphertext") -> "Ciphertext":
+    def forward(self, x: "EncryptedVector") -> "EncryptedVector":
         if self.weight is None:
             raise RuntimeError("Weights not loaded. Call load_weights() first.")
         
@@ -62,7 +62,7 @@ class Linear(Module):
         return out
 
 class Square(Module):
-    def forward(self, x: "Ciphertext") -> "Ciphertext":
+    def forward(self, x: "EncryptedVector") -> "EncryptedVector":
         return x * x
 
 class ApproxReLU(Module):
@@ -78,7 +78,7 @@ class ApproxReLU(Module):
             # Actually, standard quadratic approx: 0.125x^2 + 0.5x + 0.25
             self.coeffs = [0.25, 0.5, 0.125] 
 
-    def forward(self, x: "Ciphertext") -> "Ciphertext":
+    def forward(self, x: "EncryptedVector") -> "EncryptedVector":
         # Horner's method or Baby-step Giant-step for polynomial evaluation
         # Simplified evaluation: c0 + c1*x + c2*x^2
         x2 = x * x
@@ -91,7 +91,7 @@ class ApproxSigmoid(Module):
         # Standard Taylor for Sigmoid at 0: 0.5 + 0.25x - 0.0208x^3
         self.coeffs = {0: 0.5, 1: 0.25, 3: -0.0208}
 
-    def forward(self, x: "Ciphertext") -> "Ciphertext":
+    def forward(self, x: "EncryptedVector") -> "EncryptedVector":
         x2 = x * x
         x3 = x2 * x
         return (x * self.coeffs[1]) + (x3 * self.coeffs[3]) + self.coeffs[0]

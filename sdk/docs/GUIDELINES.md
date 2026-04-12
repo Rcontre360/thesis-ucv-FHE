@@ -80,6 +80,63 @@ Do not encode the layer ("backend") into attribute names. Name attributes after 
 
 ---
 
+## Method ordering
+
+Within a class, order members as follows:
+
+1. Class-level type annotations
+2. `__init__`
+3. Public methods (properties first, then regular, then dunder operators)
+4. Private methods (`_` prefix) at the bottom
+
+```python
+class EncryptedVector:
+    _context: "FHEContext"   # 1. annotations
+    _ct: CKKSCiphertext
+
+    def __init__(self, ...): ...   # 2. init
+
+    @property
+    def size(self) -> int: ...     # 3. public
+
+    def decrypt(self) -> ...: ...
+    def dot(self, ...) -> ...: ...
+    def __add__(self, ...) -> ...: ...
+
+    def _encode_and_align(self, ...): ...  # 4. private
+    def _sum_slots(self, n: int): ...
+```
+
+---
+
+## Comments
+
+Only add a comment when the logic is not self-evident from the code. Do not use decorative section separators, and do not add docstrings to functions — the signature and surrounding code should be self-explanatory:
+
+```python
+# WRONG — visual noise, adds no information
+# ------------------------------------------------------------------
+# Arithmetic operators
+# ------------------------------------------------------------------
+def __add__(self, other): ...
+
+# WRONG — docstring restating what the signature already says
+def dot(self, weights: List[float]) -> "EncryptedVector":
+    """Inner product with a plaintext weight vector.
+    Returns an EncryptedVector of size 1 where slot[0] = sum(self[i] * weights[i]).
+    """
+    ...
+
+# CORRECT — comment only where the why is non-obvious
+def _sum_slots(self, n: int) -> "EncryptedVector":
+    # rotation tree: each step doubles the number of slots accumulated
+    step = 1
+    while step < n:
+        ...
+```
+
+---
+
 ## Mutating caller objects
 
 Never silently mutate an object passed as an argument. If depth alignment is needed for a caller-provided `Plaintext`, raise a `ValueError` explaining what depth is required instead of calling `mod_drop_plain_inplace` on it.
