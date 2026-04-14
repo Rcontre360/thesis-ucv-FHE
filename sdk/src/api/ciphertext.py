@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING, List, Optional, Union
 
-from fhe_sdk._backend import CKKSCiphertext, CKKSPlaintext
-from fhe_sdk.plaintext import PlaintextVector
-from fhe_sdk.tensor import PlaintextTensor
+from core._backend import CKKSCiphertext, CKKSPlaintext
+from core.plaintext import PlaintextVector
+from api.tensor import PlaintextTensor
 
 if TYPE_CHECKING:
-    from fhe_sdk.context import FHEContext
+    from api.context import FHEContext
 
 
 class EncryptedVector:

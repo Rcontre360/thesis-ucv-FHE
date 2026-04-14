@@ -74,5 +74,5 @@ disallow_untyped_defs = true
 testpaths = ["tests"]
 
 [tool.coverage.run]
-source = ["src/fhe_sdk"]
+source = ["src/core", "src/api"]
 omit = ["tests/*"]

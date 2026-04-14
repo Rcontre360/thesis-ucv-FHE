@@ -1,7 +1,7 @@
 import math
 from typing import List, Optional, Union
 
-from fhe_sdk._backend import (
+from core._backend import (
     create_ckks_context_with_security,
     CKKSEncoder,
     CKKSEncryptor,
@@ -15,9 +15,9 @@ from fhe_sdk._backend import (
     CKKSCiphertext,
     CKKSOperator,
 )
-from fhe_sdk.enums import SecurityLevel
-from fhe_sdk.plaintext import PlaintextVector
-from fhe_sdk.ciphertext import EncryptedVector
+from core.enums import SecurityLevel
+from core.plaintext import PlaintextVector
+from api.ciphertext import EncryptedVector
 
 
 class FHEContext:

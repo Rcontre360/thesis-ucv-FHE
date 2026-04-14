@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, List, Union
 
-from fhe_sdk._backend import CKKSPlaintext
+from core._backend import CKKSPlaintext
 
 if TYPE_CHECKING:
-    from fhe_sdk.context import FHEContext
+    from api.context import FHEContext
 
 
 class PlaintextVector:

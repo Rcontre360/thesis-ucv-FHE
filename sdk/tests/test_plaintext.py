@@ -1,8 +1,8 @@
 import pytest
 
-pytest.importorskip("fhe_sdk._backend", reason="Run scripts/run_tests.sh to build _backend first")
+pytest.importorskip("core._backend", reason="Run scripts/run_tests.sh to build _backend first")
 
-from fhe_sdk.plaintext import PlaintextVector  # noqa: E402
+from core.plaintext import PlaintextVector  # noqa: E402
 
 EPSILON = 1e-2
 

@@ -14,12 +14,12 @@ def _preload_backend() -> None:
     import site
     candidates = site.getsitepackages() + [site.getusersitepackages()]
     for sp in candidates:
-        so_files = glob.glob(os.path.join(sp, "fhe_sdk", "_backend*.so"))
+        so_files = glob.glob(os.path.join(sp, "core", "_backend*.so"))
         if so_files:
-            spec = importlib.util.spec_from_file_location("fhe_sdk._backend", so_files[0])
+            spec = importlib.util.spec_from_file_location("core._backend", so_files[0])
             if spec and spec.loader:
                 mod = importlib.util.module_from_spec(spec)
-                sys.modules["fhe_sdk._backend"] = mod
+                sys.modules["core._backend"] = mod
                 spec.loader.exec_module(mod)
             return
 
@@ -37,7 +37,7 @@ def pytest_configure(config: pytest.Config) -> None:
 @pytest.fixture(scope="session")
 def built_context():
     try:
-        from fhe_sdk.context import FHEContext
+        from api.context import FHEContext
     except ImportError as e:
         pytest.skip(f"_backend not compiled: {e}")
     return FHEContext.default()
