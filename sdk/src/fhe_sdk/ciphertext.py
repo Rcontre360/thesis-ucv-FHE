@@ -53,25 +53,34 @@ class EncryptedVector:
                 f"Matrix columns {in_features} != vector size {self._n_values}"
             )
 
-        accumulated: Optional[EncryptedVector] = None
+        n = in_features
+        slot_count = self._context._poly_modulus_degree // 2
 
-        for i in range(out_features):
-            row: List[float] = matrix._data[i]  # type: ignore[assignment]
-            dot_i = self.dot(row)
-            masked = dot_i * [1.0]
-            replicated = masked._replicate_slot0()
-            mask_i: List[float] = [0.0] * i + [1.0]
-            selected = replicated * mask_i
+        # Zero-pad W to n×n so every diagonal has length n.
+        W_padded = [
+            list(matrix._data[i]) if i < out_features else [0.0] * n
+            for i in range(n)
+        ]
 
-            if accumulated is None:
-                accumulated = selected
-            else:
-                accumulated = accumulated + selected
+        result: Optional[EncryptedVector] = None
 
-        if accumulated is None:
-            raise ValueError("out_features must be > 0")
+        for r in range(n):
+            # r-th cyclic diagonal: d_r[i] = W_padded[i][(i+r) % n]
+            diag_r = [W_padded[i][(i + r) % n] for i in range(n)]
+            if all(v == 0.0 for v in diag_r):
+                continue
+            # Tile to fill all slot_count slots before encoding.
+            reps, rem = divmod(slot_count, n)
+            diag_full = diag_r * reps + diag_r[:rem]
+            pt = self._encode_and_align(diag_full)
+            rotated = self.copy() if r == 0 else self._context.rotate(self, r)
+            self._context._ops.multiply_plain_inplace(rotated._ct, pt)
+            self._context._ops.rescale_inplace(rotated._ct)
+            result = rotated if result is None else result + rotated
 
-        return EncryptedVector(self._context, accumulated._ct, out_features)
+        if result is None:
+            raise ValueError("All matrix diagonals are zero")
+        return EncryptedVector(self._context, result._ct, out_features)
 
     def __add__(
         self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
