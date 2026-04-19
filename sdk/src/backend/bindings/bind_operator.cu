@@ -5,7 +5,7 @@
 namespace py = pybind11;
 using namespace heongpu;
 
-using CKKSContextPtr = HEContext<Scheme::CKKS>;
+using CKKSContext = HEContext<Scheme::CKKS>;
 using CKKSRelinkey   = Relinkey<Scheme::CKKS>;
 using CKKSGaloiskey  = Galoiskey<Scheme::CKKS>;
 using CKKSPlaintext  = Plaintext<Scheme::CKKS>;
@@ -26,7 +26,9 @@ void register_operator(py::module_& m)
         "Before ct+pt or ct*pt: ensure ct.depth == pt.depth.\n"
         "If they differ, call op.mod_drop_plain_inplace(pt) once per level.")
 
-        .def(py::init<CKKSContextPtr, CKKSEncoder&>(),
+        .def(py::init([](CKKSContext& ctx, CKKSEncoder& enc) {
+                 return CKKSOperator(ctx, enc);
+             }),
              py::arg("context"), py::arg("encoder"),
              "Construct an operator for the given context and encoder.")
 

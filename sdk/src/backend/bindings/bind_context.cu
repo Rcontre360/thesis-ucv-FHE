@@ -5,12 +5,11 @@
 namespace py = pybind11;
 using namespace heongpu;
 
-using CKKSContext    = HEContextImpl<Scheme::CKKS>;
-using CKKSContextPtr = HEContext<Scheme::CKKS>;
+using CKKSContext = HEContext<Scheme::CKKS>;
 
 void register_context(py::module_& m)
 {
-    py::class_<CKKSContext, CKKSContextPtr>(m, "CKKSContext",
+    py::class_<CKKSContext>(m, "CKKSContext",
         "CKKS context. Use create_ckks_context() or "
         "create_ckks_context_with_security() to construct.\n"
         "Usable multiplication levels = get_ciphertext_modulus_count() - 1.")
@@ -69,14 +68,14 @@ void register_context(py::module_& m)
              "Return total prime count in Q' = Q + P.");
 
     m.def("create_ckks_context",
-          []() -> CKKSContextPtr {
-              return GenHEContext<Scheme::CKKS>();
+          []() {
+              return CKKSContext(keyswitching_type::KEYSWITCHING_METHOD_I);
           },
           "Create a CKKS context with the default 128-bit security level.");
 
     m.def("create_ckks_context_with_security",
-          [](sec_level_type sec) -> CKKSContextPtr {
-              return GenHEContext<Scheme::CKKS>(sec);
+          [](sec_level_type sec) {
+              return CKKSContext(keyswitching_type::KEYSWITCHING_METHOD_I, sec);
           },
           py::arg("security_level"),
           "Create a CKKS context with the given SecurityLevel.\n"

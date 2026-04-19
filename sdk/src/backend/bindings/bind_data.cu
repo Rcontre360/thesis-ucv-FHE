@@ -5,7 +5,7 @@
 namespace py = pybind11;
 using namespace heongpu;
 
-using CKKSContextPtr = HEContext<Scheme::CKKS>;
+using CKKSContext = HEContext<Scheme::CKKS>;
 using CKKSPlaintext  = Plaintext<Scheme::CKKS>;
 using CKKSCiphertext = Ciphertext<Scheme::CKKS>;
 using CKKSEncoder    = HEEncoder<Scheme::CKKS>;
@@ -34,7 +34,7 @@ void register_data(py::module_& m)
         "Fill via CKKSEncoder.encode(). Before mixing with a ciphertext,\n"
         "depths must match; use CKKSOperator.mod_drop_plain_inplace(pt) per level.")
 
-        .def(py::init<CKKSContextPtr>(),
+        .def(py::init([](CKKSContext& ctx) { return CKKSPlaintext(ctx); }),
              py::arg("context"),
              "Allocate an uninitialised plaintext bound to the given context.")
 
@@ -55,7 +55,7 @@ void register_data(py::module_& m)
         "After multiply_inplace you MUST call relinearize_inplace then rescale_inplace\n"
         "before any further operation.")
 
-        .def(py::init<CKKSContextPtr>(),
+        .def(py::init([](CKKSContext& ctx) { return CKKSCiphertext(ctx); }),
              py::arg("context"),
              "Allocate an uninitialised ciphertext bound to the given context.")
 
@@ -95,7 +95,7 @@ void register_data(py::module_& m)
     py::class_<CKKSEncoder>(m, "CKKSEncoder",
         "CKKS slot encoder/decoder. Scale is a per-encode argument.")
 
-        .def(py::init<CKKSContextPtr>(),
+        .def(py::init([](CKKSContext& ctx) { return CKKSEncoder(ctx); }),
              py::arg("context"),
              "Construct an encoder for the given (already generated) context.")
 

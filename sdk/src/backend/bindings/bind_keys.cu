@@ -5,7 +5,7 @@
 namespace py = pybind11;
 using namespace heongpu;
 
-using CKKSContextPtr = HEContext<Scheme::CKKS>;
+using CKKSContext = HEContext<Scheme::CKKS>;
 using CKKSSecretkey  = Secretkey<Scheme::CKKS>;
 using CKKSPublickey  = Publickey<Scheme::CKKS>;
 using CKKSRelinkey   = Relinkey<Scheme::CKKS>;
@@ -17,14 +17,14 @@ void register_keys(py::module_& m)
     py::class_<CKKSSecretkey>(m, "CKKSSecretkey",
         "CKKS secret key. Construct with the context, then fill via "
         "CKKSKeyGenerator.generate_secret_key(sk).")
-        .def(py::init<CKKSContextPtr>(),
+        .def(py::init([](CKKSContext& ctx) { return CKKSSecretkey(ctx); }),
              py::arg("context"),
              "Allocate an empty secret key bound to the given context.");
 
     py::class_<CKKSPublickey>(m, "CKKSPublickey",
         "CKKS public key. Construct with the context, then fill via "
         "CKKSKeyGenerator.generate_public_key(pk, sk).")
-        .def(py::init<CKKSContextPtr>(),
+        .def(py::init([](CKKSContext& ctx) { return CKKSPublickey(ctx); }),
              py::arg("context"),
              "Allocate an empty public key bound to the given context.");
 
@@ -32,7 +32,7 @@ void register_keys(py::module_& m)
         "CKKS relinearization key. Required after every multiply_inplace().\n"
         "Construct with the context, then fill via "
         "CKKSKeyGenerator.generate_relin_key(rk, sk).")
-        .def(py::init<CKKSContextPtr>(),
+        .def(py::init([](CKKSContext& ctx) { return CKKSRelinkey(ctx); }),
              py::arg("context"),
              "Allocate an empty relin key bound to the given context.");
 
@@ -44,17 +44,18 @@ void register_keys(py::module_& m)
         "  CKKSGaloiskey(ctx, [s0,s1,...]) — exact list of required shifts\n"
         "Fill via CKKSKeyGenerator.generate_galois_key(gk, sk).")
 
-        .def(py::init<CKKSContextPtr>(),
+        .def(py::init([](CKKSContext& ctx) { return CKKSGaloiskey(ctx); }),
              py::arg("context"),
              "Galois key covering powers-of-2 rotation shifts up to MAX_SHIFT.")
 
-        .def(py::init<CKKSContextPtr, int>(),
+        .def(py::init([](CKKSContext& ctx, int max_shift) {
+                 return CKKSGaloiskey(ctx, max_shift);
+             }),
              py::arg("context"), py::arg("max_shift"),
              "Galois key covering all rotations in (-2^max_shift, 2^max_shift).")
 
         .def(py::init(
-                 [](CKKSContextPtr ctx, const std::vector<int>& shifts) {
-                     // HEonGPU's shift-vector constructor takes a non-const ref, so we copy.
+                 [](CKKSContext& ctx, const std::vector<int>& shifts) {
                      std::vector<int> s = shifts;
                      return CKKSGaloiskey(ctx, s);
                  }),
@@ -65,7 +66,7 @@ void register_keys(py::module_& m)
     py::class_<CKKSKeygen>(m, "CKKSKeyGenerator",
         "Key generator for CKKS. Fills pre-allocated key objects from a secret key.")
 
-        .def(py::init<CKKSContextPtr>(),
+        .def(py::init([](CKKSContext& ctx) { return new CKKSKeygen(ctx); }),
              py::arg("context"),
              "Construct a key generator for an already-generated context.")
 
