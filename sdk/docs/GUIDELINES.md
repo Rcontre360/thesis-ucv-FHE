@@ -1,6 +1,6 @@
-# fhe_sdk Code Guidelines
+# fhe-sdk Code Guidelines
 
-Rules for all Python source files in `sdk/src/fhe_sdk/`.
+Rules for all Python source files in `sdk/src/`.
 
 ---
 
@@ -10,18 +10,18 @@ All imports must be at the top of the file — no inline or deferred imports ins
 
 ```python
 # CORRECT
-from fhe_sdk._backend import CKKSCiphertext, CKKSPlaintext
-from fhe_sdk.plaintext import Plaintext
+from core._backend import CKKSCiphertext, CKKSPlaintext
+from core.plaintext import PlaintextVector
 
-class Ciphertext:
+class EncryptedVector:
     def __mul__(self, other):
-        if isinstance(other, Plaintext): ...
+        if isinstance(other, PlaintextVector): ...
 ```
 
 ```python
 # WRONG — import inside method
 def __mul__(self, other):
-    from fhe_sdk.plaintext import Plaintext  # never do this
+    from core.plaintext import PlaintextVector  # never do this
     ...
 ```
 
@@ -30,7 +30,7 @@ If a runtime circular import would result, use `TYPE_CHECKING` for type annotati
 ```python
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from fhe_sdk.context import FHEContext  # only used in type hints
+    from api.context import FHEContext  # only used in type hints
 ```
 
 ---
@@ -41,8 +41,8 @@ Use `isinstance` for type dispatch — never `hasattr`:
 
 ```python
 # CORRECT
-if isinstance(other, Plaintext): ...
-elif isinstance(other, Ciphertext): ...
+if isinstance(other, PlaintextVector): ...
+elif isinstance(other, EncryptedVector): ...
 
 # WRONG
 if hasattr(other, "_pt"): ...
@@ -55,12 +55,12 @@ if hasattr(other, "_pt"): ...
 All instance attributes must be declared with types at the class body level, before `__init__`. This mirrors the `FHEContext` style and makes the class interface self-documenting.
 
 ```python
-class Plaintext:
+class EncryptedVector:
     _context: "FHEContext"
-    _pt: CKKSPlaintext
+    _ct: CKKSCiphertext
     _n_values: int
 
-    def __init__(self, context, pt, n_values): ...
+    def __init__(self, context, ct, n_values): ...
 ```
 
 ---
@@ -122,9 +122,7 @@ def __add__(self, other): ...
 
 # WRONG — docstring restating what the signature already says
 def dot(self, weights: List[float]) -> "EncryptedVector":
-    """Inner product with a plaintext weight vector.
-    Returns an EncryptedVector of size 1 where slot[0] = sum(self[i] * weights[i]).
-    """
+    """Inner product with a plaintext weight vector."""
     ...
 
 # CORRECT — comment only where the why is non-obvious
@@ -139,7 +137,7 @@ def _sum_slots(self, n: int) -> "EncryptedVector":
 
 ## Mutating caller objects
 
-Never silently mutate an object passed as an argument. If depth alignment is needed for a caller-provided `Plaintext`, raise a `ValueError` explaining what depth is required instead of calling `mod_drop_plain_inplace` on it.
+Never silently mutate an object passed as an argument. If depth alignment is needed for a caller-provided `PlaintextVector`, raise a `ValueError` explaining what depth is required instead of calling `mod_drop_plain_inplace` on it.
 
 ```python
 # CORRECT
@@ -159,32 +157,82 @@ For list/scalar arguments (which we own after encoding), depth alignment via `mo
 
 Each class covers one concept:
 
-- `Plaintext` — an encoded (not encrypted) slot vector and its Python arithmetic
-- `Ciphertext` — an encrypted slot vector and its homomorphic arithmetic
+- `PlaintextVector` — an encoded (not encrypted) slot vector and its Python arithmetic
+- `EncryptedVector` — an encrypted slot vector and its homomorphic arithmetic
 - `FHEContext` — the parameter set, key material, and encode/encrypt/decrypt API
 
-Do not add methods to `FHEContext` that belong on `Ciphertext`, and vice versa.
-
----
-
-## Not implemented yet
-
-`nn.py` (layers, activations, sequential) is intentionally deferred. Do not add stubs or placeholders to the primitive files (`ciphertext.py`, `plaintext.py`, `context.py`). Remove any unfinished placeholder methods rather than leaving them with `# TODO` or partial implementations.
+Do not add methods to `FHEContext` that belong on `EncryptedVector`, and vice versa.
 
 ---
 
 ## Tests
 
-Every public method must have at least one test in `sdk/tests/`. Tests are organized by file:
+Every public method must have at least one test. Each module gets its own dedicated test file — never mix tests for different modules in the same file.
 
-- `test_context.py` — `FHEContext` builder, encode, encrypt, decrypt
-- `test_plaintext.py` — `Plaintext` arithmetic
-- `test_ciphertext.py` — `Ciphertext` arithmetic, depth mismatch errors
-
-Tests that require the compiled `_backend` use the `built_context` fixture from `conftest.py`. Tests that only exercise pure Python logic (parameter validation, error messages) run without the fixture and do not require GPU.
-
-Run with:
-```bash
-cd sdk
-pytest
 ```
+tests/
+  test_context.py     # FHEContext only
+  test_ciphertext.py  # EncryptedVector only
+  test_plaintext.py   # PlaintextVector only
+  test_tensor.py      # PlaintextTensor only
+  test_relu.py        # api/functions/activations — ReLU only
+  test_linear.py      # api/layers/linear — Linear only
+  test_sequential.py  # api/sequential — Sequential only
+```
+
+Tests assume the SDK is already installed in the active Python environment. They import directly from the installed packages — no `sys.path` manipulation, no relative imports from `src/`.
+
+Tests that require the compiled backend use the `built_context` fixture from `conftest.py`. Tests that only exercise pure Python logic (parameter validation, error messages) run without the fixture and do not require GPU.
+
+Install and run:
+```bash
+bash scripts/run_tests.sh   # installs the SDK then runs pytest
+```
+
+---
+
+## Build process
+
+All build artifacts — compiled binaries, CMake cache, installed third-party libraries — must stay inside the `build/` folder at the SDK root. Nothing is written outside that directory during a build.
+
+```
+sdk/
+  build/          ← all build output lives here
+    heongpu/      ← HEonGPU installed libraries
+    src/backend/  ← compiled _backend.so
+  src/            ← source only, never modified by the build
+  external/       ← submodules only, never modified by the build
+```
+
+CMake and the backend build scripts (`build.sh`, `install_system_deps.sh`) are strictly for compiling C++/CUDA code and external dependencies. They must never install or manipulate pure Python packages — that is the responsibility of `pip` and `pyproject.toml`.
+
+---
+
+## Packaging
+
+Python package distribution is handled entirely through `pyproject.toml` using `scikit-build-core`. Pure Python packages (`api/`, `core/`) are declared via `wheel.packages`; the compiled extension (`_backend.so`) is installed via a CMake `install()` rule with component `python_modules`.
+
+Do not duplicate packaging logic in shell scripts (e.g. manual `cp` of `.py` files to site-packages, or `cmake --install` as a substitute for `pip install`).
+
+---
+
+## Examples
+
+Examples live in `examples/` and assume the SDK is already installed in the user's active Python environment. They must import directly from the installed packages with no path manipulation:
+
+```python
+# CORRECT
+from api import FHEContext
+from api.layers.linear import Linear
+
+# WRONG — never manipulate sys.path or assume a specific venv location
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+```
+
+Run an example with:
+```bash
+bash scripts/run_example.sh <example_name>
+```
+
+The script sets `LD_LIBRARY_PATH` for the HEonGPU shared libraries and respects the `PYTHON` environment variable to target any Python installation — never hardcodes a path like `.env/bin/python`.

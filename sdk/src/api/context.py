@@ -111,7 +111,7 @@ class FHEContext:
         # Galois key: powers-of-2 shifts from 1 to slot_count.
         # Covers both _sum_slots (shifts 1..n/2) and _replicate_slot0 (shifts slot_count/2..1).
         slot_count = self._poly_modulus_degree // 2
-        shifts = [2**k for k in range(int(math.log2(slot_count)) + 1)]
+        shifts = [2**k for k in range(int(math.log2(slot_count)))]
         self._gk = CKKSGaloiskey(self._backend_ctx, shifts)
         self._keygen.generate_galois_key(self._gk, self._sk)
 
