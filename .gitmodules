@@ -1,0 +1,6 @@
+[submodule "sdk/external/FIDESlib"]
+	path = sdk/external/FIDESlib
+	url = https://github.com/CAPS-UMU/FIDESlib.git
+[submodule "sdk/external/HEonGPU"]
+	path = sdk/external/HEonGPU
+	url = https://github.com/Alisah-Ozcan/HEonGPU.git

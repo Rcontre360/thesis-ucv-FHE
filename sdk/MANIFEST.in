@@ -1,0 +1,3 @@
+include docs/INTRO.md
+recursive-include src *.cu *.cpp *.hpp *.cuh CMakeLists.txt
+include CMakeLists.txt
