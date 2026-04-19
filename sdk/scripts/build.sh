@@ -14,6 +14,7 @@ fi
 PYBIND11_DIR="$("${PYTHON}" -m pybind11 --cmakedir)"
 
 CUDA_ARCH="${CUDA_ARCH:-86}"
+BUILD_JOBS="${BUILD_JOBS:-12}"
 
 echo "Building fhe-sdk Python bindings..."
 $CMAKE -S "${SDK_DIR}" -B "${SDK_DIR}/build" \
@@ -21,7 +22,7 @@ $CMAKE -S "${SDK_DIR}" -B "${SDK_DIR}/build" \
     -DCMAKE_PREFIX_PATH="${SDK_DIR}/build/heongpu" \
     -Dpybind11_DIR="${PYBIND11_DIR}"
 
-$CMAKE --build "${SDK_DIR}/build" -j"$(nproc)"
+$CMAKE --build "${SDK_DIR}/build" -j"${BUILD_JOBS}"
 
 echo "--------------------------------------------"
 echo "fhe-sdk built. Bindings at build/src/backend/"

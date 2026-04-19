@@ -38,9 +38,10 @@ $CMAKE -S . -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCH:-86}" \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \
-    -DTHRUST_INCLUDE_DIR="$(dirname "$(which nvcc)")/../targets/x86_64-linux/include"
+    -DTHRUST_INCLUDE_DIR="$(dirname "$(which nvcc)")/../targets/x86_64-linux/include" \
+    -DCMAKE_CUDA_FLAGS="--pre-include cstdint"
 
-$CMAKE --build build -j"$(nproc)"
+$CMAKE --build build -j"${BUILD_JOBS:-8}"
 $CMAKE --install build
 
 echo "------------------------------------------------"

@@ -7,4 +7,7 @@ SDK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 echo "Cleaning build artifacts..."
 rm -rf "${SDK_DIR}/build"
 
+echo "Cleaning HEonGPU build (third-party cache)..."
+rm -rf "${SDK_DIR}/external/HEonGPU/build"
+
 echo "Done."
