@@ -20,8 +20,4 @@ if [ ! -f "$EXAMPLE" ]; then
     exit 1
 fi
 
-INSTALL_LIB="${SDK_DIR}/build/heongpu/lib"
-
-export LD_LIBRARY_PATH="${INSTALL_LIB}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-
 exec "${PYTHON}" "$EXAMPLE"

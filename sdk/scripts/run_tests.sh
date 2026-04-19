@@ -7,6 +7,4 @@ PYTHON="${PYTHON:-$(command -v python3)}" || { echo "python3 not found in PATH";
 
 "${PYTHON}" -m pip install "${SDK_DIR}"
 
-export LD_LIBRARY_PATH="${SDK_DIR}/build/heongpu/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-
 "${PYTHON}" -m pytest "${SDK_DIR}/tests/" -v
