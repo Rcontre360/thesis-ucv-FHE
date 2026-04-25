@@ -8,9 +8,11 @@ PYTHON="${PYTHON:-$(command -v python3)}" || { echo "python3 not found in PATH";
 if [ -z "$1" ]; then
     echo "Usage: $0 <example_name>"
     echo "Available examples:"
-    for f in "${SDK_DIR}/examples/"*.py; do
-        basename "$f" .py
-    done
+    while IFS= read -r f; do
+        # Print path relative to examples/, without .py
+        rel="${f#${SDK_DIR}/examples/}"
+        echo "  ${rel%.py}"
+    done < <(find "${SDK_DIR}/examples" -name "*.py" ! -name "network.py" | sort)
     exit 1
 fi
 
