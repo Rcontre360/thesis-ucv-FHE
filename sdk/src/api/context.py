@@ -150,9 +150,21 @@ class FHEContext:
     def encode(self, values: List[float]) -> PlaintextVector:
         if not self._built:
             raise RuntimeError("Context must be built before encoding.")
+        n = len(values)
+        if n == 0:
+            raise ValueError("Cannot encode empty vector")
+        slot_count = self._poly_modulus_degree // 2
+        if n > slot_count:
+            raise ValueError(f"Vector length {n} exceeds slot count {slot_count}")
+        # Pad up to the next power of 2 and tile across all slots so that
+        # cyclic rotations by any r < n_padded preserve the period-n_padded
+        # structure required by diagonal matmul.
+        n_padded = 1 << (n - 1).bit_length()
+        tile = list(values) + [0.0] * (n_padded - n)
+        tiled = tile * (slot_count // n_padded)
         pt = CKKSPlaintext(self._backend_ctx)
-        self._encoder.encode(pt, values, self._scale)
-        return PlaintextVector(self, pt, len(values))
+        self._encoder.encode(pt, tiled, self._scale)
+        return PlaintextVector(self, pt, n)
 
     def decode(self, plaintext: PlaintextVector) -> List[float]:
         if not self._built:
