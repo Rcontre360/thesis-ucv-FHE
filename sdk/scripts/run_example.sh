@@ -3,14 +3,16 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SDK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-PYTHON="$(command -v python3)" || { echo "python3 not found in PATH"; exit 1; }
+PYTHON="${PYTHON:-$(command -v python3)}" || { echo "python3 not found in PATH"; exit 1; }
 
 if [ -z "$1" ]; then
     echo "Usage: $0 <example_name>"
     echo "Available examples:"
-    for f in "${SDK_DIR}/examples/"*.py; do
-        basename "$f" .py
-    done
+    while IFS= read -r f; do
+        # Print path relative to examples/, without .py
+        rel="${f#${SDK_DIR}/examples/}"
+        echo "  ${rel%.py}"
+    done < <(find "${SDK_DIR}/examples" -name "*.py" ! -name "network.py" | sort)
     exit 1
 fi
 
@@ -19,11 +21,5 @@ if [ ! -f "$EXAMPLE" ]; then
     echo "Error: example '${1}' not found at ${EXAMPLE}"
     exit 1
 fi
-
-BACKEND_DIR="${SDK_DIR}/build/src/backend"
-INSTALL_LIB="${SDK_DIR}/build/heongpu/lib"
-
-export PYTHONPATH="${SDK_DIR}/src:${BACKEND_DIR}:${PYTHONPATH}"
-export LD_LIBRARY_PATH="${INSTALL_LIB}:${LD_LIBRARY_PATH}"
 
 exec "${PYTHON}" "$EXAMPLE"

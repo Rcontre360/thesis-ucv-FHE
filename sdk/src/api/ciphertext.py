@@ -54,29 +54,33 @@ class EncryptedVector:
             )
 
         n = in_features
-        slot_count = self._context._poly_modulus_degree // 2
+        # Pad to next power of 2 so n_padded divides slot_count cleanly,
+        # which keeps cyclic rotations consistent with the tile period.
+        n_padded = 1 << (n - 1).bit_length() if n > 0 else 1
 
-        # Zero-pad W to n×n so every diagonal has length n.
+        # Zero-pad W to n_padded × n_padded.
         W_padded = [
-            list(matrix._data[i]) if i < out_features else [0.0] * n
-            for i in range(n)
+            list(matrix._data[i]) + [0.0] * (n_padded - n) if i < out_features
+            else [0.0] * n_padded
+            for i in range(n_padded)
         ]
 
+        # Walk r from 0 upwards, advancing `rotated` by a single step each
+        # iteration. Galois keys exist for power-of-2 shifts; rotating by 1
+        # repeatedly stays within them.
+        rotated = self.copy()
         result: Optional[EncryptedVector] = None
 
-        for r in range(n):
-            # r-th cyclic diagonal: d_r[i] = W_padded[i][(i+r) % n]
-            diag_r = [W_padded[i][(i + r) % n] for i in range(n)]
-            if all(v == 0.0 for v in diag_r):
-                continue
-            # Tile to fill all slot_count slots before encoding.
-            reps, rem = divmod(slot_count, n)
-            diag_full = diag_r * reps + diag_r[:rem]
-            pt = self._encode_and_align(diag_full)
-            rotated = self.copy() if r == 0 else self._context.rotate(self, r)
-            self._context._ops.multiply_plain_inplace(rotated._ct, pt)
-            self._context._ops.rescale_inplace(rotated._ct)
-            result = rotated if result is None else result + rotated
+        for r in range(n_padded):
+            diag_r = [W_padded[i][(i + r) % n_padded] for i in range(n_padded)]
+            if not all(v == 0.0 for v in diag_r):
+                pt = self._encode_and_align(diag_r)
+                term = rotated.copy()
+                self._context._ops.multiply_plain_inplace(term._ct, pt)
+                self._context._ops.rescale_inplace(term._ct)
+                result = term if result is None else result + term
+            if r < n_padded - 1:
+                rotated = self._context.rotate(rotated, 1)
 
         if result is None:
             raise ValueError("All matrix diagonals are zero")
