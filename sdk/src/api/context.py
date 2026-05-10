@@ -141,7 +141,7 @@ class FHEContext:
         if not self._built:
             raise RuntimeError("Context must be built before rotating.")
         result_ct = self._ops.rotate_rows(ct._ct, self._gk, k)
-        return EncryptedVector(self, result_ct, ct._n_values)
+        return EncryptedVector(self, result_ct, ct._n_values, ct._period)
 
     # ------------------------------------------------------------------
     # Encode / decode

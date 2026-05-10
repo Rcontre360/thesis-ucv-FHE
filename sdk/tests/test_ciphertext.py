@@ -135,3 +135,38 @@ class TestEncryptedVectorMatmul:
         x = built_context.encrypt([1.0, 2.0])
         with pytest.raises(TypeError, match="PlaintextTensor"):
             x.matmul([[1.0, 0.0], [0.0, 1.0]])  # type: ignore[arg-type]
+
+    def test_matmul_tall_expansion(self, built_context):
+        # out > next_pow2(in): rectangular Halevi–Shoup must zero-pad W to
+        # s × s with s = max(m_padded, n_padded) = 8 and lift x's tile period.
+        x = built_context.encrypt([1.0, 2.0, 3.0, 4.0])
+        W = PlaintextTensor([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+            [1.0, 1.0, 0.0, 0.0],
+            [0.0, 1.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0, 0.0, 0.0, 1.0],
+        ])
+        result = x.matmul(W)
+        assert result.size == 8
+        assert result.period == 8
+        dec = result.decrypt()
+        expected = [1.0, 2.0, 3.0, 4.0, 3.0, 5.0, 7.0, 5.0]
+        for e, a in zip(expected, dec):
+            assert abs(e - a) < EPSILON
+
+    def test_matmul_period_preserves_through_chain(self, built_context):
+        # First matmul fixes period at s=4, second wide matmul keeps the same period
+        # (no shrinking) so the chained result stays correct.
+        x = built_context.encrypt([1.0, 2.0, 3.0, 4.0])
+        W1 = PlaintextTensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
+        y = x.matmul(W1)                   # size=2, period=4
+        assert y.period == 4
+        W2 = PlaintextTensor([[1.0, 1.0]])  # 1x2: out=1, in=2
+        z = y.matmul(W2)                    # size=1
+        # period should not shrink below x's period (which is 4 here)
+        assert z.period == 4
+        assert abs(z.decrypt()[0] - 3.0) < EPSILON

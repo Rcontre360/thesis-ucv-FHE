@@ -8,25 +8,41 @@ if TYPE_CHECKING:
     from api.context import FHEContext
 
 
+def _next_pow2(n: int) -> int:
+    return 1 << (n - 1).bit_length() if n > 0 else 1
+
+
 class EncryptedVector:
     _context: "FHEContext"
     _ct: CKKSCiphertext
     _n_values: int
+    _period: int
 
-    def __init__(self, context: "FHEContext", ct: CKKSCiphertext, n_values: int) -> None:
+    def __init__(
+        self,
+        context: "FHEContext",
+        ct: CKKSCiphertext,
+        n_values: int,
+        period: Optional[int] = None,
+    ) -> None:
         self._context = context
         self._ct = ct
         self._n_values = n_values
+        self._period = period if period is not None else _next_pow2(n_values)
 
     @property
     def size(self) -> int:
         return self._n_values
 
+    @property
+    def period(self) -> int:
+        return self._period
+
     def decrypt(self) -> List[float]:
         return self._context.decrypt(self)
 
     def copy(self) -> "EncryptedVector":
-        return EncryptedVector(self._context, self._ct.copy(), self._n_values)
+        return EncryptedVector(self._context, self._ct.copy(), self._n_values, self._period)
 
     def rotate(self, k: int) -> "EncryptedVector":
         return self._context.rotate(self, k)
@@ -38,7 +54,7 @@ class EncryptedVector:
             )
         weighted = self * weights
         summed = weighted._sum_slots(self._n_values)
-        return EncryptedVector(self._context, summed._ct, 1)
+        return EncryptedVector(self._context, summed._ct, 1, self._period)
 
     def matmul(self, matrix: PlaintextTensor) -> "EncryptedVector":
         if not isinstance(matrix, PlaintextTensor):
@@ -53,38 +69,74 @@ class EncryptedVector:
                 f"Matrix columns {in_features} != vector size {self._n_values}"
             )
 
-        n = in_features
-        # Pad to next power of 2 so n_padded divides slot_count cleanly,
-        # which keeps cyclic rotations consistent with the tile period.
-        n_padded = 1 << (n - 1).bit_length() if n > 0 else 1
+        n_padded = _next_pow2(in_features)
+        m_padded = _next_pow2(out_features)
+        # Rectangular Halevi–Shoup: run the diagonal algorithm on a square
+        # s × s zero-padded view of W. s must fit both dims AND not shrink the
+        # ciphertext's tile period (CKKS rotations preserve whatever period the
+        # ciphertext already has; shrinking would read zeros from previous-layer
+        # padding instead of the wrap-around values the algorithm assumes).
+        s = max(n_padded, m_padded, self._period)
 
-        # Zero-pad W to n_padded × n_padded.
-        W_padded = [
-            list(matrix._data[i]) + [0.0] * (n_padded - n) if i < out_features
-            else [0.0] * n_padded
-            for i in range(n_padded)
-        ]
+        # Lift the ciphertext's tile period to s when the algorithm needs more
+        # working slots than the ciphertext currently exposes. Costs 1 mul level.
+        x = self if self._period >= s else self._extend_period(s)
+
+        # Zero-pad W to s × s.
+        W_padded = []
+        for i in range(s):
+            if i < out_features:
+                row = list(matrix._data[i]) + [0.0] * (s - in_features)
+            else:
+                row = [0.0] * s
+            W_padded.append(row)
 
         # Walk r from 0 upwards, advancing `rotated` by a single step each
         # iteration. Galois keys exist for power-of-2 shifts; rotating by 1
         # repeatedly stays within them.
-        rotated = self.copy()
+        rotated = x.copy()
         result: Optional[EncryptedVector] = None
 
-        for r in range(n_padded):
-            diag_r = [W_padded[i][(i + r) % n_padded] for i in range(n_padded)]
+        for r in range(s):
+            diag_r = [W_padded[i][(i + r) % s] for i in range(s)]
             if not all(v == 0.0 for v in diag_r):
-                pt = self._encode_and_align(diag_r)
+                pt = x._encode_and_align(diag_r)
                 term = rotated.copy()
                 self._context._ops.multiply_plain_inplace(term._ct, pt)
                 self._context._ops.rescale_inplace(term._ct)
                 result = term if result is None else result + term
-            if r < n_padded - 1:
+            if r < s - 1:
                 rotated = self._context.rotate(rotated, 1)
 
         if result is None:
             raise ValueError("All matrix diagonals are zero")
-        return EncryptedVector(self._context, result._ct, out_features)
+        return EncryptedVector(self._context, result._ct, out_features, period=s)
+
+    def _extend_period(self, new_period: int) -> "EncryptedVector":
+        """Mask out tile copies so the ciphertext's tile period grows to new_period.
+
+        The current tile is [v_0, …, v_{n-1}, 0, …, 0] of length self._period,
+        repeated across slot_count. After masking it becomes the same prefix
+        followed by zeros up to new_period, repeated. Costs 1 multiplicative
+        level (multiply_plain + rescale).
+        """
+        if new_period == self._period:
+            return self
+        if new_period < self._period:
+            raise ValueError(
+                f"Cannot shrink period from {self._period} to {new_period}"
+            )
+        if new_period & (new_period - 1) != 0:
+            raise ValueError(f"new_period must be a power of two, got {new_period}")
+
+        mask = [1.0] * self._period + [0.0] * (new_period - self._period)
+        pt = self._context.encode(mask)
+        new_ct = self._ct.copy()
+        while pt._pt.depth < new_ct.depth:
+            self._context._ops.mod_drop_plain_inplace(pt._pt)
+        self._context._ops.multiply_plain_inplace(new_ct, pt._pt)
+        self._context._ops.rescale_inplace(new_ct)
+        return EncryptedVector(self._context, new_ct, self._n_values, period=new_period)
 
     def __add__(
         self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
