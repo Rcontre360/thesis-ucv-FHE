@@ -141,7 +141,7 @@ class FHEContext:
         if not self._built:
             raise RuntimeError("Context must be built before rotating.")
         result_ct = self._ops.rotate_rows(ct._ct, self._gk, k)
-        return EncryptedVector(self, result_ct, ct._n_values, ct._period)
+        return EncryptedVector(self, result_ct, ct._n_values)
 
     # ------------------------------------------------------------------
     # Encode / decode
@@ -156,14 +156,12 @@ class FHEContext:
         slot_count = self._poly_modulus_degree // 2
         if n > slot_count:
             raise ValueError(f"Vector length {n} exceeds slot count {slot_count}")
-        # Pad up to the next power of 2 and tile across all slots so that
-        # cyclic rotations by any r < n_padded preserve the period-n_padded
-        # structure required by diagonal matmul.
-        n_padded = 1 << (n - 1).bit_length()
-        tile = list(values) + [0.0] * (n_padded - n)
-        tiled = tile * (slot_count // n_padded)
+        # Replicate values cyclically across all slots: replicated[k] = values[k mod n].
+        # The cyclic-wrap diagonal matmul (à la TenSEAL) relies on every slot
+        # carrying x[k mod n], not zeros past index n.
+        replicated = [values[k % n] for k in range(slot_count)]
         pt = CKKSPlaintext(self._backend_ctx)
-        self._encoder.encode(pt, tiled, self._scale)
+        self._encoder.encode(pt, replicated, self._scale)
         return PlaintextVector(self, pt, n)
 
     def decode(self, plaintext: PlaintextVector) -> List[float]:

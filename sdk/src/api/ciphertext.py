@@ -8,41 +8,30 @@ if TYPE_CHECKING:
     from api.context import FHEContext
 
 
-def _next_pow2(n: int) -> int:
-    return 1 << (n - 1).bit_length() if n > 0 else 1
-
-
 class EncryptedVector:
     _context: "FHEContext"
     _ct: CKKSCiphertext
     _n_values: int
-    _period: int
 
     def __init__(
         self,
         context: "FHEContext",
         ct: CKKSCiphertext,
         n_values: int,
-        period: Optional[int] = None,
     ) -> None:
         self._context = context
         self._ct = ct
         self._n_values = n_values
-        self._period = period if period is not None else _next_pow2(n_values)
 
     @property
     def size(self) -> int:
         return self._n_values
 
-    @property
-    def period(self) -> int:
-        return self._period
-
     def decrypt(self) -> List[float]:
         return self._context.decrypt(self)
 
     def copy(self) -> "EncryptedVector":
-        return EncryptedVector(self._context, self._ct.copy(), self._n_values, self._period)
+        return EncryptedVector(self._context, self._ct.copy(), self._n_values)
 
     def rotate(self, k: int) -> "EncryptedVector":
         return self._context.rotate(self, k)
@@ -54,9 +43,21 @@ class EncryptedVector:
             )
         weighted = self * weights
         summed = weighted._sum_slots(self._n_values)
-        return EncryptedVector(self._context, summed._ct, 1, self._period)
+        return EncryptedVector(self._context, summed._ct, 1)
 
     def matmul(self, matrix: PlaintextTensor) -> "EncryptedVector":
+        """Plaintext-matrix × ciphertext-vector via cyclic-wrap diagonals.
+
+        Computes y = W @ x for our `W ∈ ℝ^{out×in}` convention and encrypted
+        x of size `in`. The algorithm is the rectangular Halevi–Shoup variant
+        used by TenSEAL: diagonals walk through `M = Wᵀ` (shape `(in, out)`)
+        with cyclic indexing in both dimensions.
+
+        Slot pattern invariant: input ciphertext carries `x` replicated to
+        slot_count (`enc_x[k] = x[k mod in]`). Output is replicated with
+        period `out_features` (`result[k] = y[k mod out]`). No zero padding,
+        no tile-period bookkeeping.
+        """
         if not isinstance(matrix, PlaintextTensor):
             raise TypeError(f"Expected PlaintextTensor, got {type(matrix).__name__}")
         if matrix.ndim != 2:
@@ -69,74 +70,38 @@ class EncryptedVector:
                 f"Matrix columns {in_features} != vector size {self._n_values}"
             )
 
-        n_padded = _next_pow2(in_features)
-        m_padded = _next_pow2(out_features)
-        # Rectangular Halevi–Shoup: run the diagonal algorithm on a square
-        # s × s zero-padded view of W. s must fit both dims AND not shrink the
-        # ciphertext's tile period (CKKS rotations preserve whatever period the
-        # ciphertext already has; shrinking would read zeros from previous-layer
-        # padding instead of the wrap-around values the algorithm assumes).
-        s = max(n_padded, m_padded, self._period)
+        # In TenSEAL's convention M is (n_rows, n_cols) with n_rows = enc.size().
+        # Our W is (out, in), so we read it as if it were Wᵀ: M[r][c] = W[c][r].
+        n_rows = in_features
+        n_cols = out_features
+        slot_count = self._context._poly_modulus_degree // 2
+        diag_len = min(slot_count, n_rows * n_cols)
 
-        # Lift the ciphertext's tile period to s when the algorithm needs more
-        # working slots than the ciphertext currently exposes. Costs 1 mul level.
-        x = self if self._period >= s else self._extend_period(s)
-
-        # Zero-pad W to s × s.
-        W_padded = []
-        for i in range(s):
-            if i < out_features:
-                row = list(matrix._data[i]) + [0.0] * (s - in_features)
-            else:
-                row = [0.0] * s
-            W_padded.append(row)
-
-        # Walk r from 0 upwards, advancing `rotated` by a single step each
-        # iteration. Galois keys exist for power-of-2 shifts; rotating by 1
-        # repeatedly stays within them.
-        rotated = x.copy()
+        # Formulation B: rotate the ciphertext by 1 incrementally. The temp ct at
+        # iteration `local_i` is rotate(enc_x, local_i) — uses only rotate-by-1
+        # Galois keys, identical result to TenSEAL's rotate-after-multiply form.
+        rotated = self.copy()
         result: Optional[EncryptedVector] = None
 
-        for r in range(s):
-            diag_r = [W_padded[i][(i + r) % s] for i in range(s)]
-            if not all(v == 0.0 for v in diag_r):
-                pt = x._encode_and_align(diag_r)
+        for local_i in range(n_rows):
+            # diag_local_i[k] = M[(local_i + k) mod n_rows][k mod n_cols]
+            #                 = W[k mod out_features][(local_i + k) mod in_features]
+            diag = [
+                matrix._data[k % n_cols][(local_i + k) % n_rows]
+                for k in range(diag_len)
+            ]
+            if not all(v == 0.0 for v in diag):
+                pt = self._encode_and_align(diag)
                 term = rotated.copy()
                 self._context._ops.multiply_plain_inplace(term._ct, pt)
                 self._context._ops.rescale_inplace(term._ct)
                 result = term if result is None else result + term
-            if r < s - 1:
+            if local_i < n_rows - 1:
                 rotated = self._context.rotate(rotated, 1)
 
         if result is None:
             raise ValueError("All matrix diagonals are zero")
-        return EncryptedVector(self._context, result._ct, out_features, period=s)
-
-    def _extend_period(self, new_period: int) -> "EncryptedVector":
-        """Mask out tile copies so the ciphertext's tile period grows to new_period.
-
-        The current tile is [v_0, …, v_{n-1}, 0, …, 0] of length self._period,
-        repeated across slot_count. After masking it becomes the same prefix
-        followed by zeros up to new_period, repeated. Costs 1 multiplicative
-        level (multiply_plain + rescale).
-        """
-        if new_period == self._period:
-            return self
-        if new_period < self._period:
-            raise ValueError(
-                f"Cannot shrink period from {self._period} to {new_period}"
-            )
-        if new_period & (new_period - 1) != 0:
-            raise ValueError(f"new_period must be a power of two, got {new_period}")
-
-        mask = [1.0] * self._period + [0.0] * (new_period - self._period)
-        pt = self._context.encode(mask)
-        new_ct = self._ct.copy()
-        while pt._pt.depth < new_ct.depth:
-            self._context._ops.mod_drop_plain_inplace(pt._pt)
-        self._context._ops.multiply_plain_inplace(new_ct, pt._pt)
-        self._context._ops.rescale_inplace(new_ct)
-        return EncryptedVector(self._context, new_ct, self._n_values, period=new_period)
+        return EncryptedVector(self._context, result._ct, out_features)
 
     def __add__(
         self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
@@ -211,26 +176,47 @@ class EncryptedVector:
 
     def _encode_and_align(self, values: Union[List[float], float]) -> CKKSPlaintext:
         if isinstance(values, (int, float)):
-            values = [float(values)] * self._n_values
-        pt = self._context.encode(values)
+            values_list: List[float] = [float(values)] * self._n_values
+        else:
+            values_list = list(values)
+        # encode replicates to slot_count, so the resulting plaintext aligns
+        # slot-by-slot with replicated ciphertexts regardless of len(values).
+        pt = self._context.encode(values_list)
         while pt._pt.depth < self._ct.depth:
             self._context._ops.mod_drop_plain_inplace(pt._pt)
         return pt._pt
 
     def _sum_slots(self, n: int) -> "EncryptedVector":
-        result = self.copy()
-        step = 1
-        while step < n:
-            rotated = self._context.rotate(result, step)
-            result = result + rotated
-            step *= 2
-        return result
+        """Sum the first n slots into slot 0.
 
-    def _replicate_slot0(self) -> "EncryptedVector":
-        slot_count = self._context._poly_modulus_degree // 2
+        Recursive power-of-2 decomposition (à la TenSEAL's `sum_vector`).
+        For a power-of-2 `n` this collapses to the textbook `log2(n)` doubling
+        sum. For non-power-of-2 `n`, it splits `n = bp2 + (n − bp2)` where
+        `bp2` is the largest power of 2 ≤ n, doubling-sums the head, recurses
+        on the rotated tail, and adds them. Correct for replicated inputs at
+        any `n ≥ 1`, no extra multiplicative-level cost.
+        """
+        if n <= 1:
+            return self.copy()
+
+        bp2 = 1 << (n.bit_length() - 1)
+        if bp2 == n:
+            # n is a power of 2 — pure doubling sum.
+            result = self.copy()
+            step = bp2 // 2
+            while step >= 1:
+                result = result + self._context.rotate(result, step)
+                step //= 2
+            return result
+
+        # bp2 < n: rotate the original by bp2 to expose the tail at slot 0,
+        # recurse on the tail, doubling-sum the head, and combine.
+        rest = self._context.rotate(self, bp2)._sum_slots(n - bp2)
+
         result = self.copy()
-        step = slot_count // 2
+        step = bp2 // 2
         while step >= 1:
             result = result + self._context.rotate(result, step)
             step //= 2
-        return result
+
+        return result + rest
