@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, List, Optional, Union
 
+import numpy as np
+
 from core._backend import CKKSCiphertext, CKKSPlaintext
 from core.plaintext import PlaintextVector
 from api.tensor import PlaintextTensor
@@ -69,17 +71,18 @@ class EncryptedVector:
         slot_count = self._context._poly_modulus_degree // 2
         diag_len = min(slot_count, n_rows * n_cols)
 
+        md = np.asarray(matrix._data, dtype=float)
+        k = np.arange(diag_len)
+        col = k % n_cols
+
         # Rotate the ciphertext by 1 incrementally — needs only rotate-by-1 keys.
         rotated = self.copy()
         result: Optional[EncryptedVector] = None
 
         for local_i in range(n_rows):
-            diag = [
-                matrix._data[k % n_cols][(local_i + k) % n_rows]
-                for k in range(diag_len)
-            ]
-            if not all(v == 0.0 for v in diag):
-                pt = self._encode_and_align(diag)
+            diag = md[col, (local_i + k) % n_rows]
+            if diag.any():
+                pt = self._encode_and_align(diag.tolist())
                 term = rotated.copy()
                 self._context._ops.multiply_plain_inplace(term._ct, pt)
                 self._context._ops.rescale_inplace(term._ct)

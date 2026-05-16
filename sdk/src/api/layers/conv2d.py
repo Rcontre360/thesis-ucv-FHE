@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
+import numpy as np
+
 from api.tensor import PlaintextTensor
 from api.layers.base import Layer
 
@@ -26,8 +28,8 @@ class Conv2D(Layer):
         out_channels: int,
         kernel_size: Union[int, Tuple[int, int]],
         input_shape: Tuple[int, int],
-        weight: List,
-        bias: Optional[List[float]] = None,
+        weight: object,
+        bias: Optional[object] = None,
         stride: int = 1,
     ) -> None:
         if isinstance(kernel_size, int):
@@ -44,24 +46,14 @@ class Conv2D(Layer):
                 f"Kernel {k_h}x{k_w} with stride {stride} does not fit input {H}x{W}"
             )
 
-        if len(weight) != out_channels:
-            raise ValueError(
-                f"weight must have {out_channels} output channels, got {len(weight)}"
-            )
-        for oc, oc_w in enumerate(weight):
-            if len(oc_w) != in_channels:
-                raise ValueError(
-                    f"weight[{oc}] must have {in_channels} input channels, got {len(oc_w)}"
-                )
-            for ic, ic_w in enumerate(oc_w):
-                if len(ic_w) != k_h or any(len(row) != k_w for row in ic_w):
-                    raise ValueError(
-                        f"weight[{oc}][{ic}] must be {k_h}x{k_w}"
-                    )
-        if bias is not None and len(bias) != out_channels:
-            raise ValueError(
-                f"bias length {len(bias)} != out_channels {out_channels}"
-            )
+        weight = np.asarray(weight, dtype=float)
+        expected = (out_channels, in_channels, k_h, k_w)
+        if weight.shape != expected:
+            raise ValueError(f"weight shape {weight.shape} != expected {expected}")
+        if bias is not None:
+            bias = np.asarray(bias, dtype=float)
+            if bias.shape != (out_channels,):
+                raise ValueError(f"bias shape {bias.shape} != ({out_channels},)")
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -72,93 +64,55 @@ class Conv2D(Layer):
         self.in_features = in_channels * H * W
         self.out_features = out_channels * H_out * W_out
 
-        self._weight = PlaintextTensor(self._build_conv_matrix(weight))
-        self._bias = self._expand_bias(bias) if bias is not None else None
+        self._weight = PlaintextTensor.from_numpy(self._build_conv_matrix(weight))
+        self._bias: Optional[List[float]] = (
+            np.repeat(bias, H_out * W_out).tolist() if bias is not None else None
+        )
 
-    def _build_conv_matrix(self, weight: List) -> List[List[float]]:
+    def _build_conv_matrix(self, weight: np.ndarray) -> np.ndarray:
         H, W = self.input_shape
-        H_out, W_out = self.output_shape
         k_h, k_w = self.kernel_size
         s = self.stride
-        in_size = self.in_features
-        out_size = self.out_features
+        P = self.output_shape[0] * self.output_shape[1]
 
-        M: List[List[float]] = [[0.0] * in_size for _ in range(out_size)]
+        # For every output position, the flat input indices its window covers.
+        idx = np.arange(self.in_features).reshape(self.in_channels, H, W)
+        win = np.lib.stride_tricks.sliding_window_view(idx, (k_h, k_w), axis=(1, 2))
+        win = win[:, ::s, ::s].reshape(self.in_channels, P, k_h * k_w)
+
+        M = np.zeros((self.out_features, self.in_features))
+        rows = np.arange(P)[:, None]
         for oc in range(self.out_channels):
-            for oh in range(H_out):
-                for ow in range(W_out):
-                    out_idx = (oc * H_out + oh) * W_out + ow
-                    for ic in range(self.in_channels):
-                        for kh in range(k_h):
-                            ih = oh * s + kh
-                            for kw in range(k_w):
-                                iw = ow * s + kw
-                                in_idx = (ic * H + ih) * W + iw
-                                M[out_idx][in_idx] = float(weight[oc][ic][kh][kw])
+            block = M[oc * P:(oc + 1) * P]
+            for ic in range(self.in_channels):
+                block[rows, win[ic]] = weight[oc, ic].reshape(-1)
         return M
-
-    def _expand_bias(self, bias: List[float]) -> List[float]:
-        H_out, W_out = self.output_shape
-        per_map = H_out * W_out
-        expanded: List[float] = []
-        for oc in range(self.out_channels):
-            expanded.extend([float(bias[oc])] * per_map)
-        return expanded
 
     def prepare_input(self, raw_data: object) -> List[float]:
         """Reshape flat / 2-D (H,W) / 3-D (C,H,W) data (or numpy) to flat C·H·W."""
-        if hasattr(raw_data, "tolist"):
-            raw_data = raw_data.tolist()
-        if not isinstance(raw_data, (list, tuple)):
-            raise TypeError(
-                f"Conv2D.prepare_input expects a list/array, got {type(raw_data).__name__}"
-            )
+        try:
+            arr = np.asarray(raw_data, dtype=float)
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Conv2D input must be numeric and rectangular: {e}") from e
 
         H, W = self.input_shape
         C = self.in_channels
-
-        if raw_data and isinstance(raw_data[0], (int, float)):
-            flat = [float(v) for v in raw_data]
-            if len(flat) != self.in_features:
+        if arr.ndim == 1:
+            if arr.size != self.in_features:
                 raise ValueError(
-                    f"flat input size {len(flat)} != in_features {self.in_features}"
+                    f"flat input size {arr.size} != in_features {self.in_features}"
                 )
-            return flat
-
-        first = raw_data[0]
-        is_2d = isinstance(first, (list, tuple)) and (
-            len(first) == 0 or isinstance(first[0], (int, float))
-        )
-
-        if is_2d:
+        elif arr.ndim == 2:
             if C != 1:
-                raise ValueError(
-                    f"2-D input requires in_channels=1, but layer has {C}"
-                )
-            self._check_shape_2d(raw_data, H, W)
-            return [float(v) for row in raw_data for v in row]
-
-        if len(raw_data) != C:
-            raise ValueError(
-                f"3-D input has {len(raw_data)} channels, expected {C}"
-            )
-        flat: List[float] = []
-        for ic, channel in enumerate(raw_data):
-            self._check_shape_2d(channel, H, W, channel_idx=ic)
-            for row in channel:
-                flat.extend(float(v) for v in row)
-        return flat
-
-    @staticmethod
-    def _check_shape_2d(data: object, H: int, W: int, channel_idx: int = -1) -> None:
-        tag = "" if channel_idx < 0 else f"channel {channel_idx} "
-        if not isinstance(data, (list, tuple)) or len(data) != H:
-            raise ValueError(f"{tag}expected {H} rows, got {len(data)}")
-        for r, row in enumerate(data):
-            if not isinstance(row, (list, tuple)) or len(row) != W:
-                raise ValueError(
-                    f"{tag}row {r} expected {W} cols, got {len(row)}"
-                )
+                raise ValueError(f"2-D input requires in_channels=1, but layer has {C}")
+            if arr.shape != (H, W):
+                raise ValueError(f"2-D input shape {arr.shape} != ({H}, {W})")
+        elif arr.ndim == 3:
+            if arr.shape != (C, H, W):
+                raise ValueError(f"3-D input shape {arr.shape} != ({C}, {H}, {W})")
+        else:
+            raise ValueError(f"expected 1-D/2-D/3-D input, got {arr.ndim}-D")
+        return arr.reshape(-1).tolist()
 
     def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
         if x.size != self.in_features:

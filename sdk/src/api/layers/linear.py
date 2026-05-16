@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, List, Optional
 
+import numpy as np
+
 from api.tensor import PlaintextTensor
 from api.layers.base import Layer
 
@@ -18,45 +20,42 @@ class Linear(Layer):
         self,
         in_features: int,
         out_features: int,
-        weight: List[List[float]],
-        bias: Optional[List[float]] = None,
+        weight: object,
+        bias: Optional[object] = None,
     ) -> None:
-        if len(weight) != out_features:
+        weight = np.asarray(weight, dtype=float)
+        if weight.shape != (out_features, in_features):
             raise ValueError(
-                f"weight must have {out_features} rows, got {len(weight)}"
+                f"weight shape {weight.shape} != ({out_features}, {in_features})"
             )
-        if any(len(row) != in_features for row in weight):
-            raise ValueError(
-                f"every weight row must have {in_features} columns"
-            )
-        if bias is not None and len(bias) != out_features:
-            raise ValueError(
-                f"bias length {len(bias)} != out_features {out_features}"
-            )
+        if bias is not None:
+            bias = np.asarray(bias, dtype=float)
+            if bias.shape != (out_features,):
+                raise ValueError(f"bias shape {bias.shape} != ({out_features},)")
+
         self.in_features = in_features
         self.out_features = out_features
-        self._weight = PlaintextTensor(weight)
-        self._bias: Optional[List[float]] = list(bias) if bias is not None else None
+        self._weight = PlaintextTensor.from_numpy(weight)
+        self._bias: Optional[List[float]] = (
+            bias.tolist() if bias is not None else None
+        )
 
     def prepare_input(self, raw_data: object) -> List[float]:
         """Validate a flat 1-D list/tuple/numpy array of length `in_features`."""
-        if hasattr(raw_data, "tolist"):
-            raw_data = raw_data.tolist()
-        if not isinstance(raw_data, (list, tuple)):
-            raise TypeError(
-                f"Linear.prepare_input expects a 1-D list, got {type(raw_data).__name__}"
-            )
-        flat = list(raw_data)
-        if any(isinstance(v, (list, tuple)) for v in flat):
+        try:
+            arr = np.asarray(raw_data, dtype=float)
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Linear input must be numeric and 1-D: {e}") from e
+        if arr.ndim != 1:
             raise ValueError(
-                "Linear.prepare_input expects a flat 1-D sequence; "
-                "got nested data — did you mean to use Conv2D as the first layer?"
+                f"Linear input must be 1-D, got {arr.ndim}-D — "
+                "did you mean to use Conv2D as the first layer?"
             )
-        if len(flat) != self.in_features:
+        if arr.size != self.in_features:
             raise ValueError(
-                f"input size {len(flat)} != in_features {self.in_features}"
+                f"input size {arr.size} != in_features {self.in_features}"
             )
-        return [float(v) for v in flat]
+        return arr.tolist()
 
     def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
         if x.size != self.in_features:
