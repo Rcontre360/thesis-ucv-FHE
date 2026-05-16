@@ -46,17 +46,10 @@ class EncryptedVector:
         return EncryptedVector(self._context, summed._ct, 1)
 
     def matmul(self, matrix: PlaintextTensor) -> "EncryptedVector":
-        """Plaintext-matrix × ciphertext-vector via cyclic-wrap diagonals.
+        """y = W @ x via the rectangular Halevi-Shoup cyclic-wrap diagonal method.
 
-        Computes y = W @ x for our `W ∈ ℝ^{out×in}` convention and encrypted
-        x of size `in`. The algorithm is the rectangular Halevi–Shoup variant
-        used by TenSEAL: diagonals walk through `M = Wᵀ` (shape `(in, out)`)
-        with cyclic indexing in both dimensions.
-
-        Slot pattern invariant: input ciphertext carries `x` replicated to
-        slot_count (`enc_x[k] = x[k mod in]`). Output is replicated with
-        period `out_features` (`result[k] = y[k mod out]`). No zero padding,
-        no tile-period bookkeeping.
+        Input and output ciphertexts are replicated to slot_count
+        (enc_x[k] = x[k mod in], result[k] = y[k mod out]).
         """
         if not isinstance(matrix, PlaintextTensor):
             raise TypeError(f"Expected PlaintextTensor, got {type(matrix).__name__}")
@@ -70,22 +63,17 @@ class EncryptedVector:
                 f"Matrix columns {in_features} != vector size {self._n_values}"
             )
 
-        # In TenSEAL's convention M is (n_rows, n_cols) with n_rows = enc.size().
-        # Our W is (out, in), so we read it as if it were Wᵀ: M[r][c] = W[c][r].
+        # W is (out, in); read it as Wᵀ of shape (n_rows, n_cols).
         n_rows = in_features
         n_cols = out_features
         slot_count = self._context._poly_modulus_degree // 2
         diag_len = min(slot_count, n_rows * n_cols)
 
-        # Formulation B: rotate the ciphertext by 1 incrementally. The temp ct at
-        # iteration `local_i` is rotate(enc_x, local_i) — uses only rotate-by-1
-        # Galois keys, identical result to TenSEAL's rotate-after-multiply form.
+        # Rotate the ciphertext by 1 incrementally — needs only rotate-by-1 keys.
         rotated = self.copy()
         result: Optional[EncryptedVector] = None
 
         for local_i in range(n_rows):
-            # diag_local_i[k] = M[(local_i + k) mod n_rows][k mod n_cols]
-            #                 = W[k mod out_features][(local_i + k) mod in_features]
             diag = [
                 matrix._data[k % n_cols][(local_i + k) % n_rows]
                 for k in range(diag_len)
@@ -179,29 +167,22 @@ class EncryptedVector:
             values_list: List[float] = [float(values)] * self._n_values
         else:
             values_list = list(values)
-        # encode replicates to slot_count, so the resulting plaintext aligns
-        # slot-by-slot with replicated ciphertexts regardless of len(values).
         pt = self._context.encode(values_list)
         while pt._pt.depth < self._ct.depth:
             self._context._ops.mod_drop_plain_inplace(pt._pt)
         return pt._pt
 
     def _sum_slots(self, n: int) -> "EncryptedVector":
-        """Sum the first n slots into slot 0.
+        """Sum the first n slots into slot 0 via power-of-2 decomposition.
 
-        Recursive power-of-2 decomposition (à la TenSEAL's `sum_vector`).
-        For a power-of-2 `n` this collapses to the textbook `log2(n)` doubling
-        sum. For non-power-of-2 `n`, it splits `n = bp2 + (n − bp2)` where
-        `bp2` is the largest power of 2 ≤ n, doubling-sums the head, recurses
-        on the rotated tail, and adds them. Correct for replicated inputs at
-        any `n ≥ 1`, no extra multiplicative-level cost.
+        Splits a non-power-of-2 `n` into a doubling-summed head plus a
+        recursive tail. Correct for replicated inputs at any n >= 1.
         """
         if n <= 1:
             return self.copy()
 
         bp2 = 1 << (n.bit_length() - 1)
         if bp2 == n:
-            # n is a power of 2 — pure doubling sum.
             result = self.copy()
             step = bp2 // 2
             while step >= 1:
@@ -209,8 +190,6 @@ class EncryptedVector:
                 step //= 2
             return result
 
-        # bp2 < n: rotate the original by bp2 to expose the tail at slot 0,
-        # recurse on the tail, doubling-sum the head, and combine.
         rest = self._context.rotate(self, bp2)._sum_slots(n - bp2)
 
         result = self.copy()

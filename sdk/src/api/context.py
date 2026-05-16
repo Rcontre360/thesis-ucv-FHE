@@ -94,7 +94,6 @@ class FHEContext:
         self._backend_ctx.set_poly_modulus_degree(self._poly_modulus_degree)
 
         # Last element is the P prime (key-switching auxiliary modulus).
-        # One P prime => KEYSWITCHING_METHOD_I (inferred by HEonGPU from P vector size).
         q_bits = self._coeff_modulus_bit_sizes[:-1]
         p_bits = [self._coeff_modulus_bit_sizes[-1]]
         self._backend_ctx.set_coeff_modulus_bit_sizes(q_bits, p_bits)
@@ -109,7 +108,6 @@ class FHEContext:
         self._keygen.generate_relin_key(self._rk, self._sk)
 
         # Galois key: powers-of-2 shifts from 1 to slot_count.
-        # Covers both _sum_slots (shifts 1..n/2) and _replicate_slot0 (shifts slot_count/2..1).
         slot_count = self._poly_modulus_degree // 2
         shifts = [2**k for k in range(int(math.log2(slot_count)))]
         self._gk = CKKSGaloiskey(self._backend_ctx, shifts)
@@ -156,9 +154,8 @@ class FHEContext:
         slot_count = self._poly_modulus_degree // 2
         if n > slot_count:
             raise ValueError(f"Vector length {n} exceeds slot count {slot_count}")
-        # Replicate values cyclically across all slots: replicated[k] = values[k mod n].
-        # The cyclic-wrap diagonal matmul (à la TenSEAL) relies on every slot
-        # carrying x[k mod n], not zeros past index n.
+        # Replicate cyclically: replicated[k] = values[k mod n]. The cyclic-wrap
+        # diagonal matmul relies on every slot carrying x[k mod n], not zeros.
         replicated = [values[k % n] for k in range(slot_count)]
         pt = CKKSPlaintext(self._backend_ctx)
         self._encoder.encode(pt, replicated, self._scale)

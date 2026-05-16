@@ -1,13 +1,17 @@
 from typing import TYPE_CHECKING
 
+from api.layers.base import Layer
+
 if TYPE_CHECKING:
     from api.ciphertext import EncryptedVector
 
 
-class ReLU:
+class ReLU(Layer):
     """Approximate ReLU via degree-2 polynomial: 0.125x² + 0.5x + 0.375.
 
     Least-squares Chebyshev fit over [-1, 1]. Consumes 1 multiplication level.
+    Inherits the default `prepare_input` from `Layer`, which raises — ReLU
+    cannot be a model's first layer.
     """
 
     def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
