@@ -1,15 +1,12 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
-from api._validate import check_array
-from api.errors import ShapeError
+from core.errors import ShapeError
+from core.layer import AffineLayer
+from core.utils.validate import check_array
 from api.tensor import PlaintextTensor
-from api.layers.base import Layer
-
-if TYPE_CHECKING:
-    from api.ciphertext import EncryptedVector
 
 
-class Linear(Layer):
+class Linear(AffineLayer):
     """Fully-connected layer: y = W @ x + b, no extra multiplication depth.
 
     weight has shape (out_features, in_features); bias has length out_features
@@ -24,14 +21,11 @@ class Linear(Layer):
         bias: Optional[object] = None,
     ) -> None:
         weight = check_array(weight, shape=(out_features, in_features), name="weight")
+        bias_list: Optional[List[float]] = None
         if bias is not None:
-            bias = check_array(bias, shape=(out_features,), name="bias")
-
-        self.in_features = in_features
-        self.out_features = out_features
-        self._weight = PlaintextTensor.from_numpy(weight)
-        self._bias: Optional[List[float]] = (
-            bias.tolist() if bias is not None else None
+            bias_list = check_array(bias, shape=(out_features,), name="bias").tolist()
+        super().__init__(
+            in_features, out_features, PlaintextTensor.from_numpy(weight), bias_list
         )
 
     def prepare_input(self, raw_data: object) -> List[float]:
@@ -47,13 +41,3 @@ class Linear(Layer):
                 f"input size {arr.size} != in_features {self.in_features}"
             )
         return arr.tolist()
-
-    def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
-        if x.size != self.in_features:
-            raise ShapeError(
-                f"input size {x.size} != in_features {self.in_features}"
-            )
-        out = x.matmul(self._weight)
-        if self._bias is not None:
-            out = out + self._bias
-        return out

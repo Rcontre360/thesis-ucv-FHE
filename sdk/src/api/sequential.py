@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, List, Union
 
+from core.layer import Layer
 from api.input import Input
-from api.layers.base import Layer
 
 if TYPE_CHECKING:
     from api.ciphertext import EncryptedVector
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class Sequential:
     """Chain of layers and activation functions for encrypted vectors.
 
-    Each element must be a `Layer` (defined in `api.layers.base`). Use
+    Each element must be a `Layer` (defined in `core.layer`). Use
     `model.input(context, raw_data)` to validate, reshape, and encrypt raw
     user data into an `Input` in the layout this model's first layer expects.
     The model's `__call__` accepts either an `Input` or an `EncryptedVector`.

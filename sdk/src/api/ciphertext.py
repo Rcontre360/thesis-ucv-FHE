@@ -3,8 +3,8 @@ from typing import TYPE_CHECKING, List, Optional, Union
 import numpy as np
 
 from core._backend import CKKSCiphertext, CKKSPlaintext
+from core.errors import ShapeError
 from core.plaintext import PlaintextVector
-from api.errors import ShapeError
 from api.tensor import PlaintextTensor
 
 if TYPE_CHECKING:
@@ -101,16 +101,8 @@ class EncryptedVector:
         res = self.copy()
         if isinstance(other, EncryptedVector):
             self._context._ops.add_inplace(res._ct, other._ct.copy())
-        elif isinstance(other, PlaintextVector):
-            if other._pt.depth != res._ct.depth:
-                raise ValueError(
-                    f"Depth mismatch: ciphertext depth={res._ct.depth}, "
-                    f"plaintext depth={other._pt.depth}. "
-                    "Encode the plaintext at the matching depth or pass a list/scalar."
-                )
-            self._context._ops.add_plain_inplace(res._ct, other._pt)
         else:
-            self._context._ops.add_plain_inplace(res._ct, self._encode_and_align(other))
+            self._context._ops.add_plain_inplace(res._ct, self._resolve_plain(other))
         return res
 
     def __sub__(
@@ -119,15 +111,8 @@ class EncryptedVector:
         res = self.copy()
         if isinstance(other, EncryptedVector):
             self._context._ops.sub_inplace(res._ct, other._ct.copy())
-        elif isinstance(other, PlaintextVector):
-            if other._pt.depth != res._ct.depth:
-                raise ValueError(
-                    f"Depth mismatch: ciphertext depth={res._ct.depth}, "
-                    f"plaintext depth={other._pt.depth}."
-                )
-            self._context._ops.sub_plain_inplace(res._ct, other._pt)
         else:
-            self._context._ops.sub_plain_inplace(res._ct, self._encode_and_align(other))
+            self._context._ops.sub_plain_inplace(res._ct, self._resolve_plain(other))
         return res
 
     def __mul__(
@@ -137,18 +122,9 @@ class EncryptedVector:
         if isinstance(other, EncryptedVector):
             self._context._ops.multiply_inplace(res._ct, other._ct.copy())
             self._context._ops.relinearize_inplace(res._ct, self._context._rk)
-            self._context._ops.rescale_inplace(res._ct)
-        elif isinstance(other, PlaintextVector):
-            if other._pt.depth != res._ct.depth:
-                raise ValueError(
-                    f"Depth mismatch: ciphertext depth={res._ct.depth}, "
-                    f"plaintext depth={other._pt.depth}."
-                )
-            self._context._ops.multiply_plain_inplace(res._ct, other._pt)
-            self._context._ops.rescale_inplace(res._ct)
         else:
-            self._context._ops.multiply_plain_inplace(res._ct, self._encode_and_align(other))
-            self._context._ops.rescale_inplace(res._ct)
+            self._context._ops.multiply_plain_inplace(res._ct, self._resolve_plain(other))
+        self._context._ops.rescale_inplace(res._ct)
         return res
 
     def __radd__(
@@ -165,6 +141,20 @@ class EncryptedVector:
         self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
     ) -> "EncryptedVector":
         return self.__mul__(other)
+
+    def _resolve_plain(
+        self, other: Union[PlaintextVector, List[float], float]
+    ) -> CKKSPlaintext:
+        """Resolve a non-ciphertext operand to a depth-aligned CKKSPlaintext."""
+        if isinstance(other, PlaintextVector):
+            if other._pt.depth != self._ct.depth:
+                raise ShapeError(
+                    f"Depth mismatch: ciphertext depth={self._ct.depth}, "
+                    f"plaintext depth={other._pt.depth}. "
+                    "Encode the plaintext at the matching depth or pass a list/scalar."
+                )
+            return other._pt
+        return self._encode_and_align(other)
 
     def _encode_and_align(self, values: Union[List[float], float]) -> CKKSPlaintext:
         if isinstance(values, (int, float)):

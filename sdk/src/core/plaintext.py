@@ -23,31 +23,23 @@ class PlaintextVector:
     def decode(self) -> List[float]:
         return self._context.decode(self)
 
-    def __add__(self, other: Union["PlaintextVector", List[float], float]) -> "PlaintextVector":
+    def _values_of(self, other: Union["PlaintextVector", List[float], float]) -> List[float]:
         if isinstance(other, PlaintextVector):
-            values = other.decode()
-        elif isinstance(other, list):
-            values = other
-        else:
-            values = [float(other)] * self._n_values
+            return other.decode()
+        if isinstance(other, list):
+            return other
+        return [float(other)] * self._n_values
+
+    def __add__(self, other: Union["PlaintextVector", List[float], float]) -> "PlaintextVector":
+        values = self._values_of(other)
         return self._context.encode([a + b for a, b in zip(self.decode(), values)])
 
     def __sub__(self, other: Union["PlaintextVector", List[float], float]) -> "PlaintextVector":
-        if isinstance(other, PlaintextVector):
-            values = other.decode()
-        elif isinstance(other, list):
-            values = other
-        else:
-            values = [float(other)] * self._n_values
+        values = self._values_of(other)
         return self._context.encode([a - b for a, b in zip(self.decode(), values)])
 
     def __mul__(self, other: Union["PlaintextVector", List[float], float]) -> "PlaintextVector":
-        if isinstance(other, PlaintextVector):
-            values = other.decode()
-        elif isinstance(other, list):
-            values = other
-        else:
-            values = [float(other)] * self._n_values
+        values = self._values_of(other)
         return self._context.encode([a * b for a, b in zip(self.decode(), values)])
 
     def __radd__(self, other: Union["PlaintextVector", List[float], float]) -> "PlaintextVector":

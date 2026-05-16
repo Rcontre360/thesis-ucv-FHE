@@ -1,17 +1,14 @@
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from api._validate import check_array
-from api.errors import LayerConfigError, ShapeError
+from core.errors import LayerConfigError, ShapeError
+from core.layer import AffineLayer
+from core.utils.validate import check_array
 from api.tensor import PlaintextTensor
-from api.layers.base import Layer
-
-if TYPE_CHECKING:
-    from api.ciphertext import EncryptedVector
 
 
-class Conv2D(Layer):
+class Conv2D(AffineLayer):
     """2-D convolution as a single plaintext-matrix matmul.
 
     Materialises the conv at construction time as a sparse matrix of shape
@@ -60,12 +57,19 @@ class Conv2D(Layer):
         self.input_shape = (H, W)
         self.output_shape = (H_out, W_out)
         self.stride = stride
-        self.in_features = in_channels * H * W
-        self.out_features = out_channels * H_out * W_out
 
-        self._weight = PlaintextTensor.from_numpy(self._build_conv_matrix(weight))
-        self._bias: Optional[List[float]] = (
+        in_features = in_channels * H * W
+        out_features = out_channels * H_out * W_out
+        self.in_features = in_features
+        self.out_features = out_features
+        bias_list: Optional[List[float]] = (
             np.repeat(bias, H_out * W_out).tolist() if bias is not None else None
+        )
+        super().__init__(
+            in_features,
+            out_features,
+            PlaintextTensor.from_numpy(self._build_conv_matrix(weight)),
+            bias_list,
         )
 
     def _build_conv_matrix(self, weight: np.ndarray) -> np.ndarray:
@@ -108,13 +112,3 @@ class Conv2D(Layer):
         else:
             raise ShapeError(f"expected 1-D/2-D/3-D input, got {arr.ndim}-D")
         return arr.reshape(-1).tolist()
-
-    def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
-        if x.size != self.in_features:
-            raise ShapeError(
-                f"input size {x.size} != in_features {self.in_features}"
-            )
-        out = x.matmul(self._weight)
-        if self._bias is not None:
-            out = out + self._bias
-        return out

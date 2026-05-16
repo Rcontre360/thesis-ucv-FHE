@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from api.layers.base import Layer
+from core.layer import Layer
 
 if TYPE_CHECKING:
     from api.ciphertext import EncryptedVector
