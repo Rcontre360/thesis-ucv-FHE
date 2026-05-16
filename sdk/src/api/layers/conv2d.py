@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import numpy as np
 
+from api._validate import check_array
+from api.errors import LayerConfigError, ShapeError
 from api.tensor import PlaintextTensor
 from api.layers.base import Layer
 
@@ -37,23 +39,20 @@ class Conv2D(Layer):
         else:
             k_h, k_w = kernel_size
         if stride < 1:
-            raise ValueError(f"stride must be >= 1, got {stride}")
+            raise LayerConfigError(f"stride must be >= 1, got {stride}")
         H, W = input_shape
         H_out = (H - k_h) // stride + 1
         W_out = (W - k_w) // stride + 1
         if H_out <= 0 or W_out <= 0:
-            raise ValueError(
+            raise LayerConfigError(
                 f"Kernel {k_h}x{k_w} with stride {stride} does not fit input {H}x{W}"
             )
 
-        weight = np.asarray(weight, dtype=float)
-        expected = (out_channels, in_channels, k_h, k_w)
-        if weight.shape != expected:
-            raise ValueError(f"weight shape {weight.shape} != expected {expected}")
+        weight = check_array(
+            weight, shape=(out_channels, in_channels, k_h, k_w), name="weight"
+        )
         if bias is not None:
-            bias = np.asarray(bias, dtype=float)
-            if bias.shape != (out_channels,):
-                raise ValueError(f"bias shape {bias.shape} != ({out_channels},)")
+            bias = check_array(bias, shape=(out_channels,), name="bias")
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -90,33 +89,29 @@ class Conv2D(Layer):
 
     def prepare_input(self, raw_data: object) -> List[float]:
         """Reshape flat / 2-D (H,W) / 3-D (C,H,W) data (or numpy) to flat C·H·W."""
-        try:
-            arr = np.asarray(raw_data, dtype=float)
-        except (ValueError, TypeError) as e:
-            raise ValueError(f"Conv2D input must be numeric and rectangular: {e}") from e
-
+        arr = check_array(raw_data, name="Conv2D input")
         H, W = self.input_shape
         C = self.in_channels
         if arr.ndim == 1:
             if arr.size != self.in_features:
-                raise ValueError(
+                raise ShapeError(
                     f"flat input size {arr.size} != in_features {self.in_features}"
                 )
         elif arr.ndim == 2:
             if C != 1:
-                raise ValueError(f"2-D input requires in_channels=1, but layer has {C}")
+                raise ShapeError(f"2-D input requires in_channels=1, but layer has {C}")
             if arr.shape != (H, W):
-                raise ValueError(f"2-D input shape {arr.shape} != ({H}, {W})")
+                raise ShapeError(f"2-D input shape {arr.shape} != ({H}, {W})")
         elif arr.ndim == 3:
             if arr.shape != (C, H, W):
-                raise ValueError(f"3-D input shape {arr.shape} != ({C}, {H}, {W})")
+                raise ShapeError(f"3-D input shape {arr.shape} != ({C}, {H}, {W})")
         else:
-            raise ValueError(f"expected 1-D/2-D/3-D input, got {arr.ndim}-D")
+            raise ShapeError(f"expected 1-D/2-D/3-D input, got {arr.ndim}-D")
         return arr.reshape(-1).tolist()
 
     def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
         if x.size != self.in_features:
-            raise ValueError(
+            raise ShapeError(
                 f"input size {x.size} != in_features {self.in_features}"
             )
         out = x.matmul(self._weight)

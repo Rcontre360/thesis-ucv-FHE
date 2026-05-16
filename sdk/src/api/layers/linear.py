@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, List, Optional
 
-import numpy as np
-
+from api._validate import check_array
+from api.errors import ShapeError
 from api.tensor import PlaintextTensor
 from api.layers.base import Layer
 
@@ -23,15 +23,9 @@ class Linear(Layer):
         weight: object,
         bias: Optional[object] = None,
     ) -> None:
-        weight = np.asarray(weight, dtype=float)
-        if weight.shape != (out_features, in_features):
-            raise ValueError(
-                f"weight shape {weight.shape} != ({out_features}, {in_features})"
-            )
+        weight = check_array(weight, shape=(out_features, in_features), name="weight")
         if bias is not None:
-            bias = np.asarray(bias, dtype=float)
-            if bias.shape != (out_features,):
-                raise ValueError(f"bias shape {bias.shape} != ({out_features},)")
+            bias = check_array(bias, shape=(out_features,), name="bias")
 
         self.in_features = in_features
         self.out_features = out_features
@@ -42,24 +36,21 @@ class Linear(Layer):
 
     def prepare_input(self, raw_data: object) -> List[float]:
         """Validate a flat 1-D list/tuple/numpy array of length `in_features`."""
-        try:
-            arr = np.asarray(raw_data, dtype=float)
-        except (ValueError, TypeError) as e:
-            raise ValueError(f"Linear input must be numeric and 1-D: {e}") from e
+        arr = check_array(raw_data, name="Linear input")
         if arr.ndim != 1:
-            raise ValueError(
+            raise ShapeError(
                 f"Linear input must be 1-D, got {arr.ndim}-D — "
                 "did you mean to use Conv2D as the first layer?"
             )
         if arr.size != self.in_features:
-            raise ValueError(
+            raise ShapeError(
                 f"input size {arr.size} != in_features {self.in_features}"
             )
         return arr.tolist()
 
     def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
         if x.size != self.in_features:
-            raise ValueError(
+            raise ShapeError(
                 f"input size {x.size} != in_features {self.in_features}"
             )
         out = x.matmul(self._weight)

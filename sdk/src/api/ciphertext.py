@@ -4,6 +4,7 @@ import numpy as np
 
 from core._backend import CKKSCiphertext, CKKSPlaintext
 from core.plaintext import PlaintextVector
+from api.errors import ShapeError
 from api.tensor import PlaintextTensor
 
 if TYPE_CHECKING:
@@ -40,7 +41,7 @@ class EncryptedVector:
 
     def dot(self, weights: List[float]) -> "EncryptedVector":
         if len(weights) != self._n_values:
-            raise ValueError(
+            raise ShapeError(
                 f"weights length {len(weights)} != vector size {self._n_values}"
             )
         weighted = self * weights
@@ -56,12 +57,12 @@ class EncryptedVector:
         if not isinstance(matrix, PlaintextTensor):
             raise TypeError(f"Expected PlaintextTensor, got {type(matrix).__name__}")
         if matrix.ndim != 2:
-            raise ValueError(
+            raise ShapeError(
                 f"matmul requires a 2D PlaintextTensor, got {matrix.ndim}D"
             )
         out_features, in_features = matrix.shape
         if in_features != self._n_values:
-            raise ValueError(
+            raise ShapeError(
                 f"Matrix columns {in_features} != vector size {self._n_values}"
             )
 
@@ -91,7 +92,7 @@ class EncryptedVector:
                 rotated = self._context.rotate(rotated, 1)
 
         if result is None:
-            raise ValueError("All matrix diagonals are zero")
+            raise ShapeError("All matrix diagonals are zero")
         return EncryptedVector(self._context, result._ct, out_features)
 
     def __add__(
