@@ -20,3 +20,7 @@ class ReLU(Layer):
         x_sq = x * x       # depth+1  (ct*ct + relin + rescale)
         x_4  = x * 4.0     # depth+1  (ct*pt + rescale)
         return (x_sq + x_4) * 0.125 + 0.375
+
+    def mult_depth(self) -> int:
+        # Critical path: x -> x² -> (·) * 0.125. The x*4 branch runs in parallel.
+        return 2

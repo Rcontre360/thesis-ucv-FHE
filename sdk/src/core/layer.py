@@ -19,6 +19,14 @@ class Layer(ABC):
     def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
         ...
 
+    @abstractmethod
+    def mult_depth(self) -> int:
+        """Multiplicative levels this layer consumes (critical path, not count).
+
+        `Sequential.compile` sums these to size the bootstrapping schedule.
+        """
+        ...
+
     def prepare_input(self, raw_data: object) -> List[float]:
         raise NotImplementedError(
             f"{type(self).__name__} cannot be a model's input layer; "
@@ -59,3 +67,6 @@ class AffineLayer(Layer):
         if self._bias is not None:
             out = out + self._bias
         return out
+
+    def mult_depth(self) -> int:
+        return 1

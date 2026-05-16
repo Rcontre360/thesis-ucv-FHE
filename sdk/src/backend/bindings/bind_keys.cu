@@ -93,10 +93,17 @@ void register_keys(py::module_& m)
              "The keyswitching method (I or II) is set at context generate() time.")
 
         .def("generate_galois_key",
-             [](CKKSKeygen& self, CKKSGaloiskey& gk, CKKSSecretkey& sk) {
-                 self.generate_galois_key(gk, sk);
+             [](CKKSKeygen& self, CKKSGaloiskey& gk, CKKSSecretkey& sk,
+                bool store_on_host) {
+                 ExecutionOptions opts;
+                 if (store_on_host)
+                     opts.set_storage_type(storage_type::HOST);
+                 self.generate_galois_key(gk, sk, opts);
              },
-             py::arg("gk"), py::arg("sk"),
+             py::arg("gk"), py::arg("sk"), py::arg("store_on_host") = false,
              "Fill gk with rotation keys for all shifts registered in gk.\n"
-             "The shift set is fixed at Galoiskey construction time.");
+             "The shift set is fixed at Galoiskey construction time.\n"
+             "store_on_host=True keeps the keys in CPU RAM and streams each one\n"
+             "to the GPU per rotation — far less VRAM, slower per rotation.\n"
+             "Needed to fit bootstrapping key material on small GPUs.");
 }

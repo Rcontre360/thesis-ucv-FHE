@@ -9,7 +9,11 @@ void register_enums(py::module_& m)
 {
     py::enum_<sec_level_type>(m, "SecurityLevel",
         "Post-quantum security level for CKKS context construction.\n"
-        "Pass to create_ckks_context_with_security(). NONE is not exposed.")
+        "Pass to create_ckks_context_with_security().")
+        .value("NONE", sec_level_type::none,
+               "No security enforcement — lifts the Q+P bit cap so a long\n"
+               "modulus chain fits at small N. INSECURE: demonstration and\n"
+               "bootstrapping testing only, never for real data.")
         .value("SEC128", sec_level_type::sec128,
                "128-bit post-quantum security (default).")
         .value("SEC192", sec_level_type::sec192,
