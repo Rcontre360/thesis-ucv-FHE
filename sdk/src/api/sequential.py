@@ -5,6 +5,7 @@ import numpy as np
 from core.errors import LayerConfigError
 from core.layer import AffineLayer, Layer
 from api.input import Input
+from api.tensor import PlaintextTensor
 
 if TYPE_CHECKING:
     from api.ciphertext import EncryptedVector
@@ -72,6 +73,7 @@ class Sequential:
         self._context = context
         if calibration_data is not None:
             self._calibrate(calibration_data)
+            self._fold_calibration()
         usable = context._usable_levels()
 
         if sum(l.mult_depth() for l in self._layers) <= usable:
@@ -144,6 +146,38 @@ class Sequential:
                     )
                 x = layer.forward_plain(x)
         self._activation_ranges = ranges
+
+    def _fold_calibration(self) -> None:
+        """Fold per-neuron calibration ranges into the surrounding Linear layers.
+
+        For each activation at index i with range B: the preceding weighted
+        layer is rescaled so its output (the activation input) is divided by B,
+        and the following weighted layer multiplies it back by B. ReLU's
+        positive-homogeneity makes this exact — the network is unchanged, but
+        the activation now only ever sees inputs normalized to about [-1, 1].
+        """
+        for i, b in self._activation_ranges.items():
+            if i + 1 >= len(self._layers):
+                raise LayerConfigError(
+                    f"activation at index {i} is the last layer — it must be "
+                    "followed by a weighted layer for calibration folding"
+                )
+            pre, post = self._layers[i - 1], self._layers[i + 1]
+            if not isinstance(pre, AffineLayer) or not isinstance(post, AffineLayer):
+                raise LayerConfigError(
+                    f"activation at index {i} must sit between two weighted "
+                    "layers for calibration folding"
+                )
+            # Floor avoids dividing by zero on a dead (always-0) neuron.
+            b = np.maximum(np.asarray(b, dtype=float), 1e-12)
+            # Preceding layer: rows and bias /= B  -> output becomes orig / B.
+            pre_w = np.asarray(pre._weight._data, dtype=float) / b[:, None]
+            pre._weight = PlaintextTensor.from_numpy(pre_w)
+            if pre._bias is not None:
+                pre._bias = (np.asarray(pre._bias, dtype=float) / b).tolist()
+            # Following layer: columns *= B  -> absorbs the /B back.
+            post_w = np.asarray(post._weight._data, dtype=float) * b[None, :]
+            post._weight = PlaintextTensor.from_numpy(post_w)
 
     @staticmethod
     def _iter_batches(calibration_data: object):
