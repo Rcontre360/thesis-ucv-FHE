@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List, Optional
 
+import numpy as np
+
 from core.errors import ShapeError
 
 if TYPE_CHECKING:
@@ -24,6 +26,14 @@ class Layer(ABC):
         """Multiplicative levels this layer consumes (critical path, not count).
 
         `Sequential.compile` sums these to size the bootstrapping schedule.
+        """
+        ...
+
+    @abstractmethod
+    def forward_plain(self, x: np.ndarray) -> np.ndarray:
+        """Plaintext numpy forward pass — for calibration and as a reference.
+
+        Accepts a single sample `(features,)` or a batch `(N, features)`.
         """
         ...
 
@@ -70,3 +80,9 @@ class AffineLayer(Layer):
 
     def mult_depth(self) -> int:
         return 1
+
+    def forward_plain(self, x: np.ndarray) -> np.ndarray:
+        out = np.asarray(x, dtype=float) @ np.asarray(self._weight._data, dtype=float).T
+        if self._bias is not None:
+            out = out + np.asarray(self._bias, dtype=float)
+        return out

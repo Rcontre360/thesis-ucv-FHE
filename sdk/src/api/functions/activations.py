@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from core.layer import Layer
 
 if TYPE_CHECKING:
@@ -24,3 +26,8 @@ class ReLU(Layer):
     def mult_depth(self) -> int:
         # Critical path: x -> x² -> (·) * 0.125. The x*4 branch runs in parallel.
         return 2
+
+    def forward_plain(self, x: np.ndarray) -> np.ndarray:
+        # The real ReLU — calibration runs the network as it was trained.
+        return np.maximum(0.0, np.asarray(x, dtype=float))
+
