@@ -1,3 +1,3 @@
-from api.functions.activations import ReLU, Square
+from api.functions.activations import ReLU
 
-__all__ = ["ReLU", "Square"]
+__all__ = ["ReLU"]

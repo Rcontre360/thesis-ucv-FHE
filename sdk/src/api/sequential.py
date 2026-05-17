@@ -1,7 +1,9 @@
-from typing import TYPE_CHECKING, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union
+
+import numpy as np
 
 from core.errors import LayerConfigError
-from core.layer import Layer
+from core.layer import AffineLayer, Layer
 from api.input import Input
 
 if TYPE_CHECKING:
@@ -45,20 +47,31 @@ class Sequential:
         self._context: Optional["FHEContext"] = None
         # Layer indices to refresh the ciphertext before; empty until compile().
         self._bootstrap_before: Set[int] = set()
+        # Calibrated per-neuron max|input| per activation-layer index;
+        # populated by compile() when it is given calibration data.
+        self._activation_ranges: Dict[int, np.ndarray] = {}
 
     def input(self, context: "FHEContext", raw_data: object) -> Input:
         """Validate, reshape, and encrypt `raw_data` via the first layer's `prepare_input`."""
         flat = self._layers[0].prepare_input(raw_data)
         return Input(context, flat)
 
-    def compile(self, context: "FHEContext") -> "Sequential":
-        """Bind the context and plan bootstrapping from each layer's `mult_depth`.
+    def compile(
+        self, context: "FHEContext", calibration_data: object = None
+    ) -> "Sequential":
+        """Bind the context, optionally calibrate activation ranges, plan bootstrapping.
 
-        If total depth fits the context's level budget, bootstrapping stays
-        off entirely. Otherwise SLIM bootstrapping is set up and refreshes are
-        scheduled at layer boundaries where the next layer would overflow.
+        `calibration_data` (optional): any iterable of input batches — a PyTorch
+        `DataLoader`, a single 2-D array/tensor, etc. A plaintext pass measures
+        each activation layer's input range, stored in `activation_ranges`.
+
+        Bootstrapping is planned from each layer's `mult_depth`: if total depth
+        fits the context's level budget it stays off; otherwise SLIM refreshes
+        are scheduled at layer boundaries where the next layer would overflow.
         """
         self._context = context
+        if calibration_data is not None:
+            self._calibrate(calibration_data)
         usable = context._usable_levels()
 
         if sum(l.mult_depth() for l in self._layers) <= usable:
@@ -91,6 +104,67 @@ class Sequential:
             remaining -= depth
         self._bootstrap_before = schedule
         return self
+
+    @property
+    def activation_ranges(self) -> Dict[int, np.ndarray]:
+        """Calibrated per-neuron max|input| per activation-layer index.
+
+        Maps an activation layer's index to a vector of one bound per neuron.
+        Empty until `compile` is given calibration data.
+        """
+        return dict(self._activation_ranges)
+
+    def forward_plain(self, x: np.ndarray) -> np.ndarray:
+        """Plaintext numpy forward pass through every layer — reference/calibration."""
+        x = np.asarray(x, dtype=float)
+        for layer in self._layers:
+            x = layer.forward_plain(x)
+        return x
+
+    def _calibrate(self, calibration_data: object) -> None:
+        """Measure the per-neuron max|input| at each activation layer.
+
+        Activations are the non-affine layers; their input is the output of the
+        preceding weighted layer. Each layer's range is a vector (one bound per
+        neuron), accumulated over all batches and stored in `activation_ranges`.
+        """
+        act_idx = {
+            i
+            for i, layer in enumerate(self._layers)
+            if not isinstance(layer, AffineLayer)
+        }
+        ranges: Dict[int, np.ndarray] = {}
+        for batch in self._iter_batches(calibration_data):
+            x = np.atleast_2d(batch)
+            for i, layer in enumerate(self._layers):
+                if i in act_idx:
+                    peak = np.abs(x).max(axis=0)  # per-neuron, over the batch
+                    ranges[i] = (
+                        peak if i not in ranges else np.maximum(ranges[i], peak)
+                    )
+                x = layer.forward_plain(x)
+        self._activation_ranges = ranges
+
+    @staticmethod
+    def _iter_batches(calibration_data: object):
+        """Yield input batches as float ndarrays.
+
+        A single 2-D array/tensor is one batch; anything else is iterated. Each
+        batch may be an array or a `(inputs, targets)` tuple (as a PyTorch
+        DataLoader yields); torch tensors are converted to numpy.
+        """
+        def to_numpy(batch: object) -> np.ndarray:
+            if isinstance(batch, (tuple, list)):
+                batch = batch[0]
+            if hasattr(batch, "detach"):  # torch tensor
+                batch = batch.detach().cpu().numpy()
+            return np.asarray(batch, dtype=float)
+
+        if hasattr(calibration_data, "ndim") and calibration_data.ndim == 2:
+            yield to_numpy(calibration_data)
+        else:
+            for batch in calibration_data:
+                yield to_numpy(batch)
 
     def __call__(self, x: Union[Input, "EncryptedVector"]) -> "EncryptedVector":
         if isinstance(x, Input):
