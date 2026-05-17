@@ -1,5 +1,7 @@
 from typing import List, Optional, Tuple, Union
 
+import numpy as np
+
 
 def _infer_shape(data: object) -> Tuple[int, ...]:
     if not isinstance(data, list):
@@ -150,3 +152,7 @@ class PlaintextTensor:
         if not hasattr(arr, "tolist"):
             raise TypeError(f"Expected an array-like with .tolist(), got {type(arr).__name__}")
         return cls(arr.tolist())  # type: ignore[union-attr]
+
+    def to_numpy(self) -> np.ndarray:
+        """Return the tensor data as a float numpy array."""
+        return np.asarray(self._data, dtype=float)

@@ -82,7 +82,7 @@ class AffineLayer(Layer):
         return 1
 
     def forward_plain(self, x: np.ndarray) -> np.ndarray:
-        out = np.asarray(x, dtype=float) @ np.asarray(self._weight._data, dtype=float).T
+        out = np.asarray(x, dtype=float) @ self._weight.to_numpy().T
         if self._bias is not None:
             out = out + np.asarray(self._bias, dtype=float)
         return out

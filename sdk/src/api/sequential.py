@@ -4,6 +4,7 @@ import numpy as np
 
 from core.errors import LayerConfigError
 from core.layer import AffineLayer, Layer
+from core.utils import to_numpy
 from api.input import Input
 from api.tensor import PlaintextTensor
 
@@ -43,6 +44,20 @@ class Sequential:
             if not isinstance(layer, Layer):
                 raise TypeError(
                     f"layers[{i}] is {type(layer).__name__}; must inherit from `Layer`."
+                )
+            if isinstance(layer, AffineLayer):
+                continue
+            # An activation must be flanked by weighted layers, so calibration
+            # and folding can always assume affine neighbours.
+            flanked = (
+                0 < i < len(layers) - 1
+                and isinstance(layers[i - 1], AffineLayer)
+                and isinstance(layers[i + 1], AffineLayer)
+            )
+            if not flanked:
+                raise LayerConfigError(
+                    f"layers[{i}] ({type(layer).__name__}) is an activation; it "
+                    "must sit between two weighted layers (Linear/Conv2D)."
                 )
         self._layers = list(layers)
         self._context: Optional["FHEContext"] = None
@@ -155,45 +170,25 @@ class Sequential:
         and the following weighted layer multiplies it back by B. ReLU's
         positive-homogeneity makes this exact — the network is unchanged, but
         the activation now only ever sees inputs normalized to about [-1, 1].
+        `__init__` guarantees both neighbours are weighted layers.
         """
         for i, b in self._activation_ranges.items():
-            if i + 1 >= len(self._layers):
-                raise LayerConfigError(
-                    f"activation at index {i} is the last layer — it must be "
-                    "followed by a weighted layer for calibration folding"
-                )
             pre, post = self._layers[i - 1], self._layers[i + 1]
-            if not isinstance(pre, AffineLayer) or not isinstance(post, AffineLayer):
-                raise LayerConfigError(
-                    f"activation at index {i} must sit between two weighted "
-                    "layers for calibration folding"
-                )
             # Floor avoids dividing by zero on a dead (always-0) neuron.
             b = np.maximum(np.asarray(b, dtype=float), 1e-12)
-            # Preceding layer: rows and bias /= B  -> output becomes orig / B.
-            pre_w = np.asarray(pre._weight._data, dtype=float) / b[:, None]
-            pre._weight = PlaintextTensor.from_numpy(pre_w)
+            pre._weight = PlaintextTensor.from_numpy(pre._weight.to_numpy() / b[:, None])
             if pre._bias is not None:
                 pre._bias = (np.asarray(pre._bias, dtype=float) / b).tolist()
-            # Following layer: columns *= B  -> absorbs the /B back.
-            post_w = np.asarray(post._weight._data, dtype=float) * b[None, :]
-            post._weight = PlaintextTensor.from_numpy(post_w)
+            post._weight = PlaintextTensor.from_numpy(post._weight.to_numpy() * b[None, :])
 
     @staticmethod
     def _iter_batches(calibration_data: object):
         """Yield input batches as float ndarrays.
 
-        A single 2-D array/tensor is one batch; anything else is iterated. Each
-        batch may be an array or a `(inputs, targets)` tuple (as a PyTorch
-        DataLoader yields); torch tensors are converted to numpy.
+        A single 2-D array/tensor is one batch; anything else is iterated.
+        Batch coercion (torch detach, `(inputs, targets)` unwrap) is delegated
+        to `core.utils.to_numpy`.
         """
-        def to_numpy(batch: object) -> np.ndarray:
-            if isinstance(batch, (tuple, list)):
-                batch = batch[0]
-            if hasattr(batch, "detach"):  # torch tensor
-                batch = batch.detach().cpu().numpy()
-            return np.asarray(batch, dtype=float)
-
         if hasattr(calibration_data, "ndim") and calibration_data.ndim == 2:
             yield to_numpy(calibration_data)
         else:

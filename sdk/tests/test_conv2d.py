@@ -152,11 +152,12 @@ class TestConv2DInSequential:
         inp_nested = model.input(built_context, [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
         assert inp_flat.size == inp_nested.size == 9
 
-    def test_activation_as_first_layer_raises(self, built_context):
+    def test_activation_as_first_layer_raises(self):
         from api.functions.activations import ReLU
-        model = Sequential([ReLU(), Linear(2, 2, [[1.0, 0.0], [0.0, 1.0]])])
-        with pytest.raises(NotImplementedError, match="cannot be a model's input layer"):
-            model.input(built_context, [0.5, -0.5])
+        from core.errors import LayerConfigError
+        # an activation cannot be the first layer — rejected at construction
+        with pytest.raises(LayerConfigError, match="must sit between two weighted layers"):
+            Sequential([ReLU(), Linear(2, 2, [[1.0, 0.0], [0.0, 1.0]])])
 
     def test_non_layer_in_sequential_raises(self):
         with pytest.raises(TypeError, match="must inherit from `Layer`"):

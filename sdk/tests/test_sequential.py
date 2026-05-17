@@ -20,7 +20,9 @@ class TestSequential:
 
     def test_linear_then_relu(self, built_context):
         W = [[1.0, 0.0], [0.0, 1.0]]
-        model = Sequential([Linear(2, 2, W), ReLU()])
+        identity = [[1.0, 0.0], [0.0, 1.0]]
+        # activations must sit between weighted layers — trailing identity Linear
+        model = Sequential([Linear(2, 2, W), ReLU(), Linear(2, 2, identity)])
         ct = built_context.encrypt([0.5, -0.5])
         result = model(ct).decrypt()[:2]
         expected_pos = 0.125 * 0.5**2 + 0.5 * 0.5 + 0.375
