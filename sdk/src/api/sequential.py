@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 import numpy as np
 
@@ -61,8 +61,6 @@ class Sequential:
                 )
         self._layers = list(layers)
         self._context: Optional["FHEContext"] = None
-        # Layer indices to refresh the ciphertext before; empty until compile().
-        self._bootstrap_before: Set[int] = set()
         # Calibrated per-neuron max|input| per activation-layer index;
         # populated by compile() when it is given calibration data.
         self._activation_ranges: Dict[int, np.ndarray] = {}
@@ -75,51 +73,26 @@ class Sequential:
     def compile(
         self, context: "FHEContext", calibration_data: object = None
     ) -> "Sequential":
-        """Bind the context, optionally calibrate activation ranges, plan bootstrapping.
+        """Bind the context, optionally calibrate activation ranges, set up bootstrapping.
 
         `calibration_data` (optional): any iterable of input batches — a PyTorch
         `DataLoader`, a single 2-D array/tensor, etc. A plaintext pass measures
         each activation layer's input range, stored in `activation_ranges`.
 
-        Bootstrapping is planned from each layer's `mult_depth`: if total depth
-        fits the context's level budget it stays off; otherwise SLIM refreshes
-        are scheduled at layer boundaries where the next layer would overflow.
+        If the network's total multiplicative depth exceeds the context's level
+        budget, SLIM bootstrapping is set up. The refreshes themselves are
+        applied lazily by the layers during inference (`FHEContext._prepare_for`)
+        — including mid-layer, so an activation deeper than one bootstrap cycle
+        still runs. A network that fits the budget never bootstraps.
         """
         self._context = context
         if calibration_data is not None:
             self._calibrate(calibration_data)
             self._fold_calibration()
-        usable = context._usable_levels()
 
-        if sum(l.mult_depth() for l in self._layers) <= usable:
-            self._bootstrap_before = set()
-            return self
-
-        context._setup_bootstrapping()
-        after_boot = context._usable_after_boot()
-        stoc = context._stoc_piece
-        deepest = max(l.mult_depth() for l in self._layers)
-        # SLIM consumes `stoc` input levels, so a refreshed ciphertext must hold
-        # the deepest layer AND still leave `stoc` levels for the next refresh.
-        if after_boot < deepest + stoc:
-            raise LayerConfigError(
-                f"A bootstrap leaves {after_boot} levels, but a layer needs "
-                f"{deepest} and {stoc} more must remain to bootstrap again — "
-                f"lengthen coeff_modulus_bit_sizes."
-            )
-
-        schedule: Set[int] = set()
-        remaining = usable
-        last = len(self._layers) - 1
-        for i, layer in enumerate(self._layers):
-            depth = layer.mult_depth()
-            # Refresh before layer i if it can't run, or if running it would
-            # drop levels below `stoc` while layers still remain (no way back).
-            if remaining < depth or (i < last and remaining - depth < stoc):
-                schedule.add(i)
-                remaining = after_boot
-            remaining -= depth
-        self._bootstrap_before = schedule
+        total_depth = sum(l.mult_depth() for l in self._layers)
+        if total_depth > context._usable_levels():
+            context._setup_bootstrapping()
         return self
 
     @property
@@ -196,10 +169,10 @@ class Sequential:
                 yield to_numpy(batch)
 
     def __call__(self, x: Union[Input, "EncryptedVector"]) -> "EncryptedVector":
+        # Each layer self-manages bootstrapping via FHEContext._prepare_for —
+        # no schedule here; refreshes fire lazily as levels run low.
         if isinstance(x, Input):
             x = x.ciphertext
-        for i, layer in enumerate(self._layers):
-            if i in self._bootstrap_before:
-                x = self._context._bootstrap(x)
+        for layer in self._layers:
             x = layer(x)
         return x

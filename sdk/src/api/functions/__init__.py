@@ -1,3 +1,3 @@
-from api.functions.activations import ReLU
+from api.functions.relu import ReLU
 
 __all__ = ["ReLU"]

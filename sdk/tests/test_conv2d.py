@@ -153,7 +153,7 @@ class TestConv2DInSequential:
         assert inp_flat.size == inp_nested.size == 9
 
     def test_activation_as_first_layer_raises(self):
-        from api.functions.activations import ReLU
+        from api.functions.relu import ReLU
         from core.errors import LayerConfigError
         # an activation cannot be the first layer — rejected at construction
         with pytest.raises(LayerConfigError, match="must sit between two weighted layers"):

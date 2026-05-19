@@ -8,7 +8,7 @@ Weights and biases are plaintext; only the input is encrypted.
 
 from api import FHEContext
 from api.layers.linear import Linear
-from api.functions.activations import ReLU
+from api.functions.relu import ReLU
 from api.sequential import Sequential
 
 # ---------------------------------------------------------------------------

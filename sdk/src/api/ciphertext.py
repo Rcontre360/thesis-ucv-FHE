@@ -30,11 +30,23 @@ class EncryptedVector:
     def size(self) -> int:
         return self._n_values
 
+    @property
+    def level(self) -> int:
+        """Remaining usable multiplication levels in this ciphertext."""
+        return self._ct.level
+
     def decrypt(self) -> List[float]:
         return self._context.decrypt(self)
 
     def copy(self) -> "EncryptedVector":
         return EncryptedVector(self._context, self._ct.copy(), self._n_values)
+
+    def mod_drop_to(self, target_level: int) -> "EncryptedVector":
+        """Drop modulus primes until `self.level == target_level` (no-op if already)."""
+        res = self.copy()
+        while res._ct.level > target_level:
+            self._context._ops.mod_drop_inplace(res._ct)
+        return res
 
     def rotate(self, k: int) -> "EncryptedVector":
         return self._context.rotate(self, k)

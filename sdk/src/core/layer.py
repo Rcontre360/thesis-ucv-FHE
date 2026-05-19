@@ -73,6 +73,9 @@ class AffineLayer(Layer):
             raise ShapeError(
                 f"input size {x.size} != in_features {self.in_features}"
             )
+        # The matmul consumes one multiplicative level; refresh first if a
+        # deep network has run the ciphertext low (no-op otherwise).
+        x = x._context._prepare_for(x, 1)
         out = x.matmul(self._weight)
         if self._bias is not None:
             out = out + self._bias

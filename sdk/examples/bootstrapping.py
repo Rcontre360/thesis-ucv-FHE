@@ -1,10 +1,11 @@
 """Encrypted inference deeper than the level budget — automatic bootstrapping.
 
 A stack of identity Linear layers performs more plaintext multiplications than
-the CKKS modulus chain has levels. `Sequential.compile()` detects this, enables
-SLIM bootstrapping, and refreshes the ciphertext mid-network. The output still
-equals the input because every layer is the identity — so any drift is purely
-CKKS/bootstrapping noise, which makes correctness easy to read.
+the CKKS modulus chain has levels. `Sequential.compile()` detects this and sets
+up SLIM bootstrapping; the layers then refresh the ciphertext lazily during
+inference as levels run low. The output still equals the input because every
+layer is the identity — so any drift is purely CKKS/bootstrapping noise, which
+makes correctness easy to read.
 
 INSECURE PARAMETERS: SecurityLevel.NONE lifts the modulus-bit cap so the long
 chain the bootstrap circuit needs fits at N=16384 on a 4 GB GPU. This is a
@@ -44,8 +45,8 @@ print(f"network depth : {DEPTH} levels")
 print(f"fresh budget  : {ctx._usable_levels()} levels  -> network overflows it")
 
 model.compile(ctx)
-print(f"bootstraps inserted: {len(model._bootstrap_before)} "
-      f"(before layers {sorted(model._bootstrap_before)})")
+print(f"bootstrapping enabled: {ctx._bootstrapping_ready}  "
+      f"(refreshes fire lazily during inference)")
 
 data = [0.1, 0.2, 0.3, 0.4]
 result = model(model.input(ctx, data)).decrypt()

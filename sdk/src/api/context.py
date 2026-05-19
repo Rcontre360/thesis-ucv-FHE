@@ -234,11 +234,41 @@ class FHEContext:
         """
         if not self._bootstrapping_ready:
             raise RuntimeError("_setup_bootstrapping() must run before _bootstrap().")
+        if ct.level < self._stoc_piece:
+            raise RuntimeError(
+                f"Ciphertext at level {ct.level} is below the SLIM bootstrap "
+                f"input requirement ({self._stoc_piece}) — a refresh was needed "
+                "earlier. Reduce activation depth (smaller ReLU `degrees`)."
+            )
         raw = ct._ct.copy()
         while raw.level > self._stoc_piece:
             self._ops.mod_drop_inplace(raw)
         refreshed = self._ops.slim_bootstrapping(raw, self._gk, self._rk)
         return EncryptedVector(self, refreshed, ct._n_values)
+
+    def _prepare_for(self, ct: EncryptedVector, needed: int) -> EncryptedVector:
+        """Return a ciphertext with enough levels to run an op of depth `needed`.
+
+        When bootstrapping is active (set up by `Sequential.compile` for deep
+        networks) this refreshes the ciphertext before it would run out — and
+        may fire mid-layer. A no-op when bootstrapping is inactive: there the
+        network is known to fit the level budget.
+
+        Keeps `stoc_piece` levels in hand after the upcoming op so a later SLIM
+        bootstrap is still possible (SLIM needs that many input levels).
+        """
+        if not self._bootstrapping_ready:
+            return ct
+        if ct.level >= needed + self._stoc_piece:
+            return ct
+        refreshed = self._bootstrap(ct)
+        if refreshed.level < needed:
+            raise RuntimeError(
+                f"A SLIM bootstrap restores {refreshed.level} levels but an "
+                f"operation needs {needed} — reduce activation depth or "
+                "lengthen coeff_modulus_bit_sizes."
+            )
+        return refreshed
 
     # ------------------------------------------------------------------
     # Encode / decode
