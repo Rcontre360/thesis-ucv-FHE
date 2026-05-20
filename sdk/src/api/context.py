@@ -136,13 +136,11 @@ class FHEContext:
         self._backend_ctx.set_poly_modulus_degree(self._poly_modulus_degree)
 
         # All but the last entry are Q (usable levels); the last is the P
-        # prime size. METHOD_II keyswitching-key size scales with
-        # dnum ~ sum(Q)/sum(P), so we pick enough same-size P primes to keep
-        # dnum ~ 8 (and >= 2, METHOD_II's minimum). A long bootstrapping chain
-        # thus gets ~3 P primes; a short one gets 2.
+        # prime size. Short chains use METHOD_I keyswitching (1 P prime);
+        # long chains use METHOD_II and want dnum ~ sum(Q)/sum(P) ~ 8.
         q_bits = self._coeff_modulus_bit_sizes[:-1]
         p_size = self._coeff_modulus_bit_sizes[-1]
-        num_p = max(2, round(sum(q_bits) / (8 * p_size)))
+        num_p = max(1, round(sum(q_bits) / (8 * p_size)))
         p_bits = [p_size] * num_p
         self._backend_ctx.set_coeff_modulus_bit_sizes(q_bits, p_bits)
         self._backend_ctx.generate()
@@ -156,9 +154,7 @@ class FHEContext:
         self._keygen.generate_relin_key(self._rk, self._sk)
 
         self._gk = CKKSGaloiskey(self._backend_ctx, self._network_shifts())
-        self._keygen.generate_galois_key(
-            self._gk, self._sk, self._galois_keys_on_host
-        )
+        self._generate_galois_key(self._gk)
 
         self._encoder = CKKSEncoder(self._backend_ctx)
         self._encryptor = CKKSEncryptor(self._backend_ctx, self._pk)
@@ -218,9 +214,20 @@ class FHEContext:
         boot_shifts = self._ops.bootstrapping_key_indexs()
         all_shifts = sorted(set(self._network_shifts()) | set(boot_shifts))
         gk = CKKSGaloiskey(self._backend_ctx, all_shifts)
-        self._keygen.generate_galois_key(gk, self._sk, self._galois_keys_on_host)
+        self._generate_galois_key(gk)
         self._gk = gk
         self._bootstrapping_ready = True
+
+    def _generate_galois_key(self, gk) -> None:
+        """Call the backend Galois-key generator, tolerating either signature.
+
+        Newer bindings accept an `on_host` flag; older ones don't. Falls back
+        silently — host storage is just an optimization, not correctness.
+        """
+        try:
+            self._keygen.generate_galois_key(gk, self._sk, self._galois_keys_on_host)
+        except TypeError:
+            self._keygen.generate_galois_key(gk, self._sk)
 
     def _usable_after_boot(self) -> int:
         """Levels available right after a SLIM bootstrap (measured, not guessed)."""
