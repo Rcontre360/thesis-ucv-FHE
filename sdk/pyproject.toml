@@ -4,12 +4,13 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "fhe-sdk"
-version = "0.1.0"
+version = "0.1.3"
 description = "Python SDK for GPU-accelerated CKKS homomorphic encryption inference"
-readme = "docs/INTRO.md"
+readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
-authors = [{ name = "Rcontre360" }]
+authors = [{ name = "Rafael Contreras Pimentel", email = "rcontreraspimentel@gmail.com" }]
+maintainers = [{ name = "Rafael Contreras Pimentel", email = "rcontreraspimentel@gmail.com" }]
 keywords = [
     "homomorphic-encryption",
     "CKKS",
@@ -17,11 +18,15 @@ keywords = [
     "privacy-preserving-ml",
     "GPU",
     "CUDA",
+    "neural-networks",
+    "bootstrapping",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "License :: Other/Proprietary License",
+    "Operating System :: POSIX :: Linux",
+    "Environment :: GPU :: NVIDIA CUDA :: 12",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -32,6 +37,11 @@ classifiers = [
 dependencies = [
     "numpy>=1.26",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Rcontre360/thesis-ucv-FHE"
+Repository = "https://github.com/Rcontre360/thesis-ucv-FHE"
+Issues = "https://github.com/Rcontre360/thesis-ucv-FHE/issues"
 
 [project.optional-dependencies]
 dev = [

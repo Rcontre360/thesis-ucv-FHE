@@ -31,11 +31,28 @@ class Layer(ABC):
 
     @abstractmethod
     def forward_plain(self, x: np.ndarray) -> np.ndarray:
-        """Plaintext numpy forward pass — for calibration and as a reference.
+        """Plaintext numpy mirror of `__call__` — same approximations, no FHE.
+
+        Use this as the reference for what an encrypted forward should produce
+        in the absence of ciphertext noise. For layers whose encrypted path
+        uses an approximation (ReLU's Cheon-`f_n` composition, Square, ...)
+        `forward_plain` evaluates that same approximation on plaintext, so
+        `forward_plain(x) - forward(encrypted(x))` isolates the FHE noise.
 
         Accepts a single sample `(features,)` or a batch `(N, features)`.
         """
         ...
+
+    def forward_calibration(self, x: np.ndarray) -> np.ndarray:
+        """Plaintext forward used during `Sequential.compile` calibration.
+
+        Defaults to `forward_plain`. Override for layers whose encrypted-path
+        approximation requires its inputs to already be in a calibrated range:
+        calibration must measure the *original* (un-approximated) network's
+        activation ranges, otherwise the per-neuron fold is derived from the
+        polynomial's wrong-on-unbounded-inputs outputs.
+        """
+        return self.forward_plain(x)
 
     def prepare_input(self, raw_data: object) -> List[float]:
         raise NotImplementedError(

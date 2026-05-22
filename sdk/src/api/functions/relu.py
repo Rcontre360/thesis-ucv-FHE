@@ -99,7 +99,20 @@ class ReLU(Layer):
         return sum((d + 3) // 2 for d in self._degrees) + 1
 
     def forward_plain(self, x: np.ndarray) -> np.ndarray:
-        # The real ReLU — calibration runs the network as it was trained.
+        # Mirror `__call__` exactly: chain the same f_n compositions (with
+        # the last one already folded to step form in `__init__`), then
+        # multiply by x. So `forward_plain - encrypted_forward` isolates
+        # FHE noise from polynomial-approximation error.
+        x = np.asarray(x, dtype=float)
+        s = x
+        for c in self._coeffs:
+            s = np.polynomial.polynomial.polyval(s, c)
+        return x * s
+
+    def forward_calibration(self, x: np.ndarray) -> np.ndarray:
+        # Real ReLU during calibration — the per-neuron folds need to be
+        # derived from the original network's activation ranges, not from
+        # the polynomial which diverges wildly outside [-1, 1].
         return np.maximum(0.0, np.asarray(x, dtype=float))
 
     @staticmethod

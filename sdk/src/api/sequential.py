@@ -132,7 +132,12 @@ class Sequential:
                     ranges[i] = (
                         peak if i not in ranges else np.maximum(ranges[i], peak)
                     )
-                x = layer.forward_plain(x)
+                # `forward_calibration` defaults to forward_plain but lets
+                # approximation-based layers (poly-ReLU) walk through with
+                # the original activation here, so the ranges measured
+                # describe the original network — not the polynomial's
+                # response to unbounded calibration inputs.
+                x = layer.forward_calibration(x)
         self._activation_ranges = ranges
 
     def _fold_calibration(self) -> None:

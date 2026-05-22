@@ -140,7 +140,9 @@ class FHEContext:
         # long chains use METHOD_II and want dnum ~ sum(Q)/sum(P) ~ 8.
         q_bits = self._coeff_modulus_bit_sizes[:-1]
         p_size = self._coeff_modulus_bit_sizes[-1]
-        num_p = max(1, round(sum(q_bits) / (8 * p_size)))
+        # METHOD_II keyswitching requires num_p >= 2; we pick enough same-size
+        # P primes to keep dnum ~ 8 (longer chains thus get 3+).
+        num_p = max(2, round(sum(q_bits) / (8 * p_size)))
         p_bits = [p_size] * num_p
         self._backend_ctx.set_coeff_modulus_bit_sizes(q_bits, p_bits)
         self._backend_ctx.generate()
