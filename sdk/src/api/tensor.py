@@ -1,5 +1,7 @@
 from typing import List, Optional, Tuple, Union
 
+import numpy as np
+
 
 def _infer_shape(data: object) -> Tuple[int, ...]:
     if not isinstance(data, list):
@@ -84,22 +86,11 @@ class PlaintextTensor:
         axis: int = 0,
         slice_index: int = 0,
     ) -> List[float]:
-        """
-        Return the k-th rotated diagonal of a 2D slice of this tensor.
+        """Return the k-th cyclically-wrapped diagonal of a 2D slice.
 
-        For a 2D tensor the slice is the tensor itself; axis and slice_index
-        are ignored.
-
-        For a 3D tensor of shape (D, R, C):
-          axis=0, slice_index=i  →  matrix data[i, :, :]   shape (R, C)
-          axis=1, slice_index=j  →  matrix data[:, j, :]   shape (D, C)
-          axis=2, slice_index=k_ →  matrix data[:, :, k_]  shape (D, R)
-
-        k=0 is the main diagonal; k>0 shifts toward upper diagonals; k<0
-        toward lower diagonals.  The diagonal wraps cyclically, which is the
-        convention required by the diagonal matmul algorithm.
-
-        max_size caps the number of elements returned (default: n_rows * n_cols).
+        For 3D tensors, axis/slice_index pick the 2D slice (axis ignored for
+        2D). k=0 is the main diagonal, k>0 upper, k<0 lower. max_size caps the
+        element count (default: n_rows * n_cols).
         """
         if self.ndim == 2:
             n_rows, n_cols = self._shape
@@ -161,3 +152,7 @@ class PlaintextTensor:
         if not hasattr(arr, "tolist"):
             raise TypeError(f"Expected an array-like with .tolist(), got {type(arr).__name__}")
         return cls(arr.tolist())  # type: ignore[union-attr]
+
+    def to_numpy(self) -> np.ndarray:
+        """Return the tensor data as a float numpy array."""
+        return np.asarray(self._data, dtype=float)

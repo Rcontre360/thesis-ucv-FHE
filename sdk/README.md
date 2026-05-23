@@ -1,63 +1,165 @@
-# fhe_sdk
+# fhe-sdk
 
-Python library for GPU-accelerated fully homomorphic encryption (FHE) inference over neural networks. Wraps [HEonGPU](https://github.com/Alisah-Ozcan/HEonGPU) (C++/CUDA) through pybind11 bindings. The scheme is always CKKS. Users never interact with raw cryptographic objects.
+Python library for GPU-accelerated fully homomorphic encryption (FHE) inference over neural networks. Wraps [HEonGPU](https://github.com/Alisah-Ozcan/HEonGPU) (C++/CUDA) via pybind11. Scheme is always CKKS; users never interact with raw cryptographic objects.
 
-Full API reference: [`docs/API.md`](docs/API.md)
+Two public packages: **`api`** (high-level — `FHEContext`, `Sequential`, `Linear`, `Conv2D`, `ReLU`, `Square`) and **`core`** (enums, errors, base `Layer` ABC). The `_backend` extension is an implementation detail and not part of the public API.
 
-## Module map
+Full API reference: [`docs/API.md`](docs/API.md).
 
-```
-fhe_sdk/
-  context.py      # FHEContext — crypto setup and key management
-  plaintext.py    # Plaintext — encoded (not encrypted) vector
-  ciphertext.py   # Ciphertext — encrypted vector with operator overloads
-  nn/
-    __init__.py
-    linear.py     # Linear layer
-    activation.py # Square, ApproxReLU, ApproxSigmoid
-    sequential.py # Sequential container
-```
+---
 
-The CKKS pipeline is: `list[float]` → **encode** → `Plaintext` → **encrypt** → `Ciphertext`. `FHEContext.encode` and `FHEContext.encrypt` expose each step. `FHEContext.encrypt` also accepts a `list[float]` directly as a convenience (encode + encrypt in one call).
+## System requirements
 
-The `_backend` bindings (`CKKSContext`, `CKKSOperator`, `CKKSCiphertext`, etc.) are implementation details and are not part of the public API.
+This is a CUDA library — every install runs `nvcc`. The CI / development target is the stack below; older or newer versions may work but are not tested.
+
+| Component | Required version | Notes |
+| --- | --- | --- |
+| NVIDIA GPU | Compute capability ≥ 7.0 (Volta or newer) | Pascal and older lack the tensor-core primitives HEonGPU uses. |
+| NVIDIA driver | ≥ 535 | Whatever ships with CUDA 12.8. |
+| **CUDA Toolkit** | **12.8** | `nvcc --version` must report 12.8. Set `CUDA_HOME` so `find_package(CUDAToolkit)` resolves. |
+| Python | 3.11 or 3.12 | 3.13 untested; 3.10 and below not supported. |
+| CMake | ≥ 3.30 | HEonGPU's requirement. `pip install cmake` works if your distro ships an older one. |
+| GCC / G++ | 11–13 | Must be CUDA-12.8 compatible. GCC 14 is rejected by `nvcc`. |
+| **GMP** | development headers | HEonGPU links against GMP for big-integer math. Install via `gmp-devel` (RHEL/Amazon Linux) or `libgmp-dev` (Debian/Ubuntu). |
+| **NTL** | development headers | HEonGPU uses NTL (Number Theory Library) for CKKS cosine approximation. Install via `ntl-devel` (RHEL/Amazon Linux) or `libntl-dev` (Debian/Ubuntu). Requires GMP. |
+| **ZLIB** | development headers | HEonGPU's rapids-cmake helper links against ZLIB. Install via `zlib-devel` (RHEL/Amazon Linux) or `zlib1g-dev` (Debian/Ubuntu). |
+| **OpenSSL** | development headers | HEonGPU's RNG layer links against libssl/libcrypto. Install via `openssl-devel` (RHEL/Amazon Linux) or `libssl-dev` (Debian/Ubuntu). |
+| Ninja | optional | Speeds up the build (`pip install ninja`); CMake falls back to Make otherwise. |
+| Git | any recent | Needed to clone the HEonGPU submodule at install time. |
+| Disk | ~2 GB free | HEonGPU + bindings build artifacts. |
+
+OS support: **Linux only.** Tested on Ubuntu 22.04 / 24.04. WSL2 works if CUDA is correctly forwarded. macOS and Windows native are not supported (HEonGPU is CUDA-only).
 
 ---
 
 ## Installation
 
-`fhe_sdk` requires the HEonGPU C++/CUDA library to be compiled and the resulting `_backend.so` pybind11 extension to be importable on `PYTHONPATH`.
-
-**Prerequisites:**
-
-- CUDA-capable GPU with CUDA 11.x or later installed
-- HEonGPU built (see build instructions below)
-- `_backend.so` present in the `fhe_sdk/` package directory or on `PYTHONPATH`
-- Python 3.11+
-
-**Build HEonGPU and the backend extension:**
+### From PyPI
 
 ```bash
-cd sdk
-mkdir -p build && cd build
-cmake ..
-make -j$(nproc)
+pip install fhe-sdk
 ```
 
-**Install the Python package:**
+This downloads the source distribution and triggers a local CMake + CUDA build (≈ 8–15 minutes on a modern desktop). HEonGPU is cloned and built as part of the install.
+
+### From source (development)
 
 ```bash
-pip install -e sdk/
+git clone --recurse-submodules https://github.com/Rcontre360/thesis-ucv-FHE.git
+cd thesis-ucv-FHE/sdk
+pip install -e .
 ```
 
-**Verify:**
+If you forgot `--recurse-submodules`:
+
+```bash
+git submodule update --init --recursive
+```
+
+### Verify
 
 ```python
-import fhe_sdk
-ctx = fhe_sdk.FHEContext.default()
+from api import FHEContext
+from core.enums import SecurityLevel
+
+ctx = (
+    FHEContext()
+    .set_poly_modulus_degree(8192)
+    .set_coeff_modulus_bit_sizes([60, 40, 40, 60])
+    .set_scale(2**40)
+    .set_security_level(SecurityLevel.SEC128)
+    .build()
+)
+print("OK")
 ```
 
-If `_backend.so` is missing or was compiled against a different CUDA version, the import will raise `ImportError` with a message indicating the missing shared library.
+If `from api import FHEContext` prints `OK`, you're good.
+
+---
+
+## Troubleshooting
+
+### `GMP not found` / `NTL/RR.h: No such file or directory` / `Could NOT find ZLIB` / `Could NOT find OpenSSL`
+
+HEonGPU links against GMP, NTL, ZLIB, and OpenSSL. None of these are bundled with CUDA or Python — install them via the system package manager. Install all four in one go to avoid hitting the errors one at a time:
+
+```bash
+# RHEL / Amazon Linux / Fedora
+sudo yum install -y gmp-devel ntl-devel zlib-devel openssl-devel
+
+# Debian / Ubuntu
+sudo apt install -y libgmp-dev libntl-dev zlib1g-dev libssl-dev
+```
+
+Then re-run `pip install fhe-sdk`.
+
+If you don't have sudo (e.g. some managed notebook environments), install via conda:
+
+```bash
+conda install -y -c conda-forge gmp ntl zlib openssl
+export GMP_ROOT=$CONDA_PREFIX
+export NTL_ROOT=$CONDA_PREFIX
+export ZLIB_ROOT=$CONDA_PREFIX
+export OPENSSL_ROOT_DIR=$CONDA_PREFIX
+pip install fhe-sdk
+```
+
+### `ERROR: Could not find a version that satisfies the requirement fhe-sdk`
+
+Your Python interpreter is older than 3.11. Check with `python --version`. Upgrade Python (or switch conda envs) to 3.11 or 3.12.
+
+### `cmake X.Y.Z is too old. HEonGPU requires cmake >= 3.30`
+
+Your distro/container ships an older CMake. Install a newer one via pip — it lands in your env's `bin` dir which takes precedence over `/usr/bin/cmake`:
+
+```bash
+pip install -U cmake
+hash -r                 # refresh the shell's PATH cache
+cmake --version         # confirm >= 3.30
+pip install fhe-sdk
+```
+
+### `ImportError: libheongpu.so` (or similar) at runtime
+
+The install completed but the runtime can't locate the C++ library — usually because `CUDA_HOME` / `LD_LIBRARY_PATH` is unset. Re-run the install in a fresh terminal after sourcing your CUDA env, e.g.:
+
+```bash
+export CUDA_HOME=/usr/local/cuda-12.8
+export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
+```
+
+### `concrete.compiler.check_gpu_enabled()` returns `False` after installing concrete-ml
+
+When you install `concrete-ml`, it pulls the CPU build of `concrete-python` from PyPI (`Version: 2.10.0`). The GPU build is hosted separately at `https://pypi.zama.ai/gpu` under calendar versioning (`Version: 2024.12.19` or similar). Pip's resolver doesn't reliably prefer the GPU build even with `--extra-index-url` or `--index-url` — both indices host wheels named `concrete-python`, and pip can pick the wrong one based on its internal version comparison heuristics.
+
+**Fix — pin the exact GPU wheel version**, leaving no room for pip to silently substitute:
+
+```bash
+pip uninstall -y concrete-python
+pip install --no-deps --extra-index-url https://pypi.zama.ai/gpu --trusted-host pypi.zama.ai 'concrete-python==2024.12.19'
+```
+
+Replace `2024.12.19` with whatever the current GPU build version is on Zama's index (visit `https://pypi.zama.ai/gpu/concrete-python/` in a browser to check).
+
+`--no-deps` is critical: without it, pip may re-resolve other packages (notably `torch`) and break unrelated parts of your environment. After installing, **restart the kernel** (compiled `.so` files don't reload via `pip install` alone) and verify:
+
+```python
+import concrete.compiler
+print(concrete.compiler.check_gpu_enabled())    # True
+print(concrete.compiler.check_gpu_available())  # True
+```
+
+If both print `True`, the GPU build is correctly loaded. You can confirm the installed version on disk with `pip show concrete-python | head -3` — `Version: 2024.12.19` (or newer calendar version) is the GPU build; `Version: 2.10.0` (semver) is the CPU build.
+
+### `nvcc fatal: Unsupported gnu version!`
+
+You're on GCC 14 (or newer). CUDA 12.8 only supports GCC 11–13. Install GCC 12 alongside and point `CC` / `CXX` at it before installing:
+
+```bash
+sudo apt install -y gcc-12 g++-12       # Debian/Ubuntu
+export CC=gcc-12 CXX=g++-12
+pip install fhe-sdk
+```
 
 ---
 

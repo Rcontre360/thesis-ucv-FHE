@@ -7,3 +7,6 @@ __pycache__/
 *.pyc
 /**/*.so
 .claude
+temp
+keys
+dist

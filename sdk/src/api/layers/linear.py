@@ -1,55 +1,43 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
+from core.errors import ShapeError
+from core.layer import AffineLayer
+from core.utils.validate import check_array
 from api.tensor import PlaintextTensor
 
-if TYPE_CHECKING:
-    from api.ciphertext import EncryptedVector
 
+class Linear(AffineLayer):
+    """Fully-connected layer: y = W @ x + b, no extra multiplication depth.
 
-class Linear:
-    """Fully-connected layer for encrypted vectors.
-
-    Applies y = x @ W^T + b where W is a plaintext weight matrix and b is an
-    optional plaintext bias vector.  Wraps EncryptedVector.matmul(), which uses
-    the diagonal BSGS algorithm and consumes no extra multiplication levels.
-
-    Args:
-        in_features:  number of input elements per sample.
-        out_features: number of output elements per sample.
-        weight:       2-D list of shape (out_features, in_features).
-        bias:         1-D list of length out_features, or None.
+    weight has shape (out_features, in_features); bias has length out_features
+    or is None.
     """
 
     def __init__(
         self,
         in_features: int,
         out_features: int,
-        weight: List[List[float]],
-        bias: Optional[List[float]] = None,
+        weight: object,
+        bias: Optional[object] = None,
     ) -> None:
-        if len(weight) != out_features:
-            raise ValueError(
-                f"weight must have {out_features} rows, got {len(weight)}"
-            )
-        if any(len(row) != in_features for row in weight):
-            raise ValueError(
-                f"every weight row must have {in_features} columns"
-            )
-        if bias is not None and len(bias) != out_features:
-            raise ValueError(
-                f"bias length {len(bias)} != out_features {out_features}"
-            )
-        self.in_features = in_features
-        self.out_features = out_features
-        self._weight = PlaintextTensor(weight)
-        self._bias: Optional[List[float]] = list(bias) if bias is not None else None
+        weight = check_array(weight, shape=(out_features, in_features), name="weight")
+        bias_list: Optional[List[float]] = None
+        if bias is not None:
+            bias_list = check_array(bias, shape=(out_features,), name="bias").tolist()
+        super().__init__(
+            in_features, out_features, PlaintextTensor.from_numpy(weight), bias_list
+        )
 
-    def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
-        if x.size != self.in_features:
-            raise ValueError(
-                f"input size {x.size} != in_features {self.in_features}"
+    def prepare_input(self, raw_data: object) -> List[float]:
+        """Validate a flat 1-D list/tuple/numpy array of length `in_features`."""
+        arr = check_array(raw_data, name="Linear input")
+        if arr.ndim != 1:
+            raise ShapeError(
+                f"Linear input must be 1-D, got {arr.ndim}-D — "
+                "did you mean to use Conv2D as the first layer?"
             )
-        out = x.matmul(self._weight)
-        if self._bias is not None:
-            out = out + self._bias
-        return out
+        if arr.size != self.in_features:
+            raise ShapeError(
+                f"input size {arr.size} != in_features {self.in_features}"
+            )
+        return arr.tolist()

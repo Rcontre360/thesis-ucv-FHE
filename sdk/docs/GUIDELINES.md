@@ -133,6 +133,34 @@ def _sum_slots(self, n: int) -> "EncryptedVector":
         ...
 ```
 
+### Non-verbosity
+
+Comments and docstrings must be terse. When a class or non-trivial algorithm does warrant a docstring, keep it to 1-3 lines: state the *what* and the load-bearing *why*, nothing else. No multi-paragraph essays, no `Args:`/`Returns:` blocks restating typed signatures, no worked examples, no cross-references to other modules' internals.
+
+A comment must earn its line. If it narrates *what* the next line does, delete it — the code already says that. Keep only the comments that explain a *why* a reader could not infer: a hidden constraint, a non-obvious invariant, a deliberate trade-off.
+
+```python
+# WRONG — multi-paragraph docstring, restates signature, narrates the code
+def matmul(self, matrix: PlaintextTensor) -> "EncryptedVector":
+    """Plaintext-matrix × ciphertext-vector via cyclic-wrap diagonals.
+
+    Computes y = W @ x for our W ∈ ℝ^{out×in} convention and encrypted x of
+    size in. The algorithm is the rectangular Halevi-Shoup variant used by
+    TenSEAL: diagonals walk through M = Wᵀ with cyclic indexing ...
+    (8 more lines)
+    """
+    # rotate the ciphertext by one each iteration
+    rotated = self.copy()
+
+# CORRECT — one line of what + why, no narration
+def matmul(self, matrix: PlaintextTensor) -> "EncryptedVector":
+    """y = W @ x via the rectangular Halevi-Shoup cyclic-wrap diagonal method.
+
+    Input and output ciphertexts are replicated to slot_count.
+    """
+    rotated = self.copy()
+```
+
 ---
 
 ## Mutating caller objects

@@ -135,3 +135,35 @@ class TestEncryptedVectorMatmul:
         x = built_context.encrypt([1.0, 2.0])
         with pytest.raises(TypeError, match="PlaintextTensor"):
             x.matmul([[1.0, 0.0], [0.0, 1.0]])  # type: ignore[arg-type]
+
+    def test_matmul_tall_expansion(self, built_context):
+        # out > in: rectangular cyclic-wrap matmul handles the tall case
+        # natively — no padding, no level cost from period extension.
+        x = built_context.encrypt([1.0, 2.0, 3.0, 4.0])
+        W = PlaintextTensor([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+            [1.0, 1.0, 0.0, 0.0],
+            [0.0, 1.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [1.0, 0.0, 0.0, 1.0],
+        ])
+        result = x.matmul(W)
+        assert result.size == 8
+        dec = result.decrypt()
+        expected = [1.0, 2.0, 3.0, 4.0, 3.0, 5.0, 7.0, 5.0]
+        for e, a in zip(expected, dec):
+            assert abs(e - a) < EPSILON
+
+    def test_matmul_chain_wide_then_narrow(self, built_context):
+        # Chained matmul where the second layer is narrower than the first.
+        # Under replicated I/O this works without any tile-period bookkeeping.
+        x = built_context.encrypt([1.0, 2.0, 3.0, 4.0])
+        W1 = PlaintextTensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
+        y = x.matmul(W1)                    # size=2 (extracts x[0], x[1])
+        W2 = PlaintextTensor([[1.0, 1.0]])  # 1x2: out=1, in=2 (sum)
+        z = y.matmul(W2)                    # size=1
+        assert z.size == 1
+        assert abs(z.decrypt()[0] - 3.0) < EPSILON

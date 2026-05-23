@@ -67,15 +67,17 @@ void register_context(py::module_& m)
              &CKKSContext::get_key_modulus_count,
              "Return total prime count in Q' = Q + P.");
 
+    // METHOD_II (hybrid keyswitching): keys scale ~O(L) with the chain length
+    // instead of O(L^2) for METHOD_I — essential for long bootstrapping chains.
     m.def("create_ckks_context",
           []() {
-              return CKKSContext(keyswitching_type::KEYSWITCHING_METHOD_I);
+              return CKKSContext(keyswitching_type::KEYSWITCHING_METHOD_II);
           },
           "Create a CKKS context with the default 128-bit security level.");
 
     m.def("create_ckks_context_with_security",
           [](sec_level_type sec) {
-              return CKKSContext(keyswitching_type::KEYSWITCHING_METHOD_I, sec);
+              return CKKSContext(keyswitching_type::KEYSWITCHING_METHOD_II, sec);
           },
           py::arg("security_level"),
           "Create a CKKS context with the given SecurityLevel.\n"

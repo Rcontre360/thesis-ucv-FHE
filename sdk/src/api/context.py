@@ -14,6 +14,8 @@ from core._backend import (
     CKKSPlaintext,
     CKKSCiphertext,
     CKKSOperator,
+    BootstrappingConfig,
+    BootstrappingType,
 )
 from core.enums import SecurityLevel
 from core.plaintext import PlaintextVector
@@ -39,6 +41,13 @@ class FHEContext:
     _rk: Optional[CKKSRelinkey]
     _gk: Optional[CKKSGaloiskey]
 
+    # SLIM bootstrapping is always the variant used; these tune the circuit.
+    _ctos_piece: int
+    _stoc_piece: int
+    _taylor_number: int
+    _bootstrapping_ready: bool
+    _galois_keys_on_host: bool
+
     def __init__(self) -> None:
         self._poly_modulus_degree = None
         self._coeff_modulus_bit_sizes = None
@@ -57,6 +66,12 @@ class FHEContext:
         self._pk = None
         self._rk = None
         self._gk = None
+
+        self._ctos_piece = 3
+        self._stoc_piece = 3
+        self._taylor_number = 11
+        self._bootstrapping_ready = False
+        self._galois_keys_on_host = False
 
     def _ensure_not_built(self) -> None:
         if self._built:
@@ -82,6 +97,33 @@ class FHEContext:
         self._security_level = level
         return self
 
+    def set_bootstrapping_params(
+        self, ctos_piece: int = 3, stoc_piece: int = 3, taylor_number: int = 11
+    ) -> "FHEContext":
+        """Tune the SLIM bootstrapping circuit (used only if `compile` enables it).
+
+        ctos_piece/stoc_piece (2-5): DFT factor counts — more pieces means a
+        deeper but cheaper-per-stage circuit. taylor_number (6-15): EvalMod sine
+        degree — higher is more accurate but deeper. Defaults are a middle ground.
+        """
+        self._ensure_not_built()
+        self._ctos_piece = ctos_piece
+        self._stoc_piece = stoc_piece
+        self._taylor_number = taylor_number
+        return self
+
+    def set_galois_key_storage(self, on_host: bool = True) -> "FHEContext":
+        """Keep Galois (rotation) keys in CPU RAM instead of GPU VRAM.
+
+        With `on_host=True` each key is streamed GPU-side only while a rotation
+        uses it: far less VRAM (one key resident, not all of them), but a
+        host->device copy per rotation. Needed to fit bootstrapping keys on
+        small GPUs. Defaults to device storage (faster) when never called.
+        """
+        self._ensure_not_built()
+        self._galois_keys_on_host = on_host
+        return self
+
     def build(self) -> "FHEContext":
         if self._poly_modulus_degree is None:
             raise ValueError("poly_modulus_degree must be set before build()")
@@ -93,10 +135,15 @@ class FHEContext:
         self._backend_ctx = create_ckks_context_with_security(self._security_level)
         self._backend_ctx.set_poly_modulus_degree(self._poly_modulus_degree)
 
-        # Last element is the P prime (key-switching auxiliary modulus).
-        # One P prime => KEYSWITCHING_METHOD_I (inferred by HEonGPU from P vector size).
+        # All but the last entry are Q (usable levels); the last is the P
+        # prime size. Short chains use METHOD_I keyswitching (1 P prime);
+        # long chains use METHOD_II and want dnum ~ sum(Q)/sum(P) ~ 8.
         q_bits = self._coeff_modulus_bit_sizes[:-1]
-        p_bits = [self._coeff_modulus_bit_sizes[-1]]
+        p_size = self._coeff_modulus_bit_sizes[-1]
+        # METHOD_II keyswitching requires num_p >= 2; we pick enough same-size
+        # P primes to keep dnum ~ 8 (longer chains thus get 3+).
+        num_p = max(2, round(sum(q_bits) / (8 * p_size)))
+        p_bits = [p_size] * num_p
         self._backend_ctx.set_coeff_modulus_bit_sizes(q_bits, p_bits)
         self._backend_ctx.generate()
 
@@ -108,12 +155,8 @@ class FHEContext:
         self._rk = CKKSRelinkey(self._backend_ctx)
         self._keygen.generate_relin_key(self._rk, self._sk)
 
-        # Galois key: powers-of-2 shifts from 1 to slot_count.
-        # Covers both _sum_slots (shifts 1..n/2) and _replicate_slot0 (shifts slot_count/2..1).
-        slot_count = self._poly_modulus_degree // 2
-        shifts = [2**k for k in range(int(math.log2(slot_count)))]
-        self._gk = CKKSGaloiskey(self._backend_ctx, shifts)
-        self._keygen.generate_galois_key(self._gk, self._sk)
+        self._gk = CKKSGaloiskey(self._backend_ctx, self._network_shifts())
+        self._generate_galois_key(self._gk)
 
         self._encoder = CKKSEncoder(self._backend_ctx)
         self._encryptor = CKKSEncryptor(self._backend_ctx, self._pk)
@@ -143,6 +186,99 @@ class FHEContext:
         result_ct = self._ops.rotate_rows(ct._ct, self._gk, k)
         return EncryptedVector(self, result_ct, ct._n_values)
 
+    def _network_shifts(self) -> List[int]:
+        # Every rotation the SDK performs (matmul rotate-by-1, _sum_slots
+        # halving steps) is a power of 2, so this fixed set covers all layers.
+        slot_count = self._poly_modulus_degree // 2
+        return [2**k for k in range(int(math.log2(slot_count)))]
+
+    def _usable_levels(self) -> int:
+        """Multiplication levels available in a freshly encrypted ciphertext."""
+        return self.encrypt([0.0])._ct.level
+
+    def _setup_bootstrapping(self) -> None:
+        """Precompute SLIM params and extend the Galois key with boot shifts.
+
+        Idempotent: a second call is a no-op. Merges the bootstrapping BSGS
+        shifts (non-powers-of-2) with the network's power-of-2 shifts into one
+        key, since the bootstrap circuit needs exact keys for its own rotations.
+        """
+        if self._bootstrapping_ready:
+            return
+        # less_key_mode=True: trades extra circuit depth for ~30% fewer Galois
+        # keys — required to fit bootstrapping key material on smaller GPUs.
+        config = BootstrappingConfig(
+            self._ctos_piece, self._stoc_piece, self._taylor_number, True
+        )
+        self._ops.generate_bootstrapping_params(
+            self._scale, config, BootstrappingType.SLIM
+        )
+        boot_shifts = self._ops.bootstrapping_key_indexs()
+        all_shifts = sorted(set(self._network_shifts()) | set(boot_shifts))
+        gk = CKKSGaloiskey(self._backend_ctx, all_shifts)
+        self._generate_galois_key(gk)
+        self._gk = gk
+        self._bootstrapping_ready = True
+
+    def _generate_galois_key(self, gk) -> None:
+        """Call the backend Galois-key generator, tolerating either signature.
+
+        Newer bindings accept an `on_host` flag; older ones don't. Falls back
+        silently — host storage is just an optimization, not correctness.
+        """
+        try:
+            self._keygen.generate_galois_key(gk, self._sk, self._galois_keys_on_host)
+        except TypeError:
+            self._keygen.generate_galois_key(gk, self._sk)
+
+    def _usable_after_boot(self) -> int:
+        """Levels available right after a SLIM bootstrap (measured, not guessed)."""
+        return self._bootstrap(self.encrypt([0.0]))._ct.level
+
+    def _bootstrap(self, ct: EncryptedVector) -> EncryptedVector:
+        """Refresh `ct` to near-full depth via SLIM bootstrapping (new ciphertext).
+
+        SLIM runs SlotToCoeff first, so the input must sit at exactly
+        `stoc_piece` levels — `ct` must arrive with at least that many.
+        """
+        if not self._bootstrapping_ready:
+            raise RuntimeError("_setup_bootstrapping() must run before _bootstrap().")
+        if ct.level < self._stoc_piece:
+            raise RuntimeError(
+                f"Ciphertext at level {ct.level} is below the SLIM bootstrap "
+                f"input requirement ({self._stoc_piece}) — a refresh was needed "
+                "earlier. Reduce activation depth (smaller ReLU `degrees`)."
+            )
+        raw = ct._ct.copy()
+        while raw.level > self._stoc_piece:
+            self._ops.mod_drop_inplace(raw)
+        refreshed = self._ops.slim_bootstrapping(raw, self._gk, self._rk)
+        return EncryptedVector(self, refreshed, ct._n_values)
+
+    def _prepare_for(self, ct: EncryptedVector, needed: int) -> EncryptedVector:
+        """Return a ciphertext with enough levels to run an op of depth `needed`.
+
+        When bootstrapping is active (set up by `Sequential.compile` for deep
+        networks) this refreshes the ciphertext before it would run out — and
+        may fire mid-layer. A no-op when bootstrapping is inactive: there the
+        network is known to fit the level budget.
+
+        Keeps `stoc_piece` levels in hand after the upcoming op so a later SLIM
+        bootstrap is still possible (SLIM needs that many input levels).
+        """
+        if not self._bootstrapping_ready:
+            return ct
+        if ct.level >= needed + self._stoc_piece:
+            return ct
+        refreshed = self._bootstrap(ct)
+        if refreshed.level < needed:
+            raise RuntimeError(
+                f"A SLIM bootstrap restores {refreshed.level} levels but an "
+                f"operation needs {needed} — reduce activation depth or "
+                "lengthen coeff_modulus_bit_sizes."
+            )
+        return refreshed
+
     # ------------------------------------------------------------------
     # Encode / decode
     # ------------------------------------------------------------------
@@ -156,14 +292,11 @@ class FHEContext:
         slot_count = self._poly_modulus_degree // 2
         if n > slot_count:
             raise ValueError(f"Vector length {n} exceeds slot count {slot_count}")
-        # Pad up to the next power of 2 and tile across all slots so that
-        # cyclic rotations by any r < n_padded preserve the period-n_padded
-        # structure required by diagonal matmul.
-        n_padded = 1 << (n - 1).bit_length()
-        tile = list(values) + [0.0] * (n_padded - n)
-        tiled = tile * (slot_count // n_padded)
+        # Replicate cyclically: replicated[k] = values[k mod n]. The cyclic-wrap
+        # diagonal matmul relies on every slot carrying x[k mod n], not zeros.
+        replicated = [values[k % n] for k in range(slot_count)]
         pt = CKKSPlaintext(self._backend_ctx)
-        self._encoder.encode(pt, tiled, self._scale)
+        self._encoder.encode(pt, replicated, self._scale)
         return PlaintextVector(self, pt, n)
 
     def decode(self, plaintext: PlaintextVector) -> List[float]:
