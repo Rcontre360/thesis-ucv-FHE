@@ -23,11 +23,31 @@ if [ -n "$(ls -d "${INSTALL_PREFIX}/lib/cmake/HEonGPU"* 2>/dev/null)" ]; then
     exit 0
 fi
 
-# Ensure HEonGPU submodule is present
+# Ensure HEonGPU submodule is present (when running from a git checkout — pip
+# sdists already ship the source so this is skipped automatically).
 cd "${SDK_DIR}"
 if [ ! -d "external/HEonGPU/src" ]; then
-    echo "Initializing HEonGPU submodule..."
-    git submodule update --init --recursive
+    if [ -d ".git" ]; then
+        echo "Initializing HEonGPU submodule..."
+        git submodule update --init --recursive
+    else
+        echo "HEonGPU source missing and no .git available — sdist may be incomplete."
+        exit 1
+    fi
+fi
+
+# HEonGPU's thirdparty CMakeLists runs thirdparty/build.sh, which itself does a
+# `git submodule update --init --recursive` for its nested submodules. That
+# fails inside a pip sdist (no .git). Replace it with a no-op when the nested
+# submodule source is already present (it always is when shipped via sdist).
+THIRDPARTY_BUILD_SH="${EXTERNAL_DIR}/HEonGPU/thirdparty/build.sh"
+if [ -f "${EXTERNAL_DIR}/HEonGPU/thirdparty/GPU-FFT/CMakeLists.txt" ]; then
+    cat > "${THIRDPARTY_BUILD_SH}" <<'EOF'
+#!/usr/bin/env bash
+# Patched by fhe-sdk install: nested-submodule source is pre-populated.
+exit 0
+EOF
+    chmod +x "${THIRDPARTY_BUILD_SH}"
 fi
 
 # Build HEonGPU
@@ -41,7 +61,7 @@ $CMAKE -S . -B build \
     -DTHRUST_INCLUDE_DIR="$(dirname "$(which nvcc)")/../targets/x86_64-linux/include" \
     -DCMAKE_CUDA_FLAGS="--pre-include cstdint"
 
-$CMAKE --build build -j"${BUILD_JOBS:-8}"
+$CMAKE --build build -j"${BUILD_JOBS:-$(nproc 2>/dev/null || echo 8)}"
 $CMAKE --install build
 
 echo "------------------------------------------------"

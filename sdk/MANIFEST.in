@@ -1,3 +1,35 @@
-include docs/INTRO.md
-recursive-include src *.cu *.cpp *.hpp *.cuh CMakeLists.txt
-include CMakeLists.txt
+# Files shipped in the source distribution (sdist).
+# `python -m build --sdist` reads this; anything not listed is left out.
+
+include CMakeLists.txt LICENSE README.md MANIFEST.in pyproject.toml
+include docs/INTRO.md docs/API.md docs/CONFIG.md
+
+# Python source
+recursive-include src *.py
+
+# C++/CUDA sources for the pybind11 backend
+recursive-include src *.cu *.cpp *.hpp *.cuh *.h CMakeLists.txt
+
+# Build helpers run during `pip install`
+recursive-include scripts *.sh
+
+# HEonGPU submodule — required for the CMake build to succeed.
+# Git submodules are NOT auto-included in sdists, so we list the source tree
+# explicitly. Built artifacts and tests are excluded to keep the tarball lean.
+recursive-include external/HEonGPU *.cu *.cpp *.hpp *.cuh *.h
+recursive-include external/HEonGPU CMakeLists.txt *.cmake
+include external/HEonGPU/LICENSE external/HEonGPU/README.md
+recursive-include external/HEonGPU/cmake *
+recursive-include external/HEonGPU/thirdparty CMakeLists.txt *.sh
+
+# Exclusions — never ship these even if they match an include above
+global-exclude __pycache__
+global-exclude *.pyc *.pyo
+global-exclude .DS_Store
+prune build
+prune external/HEonGPU/build
+prune external/HEonGPU/test
+prune external/HEonGPU/benchmark
+prune external/HEonGPU/example
+prune external/HEonGPU/dev-tools
+prune external/HEonGPU/docs
