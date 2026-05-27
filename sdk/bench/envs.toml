@@ -1,0 +1,23 @@
+# Per-library Python environment for the benchmarks.
+#
+# Each benchmark runs every backend in its own subprocess; this file decides
+# which Python interpreter (venv) each library uses. Paths are venv directories,
+# relative to sdk/ or absolute; the driver runs "<venv>/bin/python".
+#
+# Resolution order per library (most -> least specific):
+#   1. env var  BENCH_PYTHON_<LIB>   (e.g. BENCH_PYTHON_ORION=/path/to/venv)
+#   2. an entry under [interpreters] below
+#   3. "default"
+#   4. the driver's own interpreter (if "default" is unset or missing)
+#
+# Library ids come from the script names: run_sdk.py -> sdk, run_orion.py ->
+# orion, run_cml.py -> cml, run_pytorch.py -> pytorch.
+#
+# Create envs with:  ./scripts/setup_env.sh <name>
+
+default = ".env"
+
+[interpreters]
+# Orion needs torch>=2.4 (torch.compile/dynamo is unsupported on Python 3.12
+# with torch 2.3.1, which Concrete-ML pins). It gets its own env.
+orion = ".env-orion"
