@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model import SEED, N_CLASSES, build_network
 from shared.io import load_weights, load_inputs
 from shared.measure import Measure, Timer
-from shared.metrics import accuracy
+from shared.metrics import accuracy, fidelity
 from shared.runner import emit
 
 from concrete.ml.torch.compile import compile_torch_model
@@ -31,11 +31,12 @@ def main():
     data = load_inputs(CASE_DIR)
     x_test = data["x_test"].astype(np.float32)
     y_test = data["y_test"]
+    float_logits = data["float_logits"]
     calib = torch.tensor(data["x_calib"], dtype=torch.float32)
     n_test = len(x_test)
 
     model = load_weights(build_network(), CASE_DIR).cpu().eval()
-    pred = np.empty(n_test, dtype=int)
+    enc_logits = np.empty((n_test, N_CLASSES), dtype=np.float64)
 
     with Measure() as mem:
         with Timer() as t_compile:
@@ -48,12 +49,27 @@ def main():
 
         with Timer() as t_infer:
             for i, x in enumerate(x_test):
-                logits = cml_model.forward(x.reshape(1, -1), fhe="execute").reshape(-1)[:N_CLASSES]
-                pred[i] = int(np.argmax(logits))
+                enc_logits[i] = cml_model.forward(x.reshape(1, -1), fhe="execute").reshape(-1)[:N_CLASSES]
+
+    enc_pred = enc_logits.argmax(axis=1)
+    try:
+        approx_logits = np.stack([
+            cml_model.forward(x.reshape(1, -1), fhe="disable").reshape(-1)[:N_CLASSES]
+            for x in x_test
+        ])
+        approx_accuracy = accuracy(approx_logits.argmax(axis=1), y_test)
+    except Exception:
+        approx_accuracy = None
+    agreement, output_mae, precision = fidelity(float_logits, enc_logits)
 
     emit({
         "backend": "concrete-ml",
-        "accuracy": accuracy(pred, y_test),
+        "float_accuracy": accuracy(float_logits.argmax(axis=1), y_test),
+        "approx_accuracy": approx_accuracy,
+        "accuracy": accuracy(enc_pred, y_test),
+        "agreement": agreement,
+        "output_mae": output_mae,
+        "precision_bits": precision,
         "keygen_s": t_keygen.elapsed_s,
         "compile_s": t_compile.elapsed_s,
         "latency_s": t_infer.elapsed_s / n_test,

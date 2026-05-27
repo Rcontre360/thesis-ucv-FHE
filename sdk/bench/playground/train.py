@@ -21,12 +21,17 @@ def main():
     model = build_network().to(device)
     train_model(model, data, device)
 
+    x_test = data.x_test[:N_TEST]
+    with torch.no_grad():
+        float_logits = model(torch.tensor(x_test, dtype=torch.float32, device=device)).cpu().numpy()
+
     save_weights(model, CASE_DIR)
     save_inputs(
         CASE_DIR,
-        x_test=data.x_test[:N_TEST],
+        x_test=x_test,
         y_test=data.y_test[:N_TEST],
         x_calib=data.x_train[:N_CALIB],
+        float_logits=float_logits,
     )
     print("saved artifacts to", os.path.join(CASE_DIR, "artifacts"))
 

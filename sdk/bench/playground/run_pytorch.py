@@ -30,10 +30,16 @@ def main():
             x = torch.tensor(x_test, dtype=torch.float32, device=device)
             logits = model(x).cpu().numpy()
     pred = logits.argmax(axis=1)
+    acc = accuracy(pred, y_test)
 
     emit({
         "backend": "pytorch_plain",
-        "accuracy": accuracy(pred, y_test),
+        "float_accuracy": acc,
+        "approx_accuracy": acc,
+        "accuracy": acc,
+        "agreement": 1.0,
+        "output_mae": 0.0,
+        "precision_bits": None,
         "keygen_s": 0.0,
         "compile_s": 0.0,
         "latency_s": t_infer.elapsed_s / n_test,

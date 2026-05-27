@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model import N_FEATURES, N_CLASSES, build_network
 from shared.io import load_weights, load_inputs
 from shared.measure import Measure, Timer
-from shared.metrics import accuracy
+from shared.metrics import accuracy, fidelity
 from shared.runner import emit
 
 import orion
@@ -37,6 +37,7 @@ def main():
     x_test = data["x_test"].astype(np.float32)
     y_test = data["y_test"]
     x_calib = data["x_calib"]
+    float_logits = data["float_logits"]
     n_test = len(x_test)
 
     model = load_weights(build_network(), CASE_DIR).cpu().eval()
@@ -49,7 +50,7 @@ def main():
         orion_net.fc2.bias.copy_(model[2].bias.detach())
     orion_net.eval()
 
-    pred = np.empty(n_test, dtype=int)
+    enc_logits = np.empty((n_test, N_CLASSES), dtype=np.float64)
     with Measure() as mem:
         with Timer() as t_keygen:
             orion.init_scheme(ORION_CONFIG)
@@ -65,11 +66,26 @@ def main():
                 )
                 orion_net.he()
                 out = orion_net(ctxt).decrypt().decode()
-                pred[i] = int(np.asarray(out).reshape(-1)[:N_CLASSES].argmax())
+                enc_logits[i] = np.asarray(out).reshape(-1)[:N_CLASSES]
+
+    enc_pred = enc_logits.argmax(axis=1)
+    try:
+        orion_net.eval()
+        with torch.no_grad():
+            approx_out = orion_net(torch.tensor(x_test, dtype=torch.float32)).cpu().numpy()
+        approx_accuracy = accuracy(approx_out[:, :N_CLASSES].argmax(axis=1), y_test)
+    except Exception:
+        approx_accuracy = None
+    agreement, output_mae, precision = fidelity(float_logits, enc_logits)
 
     emit({
         "backend": "orion",
-        "accuracy": accuracy(pred, y_test),
+        "float_accuracy": accuracy(float_logits.argmax(axis=1), y_test),
+        "approx_accuracy": approx_accuracy,
+        "accuracy": accuracy(enc_pred, y_test),
+        "agreement": agreement,
+        "output_mae": output_mae,
+        "precision_bits": precision,
         "keygen_s": t_keygen.elapsed_s,
         "compile_s": t_compile.elapsed_s,
         "latency_s": t_infer.elapsed_s / n_test,
