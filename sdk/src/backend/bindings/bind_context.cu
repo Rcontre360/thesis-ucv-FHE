@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <heongpu/heongpu.hpp>
+#include <heongpu/util/memorypool.cuh>
 
 namespace py = pybind11;
 using namespace heongpu;
@@ -82,4 +83,19 @@ void register_context(py::module_& m)
           py::arg("security_level"),
           "Create a CKKS context with the given SecurityLevel.\n"
           "Security level is a constructor argument and cannot be changed after creation.");
+
+    m.def("device_pool_used_bytes",
+          []() -> size_t {
+              return MemoryPool::instance().get_current_device_pool_memory_usage();
+          },
+          "Bytes currently allocated FROM the RMM device pool — the true working\n"
+          "set, independent of the pool's up-front reservation. This is the\n"
+          "analog of torch.cuda.memory_allocated(); sample it to find the peak.\n"
+          "Returns 0 if the pool is disabled or statistics are unavailable.");
+
+    m.def("device_pool_free_bytes",
+          []() -> size_t {
+              return MemoryPool::instance().get_free_device_pool_memory();
+          },
+          "Bytes still free inside the reserved RMM device pool.");
 }
