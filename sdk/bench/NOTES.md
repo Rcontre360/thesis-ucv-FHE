@@ -1,3 +1,25 @@
+# Notas del benchmark
+
+## Orden cronologico de fases por backend (semantica de los deltas)
+
+Cada backend mide tres fases con su propio `Measure`, y reporta para cada una:
+`<fase>_vram_mb`, `<fase>_vram_alloc_mb`, `<fase>_ram_mb`, mas
+`<fase>_vram_delta_mb` y `<fase>_vram_alloc_delta_mb` = pico de esta fase −
+pico de la fase **cronologicamente anterior** en ese backend. La primera fase
+ejecutada (`= 0`) no tiene predecesor.
+
+| Backend       | Orden cronologico (1ra → ultima)         | Fase con delta = 0 |
+|---------------|-------------------------------------------|--------------------|
+| pytorch_plain | infer (no hay keygen ni compile)          | infer              |
+| sdk           | keygen → compile → infer                  | keygen             |
+| concrete-ml   | compile → keygen → infer                  | compile            |
+| orion         | keygen → compile → infer                  | keygen             |
+
+Los nombres de columna coinciden entre backends, pero el delta de `keygen` en
+SDK/Orion es `0` (es la primera fase), mientras que en concrete-ml el delta de
+`keygen` es `keygen − compile` (porque compile corre primero). Para
+interpretar deltas en una vista cruzada, mirar esta tabla.
+
 # Metricas pendientes (para mas adelante)
 
 Metricas que decidimos NO implementar todavia, con el porque y el como, para

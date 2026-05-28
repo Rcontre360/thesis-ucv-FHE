@@ -4,7 +4,8 @@ import numpy as np
 import torch
 
 from bench.shared.config import SEED, N_TEST, N_CALIB
-from bench.playground.model import build_network, load_synth, train_model
+from bench.shared.training import train_model
+from bench.playground.model import build_network, load_synth
 from bench.shared.io import save_weights, save_inputs
 
 

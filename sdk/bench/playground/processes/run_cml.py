@@ -3,10 +3,9 @@ import torch
 
 from bench.shared.config import SEED
 from bench.playground.model import N_CLASSES, build_network
-from bench.shared.io import load_weights, load_inputs
-from bench.shared.measure import Measure, Timer
+from bench.shared.io import emit, load_weights, load_inputs
+from bench.shared.measure import Measure, phase_metrics
 from bench.shared.metrics import accuracy, fidelity
-from bench.shared.runner import emit
 
 from concrete.ml.torch.compile import compile_torch_model
 import concrete.compiler
@@ -32,18 +31,17 @@ def run(case_dir: str) -> None:
     model = load_weights(build_network(), case_dir).cpu().eval()
     enc_logits = np.empty((n_test, N_CLASSES), dtype=np.float64)
 
-    with Measure() as mem:
-        with Timer() as t_compile:
-            cml_model = compile_torch_model(
-                model, torch_inputset=calib, n_bits=N_BITS, device="cuda",
-            )
+    with Measure() as m_compile:
+        cml_model = compile_torch_model(
+            model, torch_inputset=calib, n_bits=N_BITS, device="cuda",
+        )
 
-        with Timer() as t_keygen:
-            cml_model.fhe_circuit.keygen(force=True, seed=SEED)
+    with Measure() as m_keygen:
+        cml_model.fhe_circuit.keygen(force=True, seed=SEED)
 
-        with Timer() as t_infer:
-            for i, x in enumerate(x_test):
-                enc_logits[i] = cml_model.forward(x.reshape(1, -1), fhe="execute").reshape(-1)[:N_CLASSES]
+    with Measure() as m_infer:
+        for i, x in enumerate(x_test):
+            enc_logits[i] = cml_model.forward(x.reshape(1, -1), fhe="execute").reshape(-1)[:N_CLASSES]
 
     try:
         approx_logits = np.stack([
@@ -63,10 +61,10 @@ def run(case_dir: str) -> None:
         "agreement": agreement,
         "output_mae": output_mae,
         "precision_bits": precision,
-        "keygen_s": t_keygen.elapsed_s,
-        "compile_s": t_compile.elapsed_s,
-        "latency_s": t_infer.elapsed_s / n_test,
-        "vram_mb": mem.peak_vram_mb,
-        "vram_alloc_mb": mem.peak_alloc_mb,
-        "ram_mb": mem.peak_rss_mb,
+
+        "keygen_s": m_keygen.elapsed_s,
+        "compile_s": m_compile.elapsed_s,
+        "latency_s": m_infer.elapsed_s / n_test,
+
+        **phase_metrics({"compile": m_compile, "keygen": m_keygen, "infer": m_infer}),
     })

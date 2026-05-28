@@ -8,7 +8,7 @@ import pynvml
 import pandas as pd
 
 from bench.paths import SDK_ROOT, case_dir
-from bench.shared.runner import read_result
+from bench.shared.io import read_result, results_dir
 from bench.shared.envs import interpreter_for
 
 TRAIN: str = "train"
@@ -75,7 +75,7 @@ def orchestrate(case: str) -> None:
         df["setup_s"] = df["keygen_s"] + df["compile_s"]
         df.insert(0, "case", case)
 
-    out = os.path.join(case_dir(case), "results.csv")
+    out = os.path.join(results_dir(case_dir(case)), "results.csv")
     df.to_csv(out, index=False)
 
     print()

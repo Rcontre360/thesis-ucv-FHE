@@ -13,19 +13,20 @@ fi
 if [ -z "$1" ]; then
     echo "Usage: $0 <benchmark_name>"
     echo "Trains the case network once and runs every backend in its own"
-    echo "subprocess, writing bench/<benchmark_name>/results.csv."
+    echo "subprocess (per-library venv from bench/envs.toml), writing"
+    echo "bench/<benchmark_name>/results.csv."
     echo "Available benchmarks:"
     for d in "${SDK_DIR}"/bench/*/; do
         name="$(basename "${d}")"
-        [ -f "${d}bench.py" ] && echo "  ${name}"
+        [ -d "${d}processes" ] && echo "  ${name}"
     done
     exit 1
 fi
 
-BENCH="${SDK_DIR}/bench/${1}/bench.py"
-if [ ! -f "$BENCH" ]; then
-    echo "Error: benchmark '${1}' not found at ${BENCH}"
+if [ ! -d "${SDK_DIR}/bench/${1}/processes" ]; then
+    echo "Error: benchmark '${1}' not found at bench/${1}/processes"
     exit 1
 fi
 
-exec "${PYTHON}" "$BENCH"
+cd "${SDK_DIR}"
+exec "${PYTHON}" -m bench "$1"

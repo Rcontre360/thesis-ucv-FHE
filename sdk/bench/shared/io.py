@@ -1,4 +1,5 @@
 import os
+import json
 
 import numpy as np
 import torch
@@ -6,6 +7,12 @@ import torch
 
 def artifacts_dir(case_dir: str) -> str:
     path = os.path.join(case_dir, "artifacts")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def results_dir(case_dir: str) -> str:
+    path = os.path.join(case_dir, "results")
     os.makedirs(path, exist_ok=True)
     return path
 
@@ -32,3 +39,19 @@ def save_inputs(case_dir: str, **arrays: np.ndarray) -> str:
 def load_inputs(case_dir: str) -> "np.lib.npyio.NpzFile":
     path = os.path.join(artifacts_dir(case_dir), "inputs.npz")
     return np.load(path)
+
+
+def emit(result: dict) -> None:
+    path = os.environ.get("BENCH_RESULT_FILE")
+    if path:
+        with open(path, "w") as f:
+            json.dump(result, f)
+    else:
+        print(json.dumps(result))
+
+
+def read_result(path: str) -> dict | None:
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        return json.load(f)

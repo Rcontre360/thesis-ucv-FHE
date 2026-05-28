@@ -1,7 +1,6 @@
 */artifacts/
+*/results/
 *.pt
 *.npz
-results.csv
-profile_sdk.csv
 __pycache__/
 *.pyc
