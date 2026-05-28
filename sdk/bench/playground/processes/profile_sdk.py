@@ -1,40 +1,35 @@
 import os
-import sys
 import csv
 import time
 
 import numpy as np
 import torch
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from model import build_network
-from sdk_model import to_sdk_model, build_context
-from shared.io import load_weights, load_inputs
+from bench.playground.model import build_network
+from bench.playground.sdk_model import to_sdk_model, build_context
+from bench.shared.io import load_weights, load_inputs
 
 from core._backend import device_pool_used_bytes
 
-CASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MB = 1024 ** 2
-FIELDS = ["layer_idx", "layer_name", "time_s", "mem_delta_mb", "mem_after_mb"]
+MB: int = 1024 ** 2
+FIELDS: list[str] = ["layer_idx", "layer_name", "time_s", "mem_delta_mb", "mem_after_mb"]
 
 
-def _sync():
+def _sync() -> None:
     if torch.cuda.is_available():
         torch.cuda.synchronize()
 
 
-def main():
-    data = load_inputs(CASE_DIR)
-    sample = data["x_test"].astype(np.float32)[0]
+def run(case_dir: str) -> None:
+    sample = load_inputs(case_dir)["x_test"].astype(np.float32)[0]
 
-    model = load_weights(build_network(), CASE_DIR).eval()
+    model = load_weights(build_network(), case_dir).eval()
     ctx = build_context()
     sdk_model = to_sdk_model(model).compile(ctx)
 
     vec = sdk_model.input(ctx, sample.tolist()).ciphertext
 
-    rows = []
+    rows: list[dict] = []
     for i, layer in enumerate(sdk_model._layers):
         _sync()
         t0 = time.perf_counter()
@@ -51,7 +46,7 @@ def main():
             "mem_after_mb": mem_after / MB,
         })
 
-    out = os.path.join(CASE_DIR, "profile_sdk.csv")
+    out = os.path.join(case_dir, "profile_sdk.csv")
     with open(out, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
@@ -62,7 +57,3 @@ def main():
               f"{r['time_s'] * 1000:8.2f} ms   "
               f"d_mem {r['mem_delta_mb']:+8.2f} MB   live {r['mem_after_mb']:8.2f} MB")
     print("saved", out)
-
-
-if __name__ == "__main__":
-    main()

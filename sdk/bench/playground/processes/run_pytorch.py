@@ -1,36 +1,28 @@
-import os
-import sys
-
 import numpy as np
 import torch
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from model import N_CLASSES, build_network
-from shared.io import load_weights, load_inputs
-from shared.measure import Measure, Timer
-from shared.metrics import accuracy
-from shared.runner import emit
-
-CASE_DIR = os.path.dirname(os.path.abspath(__file__))
+from bench.playground.model import build_network
+from bench.shared.io import load_weights, load_inputs
+from bench.shared.measure import Measure, Timer
+from bench.shared.metrics import accuracy
+from bench.shared.runner import emit
 
 
-def main():
+def run(case_dir: str) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    data = load_inputs(CASE_DIR)
+    data = load_inputs(case_dir)
     x_test = data["x_test"].astype(np.float32)
     y_test = data["y_test"]
     n_test = len(x_test)
 
-    model = load_weights(build_network(), CASE_DIR, device=device).to(device).eval()
+    model = load_weights(build_network(), case_dir, device=device).to(device).eval()
 
     alloc_probe = torch.cuda.memory_allocated if device.type == "cuda" else None
     with Measure(alloc_probe=alloc_probe) as mem:
         with torch.no_grad(), Timer() as t_infer:
             x = torch.tensor(x_test, dtype=torch.float32, device=device)
             logits = model(x).cpu().numpy()
-    pred = logits.argmax(axis=1)
-    acc = accuracy(pred, y_test)
+    acc = accuracy(logits.argmax(axis=1), y_test)
 
     emit({
         "backend": "pytorch_plain",
@@ -47,7 +39,3 @@ def main():
         "vram_alloc_mb": mem.peak_alloc_mb,
         "ram_mb": mem.peak_rss_mb,
     })
-
-
-if __name__ == "__main__":
-    main()

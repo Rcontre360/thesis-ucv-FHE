@@ -1,28 +1,21 @@
 import os
-import sys
 
 import numpy as np
 import torch
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from model import N_FEATURES, N_CLASSES, build_network
-from shared.io import load_weights, load_inputs
-from shared.measure import Measure, Timer
-from shared.metrics import accuracy, fidelity
-from shared.runner import emit
+from bench.paths import SDK_ROOT
+from bench.playground.model import N_FEATURES, N_CLASSES, build_network
+from bench.shared.io import load_weights, load_inputs
+from bench.shared.measure import Measure, Timer
+from bench.shared.metrics import accuracy, fidelity
+from bench.shared.runner import emit
 
 import orion
 import orion.nn as on
 
-CASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ORION_CONFIG = os.path.abspath(
-    os.path.join(CASE_DIR, "..", "..", "temp", "orion", "configs", "mlp.yml")
-)
-
 
 class OrionNet(on.Module):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.fc1 = on.Linear(N_FEATURES, 4)
         self.act = on.Quad()
@@ -32,15 +25,17 @@ class OrionNet(on.Module):
         return self.fc2(self.act(self.fc1(x)))
 
 
-def main():
-    data = load_inputs(CASE_DIR)
+def run(case_dir: str) -> None:
+    orion_config = os.path.join(SDK_ROOT, "temp", "orion", "configs", "mlp.yml")
+
+    data = load_inputs(case_dir)
     x_test = data["x_test"].astype(np.float32)
     y_test = data["y_test"]
     x_calib = data["x_calib"]
     float_logits = data["float_logits"]
     n_test = len(x_test)
 
-    model = load_weights(build_network(), CASE_DIR).cpu().eval()
+    model = load_weights(build_network(), case_dir).cpu().eval()
 
     orion_net = OrionNet()
     with torch.no_grad():
@@ -53,7 +48,7 @@ def main():
     enc_logits = np.empty((n_test, N_CLASSES), dtype=np.float64)
     with Measure() as mem:
         with Timer() as t_keygen:
-            orion.init_scheme(ORION_CONFIG)
+            orion.init_scheme(orion_config)
 
         with Timer() as t_compile:
             orion.fit(orion_net, torch.tensor(x_calib[:256], dtype=torch.float32), batch_size=64)
@@ -68,7 +63,6 @@ def main():
                 out = orion_net(ctxt).decrypt().decode()
                 enc_logits[i] = np.asarray(out).reshape(-1)[:N_CLASSES]
 
-    enc_pred = enc_logits.argmax(axis=1)
     try:
         orion_net.eval()
         with torch.no_grad():
@@ -82,7 +76,7 @@ def main():
         "backend": "orion",
         "float_accuracy": accuracy(float_logits.argmax(axis=1), y_test),
         "approx_accuracy": approx_accuracy,
-        "accuracy": accuracy(enc_pred, y_test),
+        "accuracy": accuracy(enc_logits.argmax(axis=1), y_test),
         "agreement": agreement,
         "output_mae": output_mae,
         "precision_bits": precision,
@@ -93,7 +87,3 @@ def main():
         "vram_alloc_mb": mem.peak_alloc_mb,
         "ram_mb": mem.peak_rss_mb,
     })
-
-
-if __name__ == "__main__":
-    main()

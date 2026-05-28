@@ -1,26 +1,20 @@
-import os
-import sys
-
 import numpy as np
 import torch
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from model import SEED, N_CLASSES, build_network
-from shared.io import load_weights, load_inputs
-from shared.measure import Measure, Timer
-from shared.metrics import accuracy, fidelity
-from shared.runner import emit
+from bench.shared.config import SEED
+from bench.playground.model import N_CLASSES, build_network
+from bench.shared.io import load_weights, load_inputs
+from bench.shared.measure import Measure, Timer
+from bench.shared.metrics import accuracy, fidelity
+from bench.shared.runner import emit
 
 from concrete.ml.torch.compile import compile_torch_model
 import concrete.compiler
 
-CASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-N_BITS = 6
+N_BITS: int = 6
 
 
-def main():
+def run(case_dir: str) -> None:
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA not available")
     if not concrete.compiler.check_gpu_enabled():
@@ -28,14 +22,14 @@ def main():
     if not concrete.compiler.check_gpu_available():
         raise RuntimeError("Concrete-ML cannot detect the GPU")
 
-    data = load_inputs(CASE_DIR)
+    data = load_inputs(case_dir)
     x_test = data["x_test"].astype(np.float32)
     y_test = data["y_test"]
     float_logits = data["float_logits"]
     calib = torch.tensor(data["x_calib"], dtype=torch.float32)
     n_test = len(x_test)
 
-    model = load_weights(build_network(), CASE_DIR).cpu().eval()
+    model = load_weights(build_network(), case_dir).cpu().eval()
     enc_logits = np.empty((n_test, N_CLASSES), dtype=np.float64)
 
     with Measure() as mem:
@@ -51,7 +45,6 @@ def main():
             for i, x in enumerate(x_test):
                 enc_logits[i] = cml_model.forward(x.reshape(1, -1), fhe="execute").reshape(-1)[:N_CLASSES]
 
-    enc_pred = enc_logits.argmax(axis=1)
     try:
         approx_logits = np.stack([
             cml_model.forward(x.reshape(1, -1), fhe="disable").reshape(-1)[:N_CLASSES]
@@ -66,7 +59,7 @@ def main():
         "backend": "concrete-ml",
         "float_accuracy": accuracy(float_logits.argmax(axis=1), y_test),
         "approx_accuracy": approx_accuracy,
-        "accuracy": accuracy(enc_pred, y_test),
+        "accuracy": accuracy(enc_logits.argmax(axis=1), y_test),
         "agreement": agreement,
         "output_mae": output_mae,
         "precision_bits": precision,
@@ -77,7 +70,3 @@ def main():
         "vram_alloc_mb": mem.peak_alloc_mb,
         "ram_mb": mem.peak_rss_mb,
     })
-
-
-if __name__ == "__main__":
-    main()

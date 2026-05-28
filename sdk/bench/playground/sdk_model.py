@@ -5,15 +5,15 @@ from api.layers.linear import Linear
 from api.functions.square import Square as SDKSquare
 from api.sequential import Sequential
 from core.enums import SecurityLevel
-from model import Square
+from bench.playground.model import Square
 
-POLY_DEGREE = 8192
-COEFF_MODULUS = [60, 40, 40, 40, 40, 60, 60]
-SCALE = 2 ** 40
+POLY_DEGREE: int = 8192
+COEFF_MODULUS: list[int] = [60, 40, 40, 40, 40, 60, 60]
+SCALE: int = 2 ** 40
 SECURITY = SecurityLevel.NONE
 
 
-def build_context():
+def build_context() -> FHEContext:
     return (FHEContext()
         .set_poly_modulus_degree(POLY_DEGREE)
         .set_coeff_modulus_bit_sizes(COEFF_MODULUS)
@@ -22,8 +22,8 @@ def build_context():
         .build())
 
 
-def to_sdk_model(model):
-    layers = []
+def to_sdk_model(model: torch.nn.Module) -> Sequential:
+    layers: list = []
     for m in model.cpu():
         if isinstance(m, torch.nn.Linear):
             layers.append(Linear(
