@@ -10,7 +10,7 @@ SDK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # 1. System packages (HEonGPU build + Orion CGO build + Python toolchain).
 apt-get update
 apt-get install -y \
-    build-essential pkg-config git ninja-build wget \
+    build-essential pkg-config git ninja-build wget cmake \
     libgmp-dev libntl-dev zlib1g-dev libssl-dev \
     python3.12 python3.12-venv python3.12-dev python3-pip pipx
 
