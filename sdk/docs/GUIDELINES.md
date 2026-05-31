@@ -232,7 +232,7 @@ sdk/
   external/       ← submodules only, never modified by the build
 ```
 
-CMake and the backend build scripts (`build.sh`, `install_system_deps.sh`) are strictly for compiling C++/CUDA code and external dependencies. They must never install or manipulate pure Python packages — that is the responsibility of `pip` and `pyproject.toml`.
+CMake and the backend build script (`build.sh`) are strictly for compiling C++/CUDA code and external dependencies. They must never install or manipulate pure Python packages — that is the responsibility of `pip` and `pyproject.toml`.
 
 ---
 
