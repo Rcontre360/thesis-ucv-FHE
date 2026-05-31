@@ -10,7 +10,7 @@ import pandas as pd
 
 from bench.shared.config import (
     case_dir, interpreter_for, samples_for,
-    ENV_VRAM_BASELINE, ENV_RESULT_FILE, ENV_LATENCY_N, ENV_ACCURACY_N,
+    ENV_VRAM_BASELINE, ENV_RESULT_FILE, ENV_LATENCY_N, ENV_ACCURACY_N, ENV_BENCH_CASE,
 )
 from bench.shared.io import read_result, results_dir
 
@@ -62,7 +62,10 @@ def _run_backend(case: str, proc: str, env: dict[str, str]) -> dict | None:
 
 
 def orchestrate(case: str) -> None:
-    env: dict[str, str] = dict(os.environ, **{ENV_VRAM_BASELINE: str(_gpu_baseline_bytes())})
+    env: dict[str, str] = dict(os.environ, **{
+        ENV_VRAM_BASELINE: str(_gpu_baseline_bytes()),
+        ENV_BENCH_CASE: case,
+    })
 
     if _run(case, TRAIN, env) != 0:
         raise RuntimeError("train failed")
@@ -91,6 +94,7 @@ def orchestrate(case: str) -> None:
 def duration(case: str) -> None:
     env: dict[str, str] = dict(os.environ, **{
         ENV_VRAM_BASELINE: str(_gpu_baseline_bytes()),
+        ENV_BENCH_CASE: case,
         ENV_LATENCY_N: "1",
         ENV_ACCURACY_N: "1",
     })
@@ -105,7 +109,7 @@ def duration(case: str) -> None:
         row = _run_backend(case, proc, env)
         if row is None:
             continue
-        counts = samples_for(proc[len("run_"):])
+        counts = samples_for(proc[len("run_"):], case)
         setup_s = row["keygen_s"] + row["compile_s"]
         per_lat = row["latency_s"]
         per_acc = row.get("accuracy_per_sample_s", per_lat)

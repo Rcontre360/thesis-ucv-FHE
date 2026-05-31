@@ -27,3 +27,17 @@ def fidelity(reference_logits: np.ndarray, logits: np.ndarray) -> tuple[float, f
     err = mae(ref, out)
     bits = None if err <= 0.0 else float(-np.log2(err))
     return agree, err, bits
+
+
+def r2_score(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
+    y_pred = np.asarray(y_pred, dtype=np.float64).reshape(-1)
+    ss_res = float(((y_true - y_pred) ** 2).sum())
+    ss_tot = float(((y_true - y_true.mean()) ** 2).sum()) + 1e-12
+    return 1.0 - ss_res / ss_tot
+
+
+def pred_fidelity(reference: np.ndarray, predictions: np.ndarray) -> tuple[float, float | None]:
+    err = mae(reference, predictions)
+    bits = None if err <= 0.0 else float(-np.log2(err))
+    return err, bits

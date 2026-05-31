@@ -16,6 +16,7 @@ ENV_VRAM_BASELINE: str = "BENCH_VRAM_BASELINE_BYTES"   # GPU floor (bytes) to su
 ENV_RESULT_FILE: str   = "BENCH_RESULT_FILE"           # path where the child writes its result JSON
 ENV_LATENCY_N: str     = "BENCH_LATENCY_N"             # override SampleCounts.latency for this run
 ENV_ACCURACY_N: str    = "BENCH_ACCURACY_N"            # override SampleCounts.accuracy for this run
+ENV_BENCH_CASE: str    = "BENCH_CASE"                  # case name, so samples_for can pick [samples.<case>]
 
 
 def case_dir(case: str) -> str:
@@ -45,9 +46,11 @@ def interpreter_for(bid: str) -> str:
     return _venv_python(cfg.get(bid, cfg["default"]))
 
 
-def samples_for(bid: str) -> SampleCounts:
+def samples_for(bid: str, case: str | None = None) -> SampleCounts:
     cfg = _load().get("samples", {})
-    entry = cfg.get(bid, cfg["default"])
+    case = case or os.environ.get(ENV_BENCH_CASE)
+    case_cfg = cfg.get(case, {}) if case else {}
+    entry = case_cfg.get(bid) or cfg.get(bid) or cfg["default"]
     return SampleCounts(latency=int(entry["latency"]), accuracy=int(entry["accuracy"]))
 
 
