@@ -13,10 +13,10 @@ primitives that require no knowledge of the underlying cryptographic machinery.
 ## Quick Start
 
 ```bash
-# 1. Install system deps and build HEonGPU into build/heongpu
-./scripts/install_system_deps.sh
+# 1. Install fhe-sdk (CMake auto-builds HEonGPU from external/ into build/heongpu)
+pip install -e .
 
-# 2. Build the Python bindings into build/
+# 2. (Optional) Re-build just the Python bindings into build/
 cmake -S . -B build -DCMAKE_CUDA_ARCHITECTURES=86 -DCMAKE_PREFIX_PATH=build/heongpu
 cmake --build build -j$(nproc)
 

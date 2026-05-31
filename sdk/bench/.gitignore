@@ -1,0 +1,6 @@
+*/artifacts/
+*/results/
+*.pt
+*.npz
+__pycache__/
+*.pyc

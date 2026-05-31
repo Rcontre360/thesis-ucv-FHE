@@ -1,0 +1,59 @@
+import os
+import json
+
+import numpy as np
+import torch
+
+from bench.shared.config import ENV_RESULT_FILE
+
+
+def artifacts_dir(case_dir: str) -> str:
+    path = os.path.join(case_dir, "artifacts")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def results_dir(case_dir: str) -> str:
+    path = os.path.join(case_dir, "results")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+def save_weights(model: torch.nn.Module, case_dir: str) -> str:
+    path = os.path.join(artifacts_dir(case_dir), "weights.pt")
+    torch.save(model.state_dict(), path)
+    return path
+
+
+def load_weights(model: torch.nn.Module, case_dir: str, device: str = "cpu") -> torch.nn.Module:
+    path = os.path.join(artifacts_dir(case_dir), "weights.pt")
+    state = torch.load(path, map_location=device)
+    model.load_state_dict(state)
+    return model
+
+
+def save_inputs(case_dir: str, **arrays: np.ndarray) -> str:
+    path = os.path.join(artifacts_dir(case_dir), "inputs.npz")
+    np.savez(path, **arrays)
+    return path
+
+
+def load_inputs(case_dir: str) -> "np.lib.npyio.NpzFile":
+    path = os.path.join(artifacts_dir(case_dir), "inputs.npz")
+    return np.load(path)
+
+
+def emit(result: dict) -> None:
+    path = os.environ.get(ENV_RESULT_FILE)
+    if path:
+        with open(path, "w") as f:
+            json.dump(result, f)
+    else:
+        print(json.dumps(result))
+
+
+def read_result(path: str) -> dict | None:
+    if not os.path.exists(path):
+        return None
+    with open(path) as f:
+        return json.load(f)
