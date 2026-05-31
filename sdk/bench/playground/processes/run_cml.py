@@ -61,7 +61,7 @@ def run(case_dir: str) -> None:
         "backend": "concrete-ml",
         "float_accuracy": accuracy(float_logits.argmax(axis=1), y_test),
         "approx_accuracy": approx_accuracy,
-        "accuracy": accuracy(enc_logits.argmax(axis=1), y_test[:counts.latency]),
+        "accuracy": approx_accuracy,
         "agreement": agreement,
         "output_mae": output_mae,
         "precision_bits": precision,

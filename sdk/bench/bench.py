@@ -9,7 +9,7 @@ import pynvml
 import pandas as pd
 
 from bench.shared.config import (
-    SDK_ROOT, case_dir, interpreter_for, samples_for,
+    case_dir, interpreter_for, samples_for,
     ENV_VRAM_BASELINE, ENV_RESULT_FILE, ENV_LATENCY_N, ENV_ACCURACY_N,
 )
 from bench.shared.io import read_result, results_dir
@@ -39,7 +39,7 @@ def _interpreter(proc: str) -> str:
 
 def _run(case: str, proc: str, env: dict[str, str]) -> int:
     cmd = [_interpreter(proc), "-m", "bench", case, proc]
-    return subprocess.run(cmd, cwd=SDK_ROOT, env=env).returncode
+    return subprocess.run(cmd, env=env).returncode
 
 
 def _run_backend(case: str, proc: str, env: dict[str, str]) -> dict | None:
@@ -49,7 +49,7 @@ def _run_backend(case: str, proc: str, env: dict[str, str]) -> dict | None:
         result_file = os.path.join(tmp, "result.json")
         result = subprocess.run(
             [python, "-m", "bench", case, proc],
-            cwd=SDK_ROOT, text=True, capture_output=True,
+            text=True, capture_output=True,
             env=dict(env, **{ENV_RESULT_FILE: result_file}),
         )
         if result.returncode != 0:
@@ -76,9 +76,9 @@ def orchestrate(case: str) -> None:
     df = pd.DataFrame(rows)
     if not df.empty:
         df["setup_s"] = df["keygen_s"] + df["compile_s"]
-        df.insert(0, "case", case)
+        df = df.drop(columns=["accuracy_per_sample_s"], errors="ignore")
 
-    out = os.path.join(results_dir(case_dir(case)), "results.csv")
+    out = os.path.join(results_dir(case_dir(case)), f"results_{case}.csv")
     df.to_csv(out, index=False)
 
     print()

@@ -43,7 +43,7 @@ def run(case_dir: str) -> None:
             "mem_after_mb": mem_after / MB,
         })
 
-    out = os.path.join(results_dir(case_dir), "profile_sdk.csv")
+    out = os.path.join(results_dir(case_dir), f"profile_sdk_{os.path.basename(case_dir)}.csv")
     with open(out, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
