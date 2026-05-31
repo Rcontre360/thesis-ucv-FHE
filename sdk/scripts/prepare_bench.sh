@@ -12,7 +12,7 @@ apt-get update
 apt-get install -y \
     build-essential pkg-config git ninja-build wget \
     libgmp-dev libntl-dev zlib1g-dev libssl-dev \
-    python3.12 python3.12-venv python3-pip pipx
+    python3.12 python3.12-venv python3.12-dev python3-pip pipx
 
 # 2. Go >= 1.22 (Orion's Lattigo CGO bridge needs it).
 need_go=1
