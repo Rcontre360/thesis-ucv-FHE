@@ -58,8 +58,10 @@ def run(case_dir: str) -> None:
         orion.init_scheme(orion_config)
 
     with Measure() as m_compile:
-        calib = torch.tensor(x_calib[:256], dtype=torch.float32).reshape(-1, CHANNELS, h, w)
-        orion.fit(orion_net, calib, batch_size=64)
+        # See bench/mlp/processes/run_orion.py for why the calib batch is tiny:
+        # Orion bakes batch into its matrix packing.
+        calib = torch.tensor(x_calib[:8], dtype=torch.float32).reshape(-1, CHANNELS, h, w)
+        orion.fit(orion_net, calib, batch_size=8)
         input_level = orion.compile(orion_net)
 
     with Measure() as m_infer:

@@ -62,7 +62,10 @@ def run(case_dir: str) -> None:
         orion.init_scheme(orion_config)
 
     with Measure() as m_compile:
-        orion.fit(orion_net, torch.tensor(x_calib[:256], dtype=torch.float32), batch_size=64)
+        # Orion bakes the calib batch dim into its matrix packing, so 200 samples
+        # would blow fc1 up to a 32k×32k diagonal set. 8 samples is enough for
+        # range estimation on the Chebyshev fit.
+        orion.fit(orion_net, torch.tensor(x_calib[:8], dtype=torch.float32), batch_size=8)
         input_level = orion.compile(orion_net)
 
     with Measure() as m_infer:
