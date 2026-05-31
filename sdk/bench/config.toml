@@ -1,0 +1,15 @@
+# Bench-wide config. Provision per-library venvs with: tox -e <name>
+
+[interpreters]
+default = ".env"
+orion = ".env-orion"  # needs torch>=2.4 for dynamo on py3.12; Concrete-ML pins 2.3.1
+
+# Per-library sample counts. `latency` runs are REAL encrypted (slow per sample);
+# `accuracy` runs use the backend's cheap clear-equivalent mode when it has one
+# (Concrete-ML: fhe="disable"; SDK: forward_plain; Orion: eval()).
+[samples]
+default = {latency = 5, accuracy = 50}
+pytorch = {latency = 100, accuracy = 200}
+sdk     = {latency = 5,   accuracy = 50}
+cml     = {latency = 2,   accuracy = 100}
+orion   = {latency = 5,   accuracy = 50}

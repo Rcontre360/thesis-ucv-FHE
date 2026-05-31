@@ -7,6 +7,8 @@ from collections.abc import Callable
 import pynvml
 import torch
 
+from bench.shared.config import ENV_VRAM_BASELINE
+
 
 def cuda_sync() -> None:
     if torch.cuda.is_available():
@@ -14,14 +16,6 @@ def cuda_sync() -> None:
 
 
 def phase_metrics(phases: dict[str, "Measure | None"]) -> dict:
-    """Flatten ordered named Measure phases into prefixed result columns.
-
-    `phases` is insertion-ordered {name: Measure}. Per phase emits
-    `<name>_{vram,vram_alloc}_{mb,delta_mb}` and `<name>_ram_mb`, where each
-    delta is this phase's peak minus the previous phase's peak (0 for the first).
-    A `None` phase (one the backend does not run) emits zeros and is skipped
-    when computing the next phase's delta.
-    """
     out: dict = {}
     prev: Measure | None = None
     for name, m in phases.items():
@@ -101,7 +95,7 @@ class Measure:
                  alloc_probe: Callable[[], int] | None = None) -> None:
         self._gpu_index = gpu_index
         self._alloc_probe = alloc_probe
-        self._baseline_bytes = int(os.environ.get("BENCH_VRAM_BASELINE_BYTES") or 0)
+        self._baseline_bytes = int(os.environ.get(ENV_VRAM_BASELINE) or 0)
         self._sampler = None
 
     def __enter__(self) -> "Measure":

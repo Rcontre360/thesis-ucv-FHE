@@ -4,6 +4,8 @@ import json
 import numpy as np
 import torch
 
+from bench.shared.config import ENV_RESULT_FILE
+
 
 def artifacts_dir(case_dir: str) -> str:
     path = os.path.join(case_dir, "artifacts")
@@ -42,7 +44,7 @@ def load_inputs(case_dir: str) -> "np.lib.npyio.NpzFile":
 
 
 def emit(result: dict) -> None:
-    path = os.environ.get("BENCH_RESULT_FILE")
+    path = os.environ.get(ENV_RESULT_FILE)
     if path:
         with open(path, "w") as f:
             json.dump(result, f)

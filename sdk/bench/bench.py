@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import importlib
 import subprocess
 import tempfile
@@ -7,9 +8,11 @@ import tempfile
 import pynvml
 import pandas as pd
 
-from bench.paths import SDK_ROOT, case_dir
+from bench.shared.config import (
+    SDK_ROOT, case_dir, interpreter_for, samples_for,
+    ENV_VRAM_BASELINE, ENV_RESULT_FILE, ENV_LATENCY_N, ENV_ACCURACY_N,
+)
 from bench.shared.io import read_result, results_dir
-from bench.shared.envs import interpreter_for
 
 TRAIN: str = "train"
 BACKENDS: list[str] = ["run_pytorch", "run_sdk", "run_cml", "run_orion"]
@@ -47,7 +50,7 @@ def _run_backend(case: str, proc: str, env: dict[str, str]) -> dict | None:
         result = subprocess.run(
             [python, "-m", "bench", case, proc],
             cwd=SDK_ROOT, text=True, capture_output=True,
-            env=dict(env, BENCH_RESULT_FILE=result_file),
+            env=dict(env, **{ENV_RESULT_FILE: result_file}),
         )
         if result.returncode != 0:
             print(f"[bench] SKIP {proc}: rc={result.returncode}\n{result.stderr}", file=sys.stderr, flush=True)
@@ -59,7 +62,7 @@ def _run_backend(case: str, proc: str, env: dict[str, str]) -> dict | None:
 
 
 def orchestrate(case: str) -> None:
-    env: dict[str, str] = dict(os.environ, BENCH_VRAM_BASELINE_BYTES=str(_gpu_baseline_bytes()))
+    env: dict[str, str] = dict(os.environ, **{ENV_VRAM_BASELINE: str(_gpu_baseline_bytes())})
 
     if _run(case, TRAIN, env) != 0:
         raise RuntimeError("train failed")
@@ -83,3 +86,46 @@ def orchestrate(case: str) -> None:
     print("saved", out)
 
     _run(case, PROFILE, env)
+
+
+def duration(case: str) -> None:
+    env: dict[str, str] = dict(os.environ, **{
+        ENV_VRAM_BASELINE: str(_gpu_baseline_bytes()),
+        ENV_LATENCY_N: "1",
+        ENV_ACCURACY_N: "1",
+    })
+
+    t0 = time.perf_counter()
+    if _run(case, TRAIN, env) != 0:
+        raise RuntimeError("train failed")
+    train_s = time.perf_counter() - t0
+
+    rows: list[dict] = []
+    for proc in BACKENDS:
+        row = _run_backend(case, proc, env)
+        if row is None:
+            continue
+        counts = samples_for(proc[len("run_"):])
+        setup_s = row["keygen_s"] + row["compile_s"]
+        per_lat = row["latency_s"]
+        per_acc = row.get("accuracy_per_sample_s", per_lat)
+        rows.append({
+            "backend": row["backend"],
+            "setup_s": setup_s,
+            "per_latency_s": per_lat,
+            "per_accuracy_s": per_acc,
+            "latency_n": counts.latency,
+            "accuracy_n": counts.accuracy,
+            "full_latency_s": counts.latency * per_lat,
+            "full_accuracy_s": counts.accuracy * per_acc,
+            "total_s": setup_s + counts.latency * per_lat + counts.accuracy * per_acc,
+        })
+
+    df = pd.DataFrame(rows)
+    total_s = train_s + (df["total_s"].sum() if not df.empty else 0.0)
+
+    print()
+    print(f"[duration] projection for '{case}' (1 sample timed; train one-shot {train_s:.2f}s)")
+    if not df.empty:
+        print(df.to_string(index=False, float_format=lambda v: f"{v:.3f}"))
+    print(f"GRAND TOTAL: {total_s:.2f}s  (~{total_s / 60:.1f} min)")
