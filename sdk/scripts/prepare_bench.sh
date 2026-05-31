@@ -8,8 +8,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SDK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # 1. System packages (HEonGPU build + Orion CGO build + Python toolchain).
-sudo apt-get update
-sudo apt-get install -y \
+apt-get update
+apt-get install -y \
     build-essential pkg-config git ninja-build wget \
     libgmp-dev libntl-dev zlib1g-dev libssl-dev \
     python3.12 python3.12-venv python3-pip pipx
@@ -27,8 +27,8 @@ fi
 if [ "$need_go" -eq 1 ]; then
     cd /tmp
     wget -q https://go.dev/dl/go1.22.3.linux-amd64.tar.gz
-    sudo rm -rf /usr/local/go
-    sudo tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz
+    rm -rf /usr/local/go
+    tar -C /usr/local -xzf go1.22.3.linux-amd64.tar.gz
     rm go1.22.3.linux-amd64.tar.gz
     grep -qF '/usr/local/go/bin' "$HOME/.bashrc" || echo 'export PATH=/usr/local/go/bin:$PATH' >> "$HOME/.bashrc"
     export PATH=/usr/local/go/bin:$PATH
