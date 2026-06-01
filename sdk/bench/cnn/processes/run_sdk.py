@@ -39,8 +39,11 @@ def run(case_dir: str) -> None:
             enc_logits[i] = sdk_model(sdk_model.input(ctx, img.tolist())).decrypt()[:N_CLASSES]
 
     with Timer() as t_acc:
+        # forward_plain is a raw `x @ W.T` and expects flat input (1·28·28=784).
+        # Only the encrypted path goes through Conv2D.prepare_input which handles
+        # the (28, 28) reshape.
         acc_logits = np.stack([
-            np.asarray(sdk_model.forward_plain(x.reshape(h, w)))[:N_CLASSES]
+            np.asarray(sdk_model.forward_plain(x))[:N_CLASSES]
             for x in x_acc
         ])
     approx_accuracy = accuracy(acc_logits.argmax(axis=1), y_acc)
