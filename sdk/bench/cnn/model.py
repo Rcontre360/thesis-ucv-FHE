@@ -1,9 +1,9 @@
 import numpy as np
 from torch import nn
-from sklearn.datasets import fetch_openml
+from torchvision import datasets
 from sklearn.model_selection import train_test_split
 
-from bench.shared.config import SEED
+from bench.shared.config import SEED, BENCH_DIR
 from bench.shared.training import Dataset, TrainConfig
 
 IMAGE_SHAPE: tuple[int, int] = (28, 28)
@@ -27,11 +27,14 @@ def build_network() -> nn.Sequential:
 
 
 def load_mnist() -> Dataset:
-    # fetch_openml avoids the `datasets` package the notebook uses, keeping
-    # the bench install footprint to what's already in tox.ini.
-    raw = fetch_openml("mnist_784", version=1, as_frame=False, parser="auto")
-    x = raw.data.astype(np.float32) / 255.0
-    y = raw.target.astype(np.int64)
+    # torchvision uses the ossci-datasets S3 mirror (reliable on cloud pods);
+    # OpenML is frequently unreachable. Cache lives next to the bench tree so
+    # it survives between runs without polluting /tmp.
+    cache_dir = str(BENCH_DIR / "cnn" / ".mnist_cache")
+    train = datasets.MNIST(root=cache_dir, train=True, download=True)
+    test = datasets.MNIST(root=cache_dir, train=False, download=True)
+    x = np.concatenate([train.data.numpy(), test.data.numpy()]).reshape(-1, 784).astype(np.float32) / 255.0
+    y = np.concatenate([train.targets.numpy(), test.targets.numpy()]).astype(np.int64)
     x_tr, x_te, y_tr, y_te = train_test_split(
         x, y, test_size=TEST_SIZE, random_state=SEED, stratify=y,
     )
