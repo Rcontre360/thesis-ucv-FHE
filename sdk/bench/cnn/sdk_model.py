@@ -8,10 +8,12 @@ from api.sequential import Sequential
 from core.enums import SecurityLevel
 from bench.cnn.model import IMAGE_SHAPE
 
-# Same config as notebooks/shallow_cnn.ipynb. Galois keys stored on host to fit
-# the ~24 GB key set; (3,3,11) is the bootstrap factorization the notebook uses.
+# Same config as notebooks/shallow_cnn.ipynb but one bootstrap level shorter
+# (27 mid-primes vs the notebook's 28). The full 28-prime chain pushes keygen
+# scratch over the RMM pool ceiling (0.95 × 24 GB = 22.8 GB) on the cloud
+# 24 GB GPU; one fewer prime trims ~few-hundred MB of key material.
 POLY_DEGREE: int = 65_536
-COEFF_MODULUS: list[int] = [60] + [53] * 28 + [60]
+COEFF_MODULUS: list[int] = [60] + [53] * 27 + [60]
 SCALE: int = 2 ** 53
 SECURITY = SecurityLevel.SEC128
 RELU_DEGREES: tuple[int, ...] = (5,) * 9
