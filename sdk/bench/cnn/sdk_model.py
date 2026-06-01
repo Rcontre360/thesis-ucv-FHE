@@ -16,8 +16,8 @@ POLY_DEGREE: int = 65_536
 COEFF_MODULUS: list[int] = [60] + [53] * 27 + [60]
 SCALE: int = 2 ** 53
 SECURITY = SecurityLevel.SEC128
-RELU_DEGREES: tuple[int, ...] = (5,) * 9
-BOOTSTRAP_PARAMS: tuple[int, int, int] = (3, 3, 11)
+RELU_DEGREES: tuple[int, ...] = (5,) * 10
+BOOTSTRAP_PARAMS: tuple[int, int, int] = (3, 3, 10)
 
 
 def build_context() -> FHEContext:
