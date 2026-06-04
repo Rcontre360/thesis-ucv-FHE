@@ -48,7 +48,13 @@ void register_data(py::module_& m)
 
         .def_property_readonly("size",
              &CKKSPlaintext::size,
-             "Raw polynomial size = n * (Q_size - depth).");
+             "Raw polynomial size = n * (Q_size - depth).")
+
+        .def("copy",
+             [](const CKKSPlaintext& self) -> CKKSPlaintext {
+                 return CKKSPlaintext(self);
+             },
+             "Return a device-side deep copy of this plaintext.");
 
     py::class_<CKKSCiphertext>(m, "CKKSCiphertext",
         "CKKS ciphertext — an encrypted slot vector.\n"

@@ -84,6 +84,10 @@ class Sequential:
             self._calibrate(calibration_data)
             self._fold_calibration()
 
+        for layer in self._layers:
+            if isinstance(layer, AffineLayer):
+                layer._weight.encode(context)
+
         total_depth = sum(l.mult_depth() for l in self._layers)
         if total_depth > context._usable_levels():
             context._setup_bootstrapping()
