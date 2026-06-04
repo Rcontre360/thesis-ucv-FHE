@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import numpy as np
+import torch.nn as nn
 
 from core.errors import ShapeError
 
@@ -11,11 +12,7 @@ if TYPE_CHECKING:
 
 
 class Layer(ABC):
-    """Interface for `Sequential` elements: a callable EncryptedVector -> EncryptedVector.
-
-    Subclasses must implement `__call__`. Layers usable as a model's first
-    element override `prepare_input`; others inherit the raising default.
-    """
+    """Sequential element: EncryptedVector -> EncryptedVector."""
 
     @abstractmethod
     def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
@@ -23,35 +20,22 @@ class Layer(ABC):
 
     @abstractmethod
     def mult_depth(self) -> int:
-        """Multiplicative levels this layer consumes (critical path, not count).
-
-        `Sequential.compile` sums these to size the bootstrapping schedule.
-        """
         ...
 
     @abstractmethod
     def forward_plain(self, x: np.ndarray) -> np.ndarray:
-        """Plaintext numpy mirror of `__call__` — same approximations, no FHE.
+        ...
 
-        Use this as the reference for what an encrypted forward should produce
-        in the absence of ciphertext noise. For layers whose encrypted path
-        uses an approximation (ReLU's Cheon-`f_n` composition, Square, ...)
-        `forward_plain` evaluates that same approximation on plaintext, so
-        `forward_plain(x) - forward(encrypted(x))` isolates the FHE noise.
-
-        Accepts a single sample `(features,)` or a batch `(N, features)`.
-        """
+    @classmethod
+    @abstractmethod
+    def from_torch(
+        cls,
+        module: nn.Module,
+        input_shape: Tuple[int, ...],
+    ) -> Tuple["Layer", Tuple[int, ...]]:
         ...
 
     def forward_calibration(self, x: np.ndarray) -> np.ndarray:
-        """Plaintext forward used during `Sequential.compile` calibration.
-
-        Defaults to `forward_plain`. Override for layers whose encrypted-path
-        approximation requires its inputs to already be in a calibrated range:
-        calibration must measure the *original* (un-approximated) network's
-        activation ranges, otherwise the per-neuron fold is derived from the
-        polynomial's wrong-on-unbounded-inputs outputs.
-        """
         return self.forward_plain(x)
 
     def prepare_input(self, raw_data: object) -> List[float]:
@@ -62,11 +46,7 @@ class Layer(ABC):
 
 
 class AffineLayer(Layer):
-    """Base for layers computing y = W @ x + b with plaintext W and b.
-
-    Subclasses build the weight matrix and bias in their own `__init__`, then
-    call `super().__init__(...)`; the forward pass is shared here.
-    """
+    """y = W @ x + b with plaintext W and b."""
 
     in_features: int
     out_features: int
@@ -90,8 +70,6 @@ class AffineLayer(Layer):
             raise ShapeError(
                 f"input size {x.size} != in_features {self.in_features}"
             )
-        # The matmul consumes one multiplicative level; refresh first if a
-        # deep network has run the ciphertext low (no-op otherwise).
         x = x._context._prepare_for(x, 1)
         out = x.matmul(self._weight)
         if self._bias is not None:

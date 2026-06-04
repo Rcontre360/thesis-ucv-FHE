@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from core.enums import SecurityLevel
 
@@ -46,10 +46,7 @@ class _ValidatedDataclass:
 
 @dataclass
 class BootstrapConfig(_ValidatedDataclass):
-    """SLIM bootstrapping circuit knobs.
-
-    Used only when Sequential.compile enables bootstrapping for a deep network.
-    """
+    """SLIM bootstrap circuit knobs."""
     ctos_piece: int = 3
     stoc_piece: int = 3
     taylor_number: int = 11
@@ -76,13 +73,7 @@ class BootstrapConfig(_ValidatedDataclass):
 
 @dataclass
 class FHEConfig(_ValidatedDataclass):
-    """CKKS parameters and key-management options for FHEContext.
-
-    Validates on construction and on every subsequent attribute assignment.
-    All quantities that are exact powers of 2 are stored as their log2.
-    `bootstrap` is opt-in: set a BootstrapConfig only if your network needs
-    bootstrapping; the chain must then satisfy a depth requirement.
-    """
+    """CKKS parameters for FHEContext. Validates on every attribute write."""
     log_n: int = 14
     coeff_modulus_bit_sizes: List[int] = field(
         default_factory=lambda: [60, 40, 40, 40, 40, 60]
@@ -91,6 +82,7 @@ class FHEConfig(_ValidatedDataclass):
     security_level: SecurityLevel = SecurityLevel.SEC128
     galois_keys_on_host: bool = False
     bootstrap: Optional[BootstrapConfig] = None
+    relu_degrees: Tuple[int, ...] = (7,) * 12
 
     def _validate(self) -> None:
         self._validate_log_n()
@@ -101,6 +93,7 @@ class FHEConfig(_ValidatedDataclass):
         self._validate_security_cap()
         self._validate_coefficient_validator()
         self._validate_bootstrap_chain_depth()
+        self._validate_relu_degrees()
 
     def _validate_log_n(self) -> None:
         if self.log_n not in _VALID_LOG_N:
@@ -184,3 +177,13 @@ class FHEConfig(_ValidatedDataclass):
                 f"need at least {min_q_size} Q primes. Lengthen coeff_modulus_bit_sizes "
                 f"or use smaller bootstrap parameters."
             )
+
+    def _validate_relu_degrees(self) -> None:
+        if not isinstance(self.relu_degrees, tuple) or not self.relu_degrees:
+            raise ValueError("relu_degrees must be a non-empty tuple of odd ints >= 3")
+        for d in self.relu_degrees:
+            if not isinstance(d, int) or d < 3 or d % 2 == 0:
+                raise ValueError(
+                    f"each relu_degrees entry must be an odd int >= 3 "
+                    f"(Cheon-Kim-Kim-Lee f_n constraint), got {d}"
+                )

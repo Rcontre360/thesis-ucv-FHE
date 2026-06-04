@@ -127,6 +127,21 @@ By the time that throws, you've already paid for key generation, model compilati
 
 ---
 
+## 9. `relu_degrees` — Cheon `f_n` polynomial structure
+
+`relu_degrees` is a non-empty tuple; each entry must be an **odd integer ≥ 3**.
+
+**Why.** The SDK's polynomial ReLU chains the `f_n` polynomials from Cheon, Kim, Kim, Lee, Lee — *"Numerical Method for Comparison on Homomorphically Encrypted Numbers"* (Asiacrypt 2019), ePrint [2019/417](https://eprint.iacr.org/2019/417). For each integer `n ≥ 1`, `f_n` is defined as the **unique odd polynomial of degree `2n + 1`** with `f_n(1) = 1` and the first `n` derivatives vanishing at `x = 1`. Iterated composition `f_n ∘ … ∘ f_n` converges to the `sign` function on `[-1, 1]`; we use that to approximate `step(x) = (1 + sign(x))/2`, then multiply by `x` to get ReLU.
+
+Two structural constraints fall out:
+
+1. **Odd polynomial → degree must be odd.** Non-trivial odd polynomials have odd degree.
+2. **`n ≥ 1` → degree ≥ 3.** `n = 0` collapses to the identity (degree 1), which doesn't converge to `sign`. The smallest usable case is `n = 1`, degree `2·1 + 1 = 3`.
+
+**Source.** The constraints are from the paper's polynomial-family definition (Algorithm 1, Section 4). The validator mirrors the same check `_fn_coeffs` performs at coefficient-build time, just lifted to the config object so misconfigurations surface immediately rather than at `Sequential.compile()`.
+
+---
+
 ## Validations HEonGPU has that we deliberately don't
 
 - **Order-of-call enforcement.** HEonGPU throws if `set_poly_modulus_degree` is called after `set_coeff_modulus_bit_sizes`, etc. Our `FHEConfig` is a plain dataclass — order of attribute writes doesn't matter, only the final state. No equivalent check needed.
@@ -140,3 +155,4 @@ By the time that throws, you've already paid for key generation, model compilati
 - **`log_scale` positivity** (validation #4).
 - **`bootstrap` opt-in semantics** + chain-depth check at config time (validation #5 + #8 — HEonGPU has neither).
 - **`BootstrapConfig` field ranges** (`ctos_piece`, `stoc_piece` ∈ `[2, 5]`; `taylor_number` ∈ `[6, 15]`). HEonGPU does not validate these — out-of-range values may produce broken bootstrap circuits or runtime errors. Our ranges come from the documented usable range in HEonGPU's BootstrappingConfig usage.
+- **`relu_degrees` structure** (validation #9). HEonGPU is unaware of polynomial-activation choices — it just runs the multiplications you queue. This constraint is purely a property of the Cheon-Kim-Kim-Lee-Lee `f_n` family our SDK uses, not of the scheme.

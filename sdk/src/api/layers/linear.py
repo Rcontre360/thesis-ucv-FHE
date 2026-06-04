@@ -1,4 +1,7 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
+
+import numpy as np
+import torch.nn as nn
 
 from core.errors import ShapeError
 from core.layer import AffineLayer
@@ -7,11 +10,7 @@ from api.tensor import PlaintextTensor
 
 
 class Linear(AffineLayer):
-    """Fully-connected layer: y = W @ x + b, no extra multiplication depth.
-
-    weight has shape (out_features, in_features); bias has length out_features
-    or is None.
-    """
+    """Fully-connected layer y = W @ x + b."""
 
     def __init__(
         self,
@@ -29,7 +28,6 @@ class Linear(AffineLayer):
         )
 
     def prepare_input(self, raw_data: object) -> List[float]:
-        """Validate a flat 1-D list/tuple/numpy array of length `in_features`."""
         arr = check_array(raw_data, name="Linear input")
         if arr.ndim != 1:
             raise ShapeError(
@@ -41,3 +39,24 @@ class Linear(AffineLayer):
                 f"input size {arr.size} != in_features {self.in_features}"
             )
         return arr.tolist()
+
+    @classmethod
+    def from_torch(
+        cls,
+        module: nn.Linear,
+        input_shape: Tuple[int, ...],
+    ) -> Tuple["Linear", Tuple[int, ...]]:
+        expected = int(np.prod(input_shape))
+        if expected != module.in_features:
+            raise ShapeError(
+                f"Linear expects {module.in_features} features but the previous "
+                f"layer outputs {expected} (shape={input_shape})"
+            )
+        bias = module.bias.detach().numpy() if module.bias is not None else None
+        layer = cls(
+            module.in_features,
+            module.out_features,
+            module.weight.detach().numpy(),
+            bias,
+        )
+        return layer, (module.out_features,)
