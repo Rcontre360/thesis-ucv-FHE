@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 
 from core.enums import SecurityLevel
 
@@ -10,8 +10,13 @@ _SECURITY_CAPS = {
     SecurityLevel.SEC256: {12: 57,  13: 115, 14: 232, 15: 465, 16: 930},
 }
 _VALID_LOG_N = {12, 13, 14, 15, 16}
-_PRIME_BITS_MIN = 14
+_PRIME_BITS_MIN = 30
 _PRIME_BITS_MAX = 60
+_BOOTSTRAP_PIECE_MIN = 2
+_BOOTSTRAP_PIECE_MAX = 5
+_TAYLOR_MIN = 6
+_TAYLOR_MAX = 15
+_SLIM_BOOTSTRAP_OVERHEAD = 9
 
 
 class _ValidatedDataclass:
@@ -50,12 +55,23 @@ class BootstrapConfig(_ValidatedDataclass):
     taylor_number: int = 11
 
     def _validate(self) -> None:
-        if not 2 <= self.ctos_piece <= 5:
-            raise ValueError(f"ctos_piece must be in [2, 5], got {self.ctos_piece}")
-        if not 2 <= self.stoc_piece <= 5:
-            raise ValueError(f"stoc_piece must be in [2, 5], got {self.stoc_piece}")
-        if not 6 <= self.taylor_number <= 15:
-            raise ValueError(f"taylor_number must be in [6, 15], got {self.taylor_number}")
+        self._validate_piece("ctos_piece", self.ctos_piece)
+        self._validate_piece("stoc_piece", self.stoc_piece)
+        self._validate_taylor_number()
+
+    def _validate_piece(self, name: str, value: int) -> None:
+        if not _BOOTSTRAP_PIECE_MIN <= value <= _BOOTSTRAP_PIECE_MAX:
+            raise ValueError(
+                f"{name} must be in [{_BOOTSTRAP_PIECE_MIN}, {_BOOTSTRAP_PIECE_MAX}], "
+                f"got {value}"
+            )
+
+    def _validate_taylor_number(self) -> None:
+        if not _TAYLOR_MIN <= self.taylor_number <= _TAYLOR_MAX:
+            raise ValueError(
+                f"taylor_number must be in [{_TAYLOR_MIN}, {_TAYLOR_MAX}], "
+                f"got {self.taylor_number}"
+            )
 
 
 @dataclass
@@ -64,6 +80,8 @@ class FHEConfig(_ValidatedDataclass):
 
     Validates on construction and on every subsequent attribute assignment.
     All quantities that are exact powers of 2 are stored as their log2.
+    `bootstrap` is opt-in: set a BootstrapConfig only if your network needs
+    bootstrapping; the chain must then satisfy a depth requirement.
     """
     log_n: int = 14
     coeff_modulus_bit_sizes: List[int] = field(
@@ -72,22 +90,36 @@ class FHEConfig(_ValidatedDataclass):
     log_scale: int = 40
     security_level: SecurityLevel = SecurityLevel.SEC128
     galois_keys_on_host: bool = False
-    bootstrap: BootstrapConfig = field(default_factory=BootstrapConfig)
+    bootstrap: Optional[BootstrapConfig] = None
 
     def _validate(self) -> None:
+        self._validate_log_n()
+        self._validate_coeff_modulus_shape()
+        self._validate_coeff_modulus_bits()
+        self._validate_log_scale()
+        self._validate_bootstrap_type()
+        self._validate_security_cap()
+        self._validate_coefficient_validator()
+        self._validate_bootstrap_chain_depth()
+
+    def _validate_log_n(self) -> None:
         if self.log_n not in _VALID_LOG_N:
             raise ValueError(
                 f"log_n must be one of {sorted(_VALID_LOG_N)} "
                 f"(N = 2^log_n in {{4096, ..., 65536}}), got {self.log_n}"
             )
 
-        if not isinstance(self.coeff_modulus_bit_sizes, list) or not self.coeff_modulus_bit_sizes:
+    def _validate_coeff_modulus_shape(self) -> None:
+        c = self.coeff_modulus_bit_sizes
+        if not isinstance(c, list) or not c:
             raise ValueError("coeff_modulus_bit_sizes must be a non-empty list")
-        if len(self.coeff_modulus_bit_sizes) < 2:
+        if len(c) < 2:
             raise ValueError(
                 "coeff_modulus_bit_sizes needs at least 2 entries "
                 "(one Q prime + one P prime size)"
             )
+
+    def _validate_coeff_modulus_bits(self) -> None:
         for b in self.coeff_modulus_bit_sizes:
             if not isinstance(b, int) or not _PRIME_BITS_MIN <= b <= _PRIME_BITS_MAX:
                 raise ValueError(
@@ -95,26 +127,25 @@ class FHEConfig(_ValidatedDataclass):
                     f"[{_PRIME_BITS_MIN}, {_PRIME_BITS_MAX}], got {b}"
                 )
 
+    def _validate_log_scale(self) -> None:
         if not isinstance(self.log_scale, int) or self.log_scale < 1:
             raise ValueError(f"log_scale must be a positive int, got {self.log_scale}")
-        q_bits = self.coeff_modulus_bit_sizes[:-1]
-        if self.log_scale > max(q_bits):
-            raise ValueError(
-                f"log_scale ({self.log_scale}) exceeds the largest Q prime "
-                f"({max(q_bits)} bits); decoding precision would underflow"
-            )
 
-        if not isinstance(self.bootstrap, BootstrapConfig):
+    def _validate_bootstrap_type(self) -> None:
+        if self.bootstrap is not None and not isinstance(self.bootstrap, BootstrapConfig):
             raise TypeError(
-                f"bootstrap must be a BootstrapConfig, got {type(self.bootstrap).__name__}"
+                f"bootstrap must be a BootstrapConfig or None, "
+                f"got {type(self.bootstrap).__name__}"
             )
 
+    def _validate_security_cap(self) -> None:
         if self.security_level == SecurityLevel.NONE:
             return
         caps = _SECURITY_CAPS.get(self.security_level)
         if caps is None:
             raise ValueError(f"unknown security_level: {self.security_level}")
         cap = caps[self.log_n]
+        q_bits = self.coeff_modulus_bit_sizes[:-1]
         p_size = self.coeff_modulus_bit_sizes[-1]
         num_p = max(2, round(sum(q_bits) / (8 * p_size)))
         total_bits = sum(q_bits) + num_p * p_size
@@ -124,4 +155,32 @@ class FHEConfig(_ValidatedDataclass):
                 f"cap ({cap} bits) for log_n={self.log_n} (N=2^{self.log_n}). "
                 f"Lower the bit sizes, shorten the chain, raise log_n, or use "
                 f"SecurityLevel.NONE (insecure)."
+            )
+
+    def _validate_coefficient_validator(self) -> None:
+        q_bits = self.coeff_modulus_bit_sizes[:-1]
+        p_size = self.coeff_modulus_bit_sizes[-1]
+        num_p = max(2, round(sum(q_bits) / (8 * p_size)))
+        total_p = num_p * p_size
+        for i in range(0, len(q_bits), num_p):
+            chunk = q_bits[i:i + num_p]
+            if sum(chunk) > total_p:
+                raise ValueError(
+                    f"coefficient_validator: Q chunk {chunk} (sum={sum(chunk)}) "
+                    f"exceeds total P bits ({total_p}). Raise the P prime size "
+                    f"(last entry of coeff_modulus_bit_sizes) or lower the Q bit sizes."
+                )
+
+    def _validate_bootstrap_chain_depth(self) -> None:
+        if self.bootstrap is None:
+            return
+        q_size = len(self.coeff_modulus_bit_sizes) - 1
+        b = self.bootstrap
+        min_q_size = b.ctos_piece + b.stoc_piece + b.taylor_number + _SLIM_BOOTSTRAP_OVERHEAD
+        if q_size < min_q_size:
+            raise ValueError(
+                f"Q chain size ({q_size}) is too short for the bootstrap config "
+                f"(ctos={b.ctos_piece}, stoc={b.stoc_piece}, taylor={b.taylor_number}): "
+                f"need at least {min_q_size} Q primes. Lengthen coeff_modulus_bit_sizes "
+                f"or use smaller bootstrap parameters."
             )

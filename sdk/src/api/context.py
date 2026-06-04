@@ -149,6 +149,11 @@ class FHEContext:
     def _setup_bootstrapping(self) -> None:
         if self._bootstrapping_ready:
             return
+        if self.config.bootstrap is None:
+            raise RuntimeError(
+                "Bootstrapping required but FHEConfig.bootstrap is None. "
+                "Set bootstrap=BootstrapConfig(...) on the FHEConfig."
+            )
         boot = self.config.bootstrap
         config = BootstrappingConfig(
             boot.ctos_piece, boot.stoc_piece, boot.taylor_number, True
