@@ -2,7 +2,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from core.errors import ShapeError
+from fhe_ml.utils.errors import ShapeError
 
 
 def check_array(

@@ -3,18 +3,18 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 import numpy as np
 import torch.nn as nn
 
-from core.errors import LayerConfigError
-from core.layer import AffineLayer, Layer
-from core.utils import to_numpy
-from api.functions.relu import ReLU
-from api.input import Input
-from api.layers.conv2d import Conv2D
-from api.layers.linear import Linear
-from api.tensor import PlaintextTensor
+from fhe_ml.utils.errors import LayerConfigError
+from fhe_ml.layers.base import AffineLayer, Layer
+from fhe_ml.utils import to_numpy
+from fhe_ml.layers.relu import ReLU
+from fhe_ml.layers.input import Input
+from fhe_ml.layers.conv2d import Conv2D
+from fhe_ml.layers.linear import Linear
+from fhe_ml.ckks.containers.tensor import PlaintextTensor
 
 if TYPE_CHECKING:
-    from api.ciphertext import EncryptedVector
-    from api.context import FHEContext
+    from fhe_ml.ckks.containers.ciphertext import EncryptedVector
+    from fhe_ml.ckks.context import FHEContext
 
 
 class Sequential:

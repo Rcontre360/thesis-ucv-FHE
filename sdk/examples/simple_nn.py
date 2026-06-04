@@ -7,8 +7,7 @@ Weights and biases are plaintext; only the input is encrypted.
 """
 
 from fhe_ml import FHEContext, Sequential
-from fhe_ml.layers import Linear
-from fhe_ml.functions import ReLU
+from fhe_ml.layers import Linear, ReLU
 
 # ---------------------------------------------------------------------------
 # Weights and biases (normally loaded from a trained model)

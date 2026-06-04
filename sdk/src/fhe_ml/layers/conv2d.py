@@ -3,10 +3,10 @@ from typing import List, Optional, Tuple, Union
 import numpy as np
 import torch.nn as nn
 
-from core.errors import LayerConfigError, ShapeError
-from core.layer import AffineLayer
-from core.utils.validate import check_array
-from api.tensor import PlaintextTensor
+from fhe_ml.utils.errors import LayerConfigError, ShapeError
+from fhe_ml.layers.base import AffineLayer
+from fhe_ml.utils.validate import check_array
+from fhe_ml.ckks.containers.tensor import PlaintextTensor
 
 
 class Conv2D(AffineLayer):

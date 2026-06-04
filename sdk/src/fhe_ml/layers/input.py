@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, List
 
-from api.ciphertext import EncryptedVector
+from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 
 if TYPE_CHECKING:
-    from api.context import FHEContext
+    from fhe_ml.ckks.context import FHEContext
 
 
 class Input:

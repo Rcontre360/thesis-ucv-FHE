@@ -2,13 +2,13 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
 
-from core._backend import CKKSCiphertext, CKKSPlaintext
-from core.errors import ShapeError
-from core.plaintext import PlaintextVector
-from api.tensor import PlaintextTensor
+from fhe_ml.backend._backend import CKKSCiphertext, CKKSPlaintext
+from fhe_ml.utils.errors import ShapeError
+from fhe_ml.ckks.containers.plaintext import PlaintextVector
+from fhe_ml.ckks.containers.tensor import PlaintextTensor
 
 if TYPE_CHECKING:
-    from api.context import FHEContext
+    from fhe_ml.ckks.context import FHEContext
 
 
 class EncryptedVector:

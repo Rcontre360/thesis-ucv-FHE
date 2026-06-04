@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
-from core.enums import SecurityLevel
+from fhe_ml.utils.enums import SecurityLevel
 
 
 _SECURITY_CAPS = {

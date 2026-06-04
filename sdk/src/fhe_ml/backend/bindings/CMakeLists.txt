@@ -29,4 +29,4 @@ set_target_properties(_backend PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
-install(TARGETS _backend LIBRARY DESTINATION core COMPONENT python_modules)
+install(TARGETS _backend LIBRARY DESTINATION fhe_ml/backend COMPONENT python_modules)

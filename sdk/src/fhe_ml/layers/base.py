@@ -4,11 +4,11 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import numpy as np
 import torch.nn as nn
 
-from core.errors import ShapeError
+from fhe_ml.utils.errors import ShapeError
 
 if TYPE_CHECKING:
-    from api.ciphertext import EncryptedVector
-    from api.tensor import PlaintextTensor
+    from fhe_ml.ckks.containers.ciphertext import EncryptedVector
+    from fhe_ml.ckks.containers.tensor import PlaintextTensor
 
 
 class Layer(ABC):

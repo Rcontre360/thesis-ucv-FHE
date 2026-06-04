@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 import numpy as np
 import torch.nn as nn
 
-from core.layer import Layer
+from fhe_ml.layers.base import Layer
 
 if TYPE_CHECKING:
-    from api.ciphertext import EncryptedVector
+    from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 
 
 def _fn_coeffs(degree: int) -> np.ndarray:

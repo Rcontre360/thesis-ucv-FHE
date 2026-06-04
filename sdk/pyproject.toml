@@ -57,7 +57,7 @@ dev = [
 cmake.version = ">=3.25"
 ninja.make-fallback = true
 install.components = ["python_modules"]
-wheel.packages = ["src/fhe_ml", "src/api", "src/core"]
+wheel.packages = ["src/fhe_ml"]
 
 [tool.scikit-build.cmake.define]
 BUILD_PYTHON_BINDINGS = "ON"
