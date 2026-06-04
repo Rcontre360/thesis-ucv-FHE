@@ -6,7 +6,9 @@ that lives across `api.*` and `core.*`; do not import from those directly
 in user code.
 """
 from api import (
+    BootstrapConfig,
     EncryptedVector,
+    FHEConfig,
     FHEContext,
     FHESDKError,
     Input,
@@ -19,6 +21,8 @@ from core import PlaintextVector, SecurityLevel
 
 __all__ = [
     "FHEContext",
+    "FHEConfig",
+    "BootstrapConfig",
     "Sequential",
     "Input",
     "PlaintextTensor",

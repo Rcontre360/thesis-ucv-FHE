@@ -15,21 +15,20 @@ N=65536 and a >=16 GB GPU.
 Run: from the sdk/ dir, `/usr/bin/python3.12 examples/bootstrapping.py`.
 """
 
-from fhe_ml import FHEContext, SecurityLevel, Sequential
+from fhe_ml import FHEConfig, FHEContext, SecurityLevel, Sequential
 from fhe_ml.layers import Linear
 
 DEPTH = 30  # identity Linear layers — deeper than the ~28-level fresh budget
 
 # Long modulus chain (29 Q primes) so the SLIM bootstrap circuit fits.
-ctx = (
-    FHEContext()
-    .set_poly_modulus_degree(16384)
-    .set_coeff_modulus_bit_sizes([60] + [50] * 28 + [60])
-    .set_scale(2**50)
-    .set_security_level(SecurityLevel.NONE)   # INSECURE — demo only
-    .set_galois_key_storage(on_host=True)     # stream keys from CPU RAM: fits 4 GB
-    .build()
+config = FHEConfig(
+    poly_modulus_degree=16384,
+    coeff_modulus_bit_sizes=[60] + [50] * 28 + [60],
+    scale=2 ** 50,
+    security_level=SecurityLevel.NONE,   # INSECURE — demo only
+    galois_keys_on_host=True,            # stream keys from CPU RAM: fits 4 GB
 )
+ctx = FHEContext(config).build()
 
 identity = [
     [1.0, 0.0, 0.0, 0.0],

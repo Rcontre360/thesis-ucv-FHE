@@ -17,16 +17,13 @@ from core._backend import (
     BootstrappingConfig,
     BootstrappingType,
 )
-from core.enums import SecurityLevel
 from core.plaintext import PlaintextVector
 from api.ciphertext import EncryptedVector
+from api.config import FHEConfig
 
 
 class FHEContext:
-    _poly_modulus_degree: Optional[int]
-    _coeff_modulus_bit_sizes: Optional[List[int]]
-    _scale: Optional[float]
-    _security_level: SecurityLevel
+    config: FHEConfig
     _built: bool
 
     _backend_ctx: Optional[object]
@@ -41,19 +38,12 @@ class FHEContext:
     _rk: Optional[CKKSRelinkey]
     _gk: Optional[CKKSGaloiskey]
 
-    # SLIM bootstrapping is always the variant used; these tune the circuit.
-    _ctos_piece: int
-    _stoc_piece: int
-    _taylor_number: int
     _bootstrapping_ready: bool
-    _galois_keys_on_host: bool
 
-    def __init__(self) -> None:
-        self._poly_modulus_degree = None
-        self._coeff_modulus_bit_sizes = None
-        self._scale = None
-        self._security_level = SecurityLevel.SEC128
+    def __init__(self, config: Optional[FHEConfig] = None) -> None:
+        self.config = config if config is not None else FHEConfig()
         self._built = False
+        self._bootstrapping_ready = False
 
         self._backend_ctx = None
         self._encoder = None
@@ -67,79 +57,19 @@ class FHEContext:
         self._rk = None
         self._gk = None
 
-        self._ctos_piece = 3
-        self._stoc_piece = 3
-        self._taylor_number = 11
-        self._bootstrapping_ready = False
-        self._galois_keys_on_host = False
-
-    def _ensure_not_built(self) -> None:
+    def build(self) -> "FHEContext":
         if self._built:
             raise RuntimeError("Context already built — create a new FHEContext to change parameters.")
+        cfg = self.config
 
-    def set_poly_modulus_degree(self, degree: int) -> "FHEContext":
-        self._ensure_not_built()
-        self._poly_modulus_degree = degree
-        return self
+        self._backend_ctx = create_ckks_context_with_security(cfg.security_level)
+        self._backend_ctx.set_poly_modulus_degree(cfg.poly_modulus_degree)
 
-    def set_coeff_modulus_bit_sizes(self, bit_sizes: List[int]) -> "FHEContext":
-        self._ensure_not_built()
-        self._coeff_modulus_bit_sizes = bit_sizes
-        return self
-
-    def set_scale(self, scale: float) -> "FHEContext":
-        self._ensure_not_built()
-        self._scale = scale
-        return self
-
-    def set_security_level(self, level: SecurityLevel) -> "FHEContext":
-        self._ensure_not_built()
-        self._security_level = level
-        return self
-
-    def set_bootstrapping_params(
-        self, ctos_piece: int = 3, stoc_piece: int = 3, taylor_number: int = 11
-    ) -> "FHEContext":
-        """Tune the SLIM bootstrapping circuit (used only if `compile` enables it).
-
-        ctos_piece/stoc_piece (2-5): DFT factor counts — more pieces means a
-        deeper but cheaper-per-stage circuit. taylor_number (6-15): EvalMod sine
-        degree — higher is more accurate but deeper. Defaults are a middle ground.
-        """
-        self._ensure_not_built()
-        self._ctos_piece = ctos_piece
-        self._stoc_piece = stoc_piece
-        self._taylor_number = taylor_number
-        return self
-
-    def set_galois_key_storage(self, on_host: bool = True) -> "FHEContext":
-        """Keep Galois (rotation) keys in CPU RAM instead of GPU VRAM.
-
-        With `on_host=True` each key is streamed GPU-side only while a rotation
-        uses it: far less VRAM (one key resident, not all of them), but a
-        host->device copy per rotation. Needed to fit bootstrapping keys on
-        small GPUs. Defaults to device storage (faster) when never called.
-        """
-        self._ensure_not_built()
-        self._galois_keys_on_host = on_host
-        return self
-
-    def build(self) -> "FHEContext":
-        if self._poly_modulus_degree is None:
-            raise ValueError("poly_modulus_degree must be set before build()")
-        if self._coeff_modulus_bit_sizes is None:
-            raise ValueError("coeff_modulus_bit_sizes must be set before build()")
-        if self._scale is None:
-            raise ValueError("scale must be set before build()")
-
-        self._backend_ctx = create_ckks_context_with_security(self._security_level)
-        self._backend_ctx.set_poly_modulus_degree(self._poly_modulus_degree)
-
-        # All but the last entry are Q (usable levels); the last is the P
-        # prime size. Short chains use METHOD_I keyswitching (1 P prime);
-        # long chains use METHOD_II and want dnum ~ sum(Q)/sum(P) ~ 8.
-        q_bits = self._coeff_modulus_bit_sizes[:-1]
-        p_size = self._coeff_modulus_bit_sizes[-1]
+        # All but the last entry are Q (usable levels); the last is the P prime
+        # size. Short chains use METHOD_I keyswitching (1 P prime); long chains
+        # use METHOD_II and want dnum ~ sum(Q)/sum(P) ~ 8.
+        q_bits = cfg.coeff_modulus_bit_sizes[:-1]
+        p_size = cfg.coeff_modulus_bit_sizes[-1]
         # METHOD_II keyswitching requires num_p >= 2; we pick enough same-size
         # P primes to keep dnum ~ 8 (longer chains thus get 3+).
         num_p = max(2, round(sum(q_bits) / (8 * p_size)))
@@ -168,13 +98,7 @@ class FHEContext:
 
     @classmethod
     def default(cls) -> "FHEContext":
-        return (
-            cls()
-            .set_poly_modulus_degree(16384)
-            .set_coeff_modulus_bit_sizes([60, 40, 40, 40, 40, 60])
-            .set_scale(2**40)
-            .build()
-        )
+        return cls().build()
 
     # ------------------------------------------------------------------
     # Rotation
@@ -189,7 +113,7 @@ class FHEContext:
     def _network_shifts(self) -> List[int]:
         # Every rotation the SDK performs (matmul rotate-by-1, _sum_slots
         # halving steps) is a power of 2, so this fixed set covers all layers.
-        slot_count = self._poly_modulus_degree // 2
+        slot_count = self.config.poly_modulus_degree // 2
         return [2**k for k in range(int(math.log2(slot_count)))]
 
     def _usable_levels(self) -> int:
@@ -205,13 +129,14 @@ class FHEContext:
         """
         if self._bootstrapping_ready:
             return
+        boot = self.config.bootstrap
         # less_key_mode=True: trades extra circuit depth for ~30% fewer Galois
         # keys — required to fit bootstrapping key material on smaller GPUs.
         config = BootstrappingConfig(
-            self._ctos_piece, self._stoc_piece, self._taylor_number, True
+            boot.ctos_piece, boot.stoc_piece, boot.taylor_number, True
         )
         self._ops.generate_bootstrapping_params(
-            self._scale, config, BootstrappingType.SLIM
+            self.config.scale, config, BootstrappingType.SLIM
         )
         boot_shifts = self._ops.bootstrapping_key_indexs()
         all_shifts = sorted(set(self._network_shifts()) | set(boot_shifts))
@@ -227,7 +152,7 @@ class FHEContext:
         silently — host storage is just an optimization, not correctness.
         """
         try:
-            self._keygen.generate_galois_key(gk, self._sk, self._galois_keys_on_host)
+            self._keygen.generate_galois_key(gk, self._sk, self.config.galois_keys_on_host)
         except TypeError:
             self._keygen.generate_galois_key(gk, self._sk)
 
@@ -243,14 +168,15 @@ class FHEContext:
         """
         if not self._bootstrapping_ready:
             raise RuntimeError("_setup_bootstrapping() must run before _bootstrap().")
-        if ct.level < self._stoc_piece:
+        stoc = self.config.bootstrap.stoc_piece
+        if ct.level < stoc:
             raise RuntimeError(
                 f"Ciphertext at level {ct.level} is below the SLIM bootstrap "
-                f"input requirement ({self._stoc_piece}) — a refresh was needed "
-                "earlier. Reduce activation depth (smaller ReLU `degrees`)."
+                f"input requirement ({stoc}) — a refresh was needed earlier. "
+                "Reduce activation depth (smaller ReLU `degrees`)."
             )
         raw = ct._ct.copy()
-        while raw.level > self._stoc_piece:
+        while raw.level > stoc:
             self._ops.mod_drop_inplace(raw)
         refreshed = self._ops.slim_bootstrapping(raw, self._gk, self._rk)
         return EncryptedVector(self, refreshed, ct._n_values)
@@ -268,7 +194,8 @@ class FHEContext:
         """
         if not self._bootstrapping_ready:
             return ct
-        if ct.level >= needed + self._stoc_piece:
+        stoc = self.config.bootstrap.stoc_piece
+        if ct.level >= needed + stoc:
             return ct
         refreshed = self._bootstrap(ct)
         if refreshed.level < needed:
@@ -289,14 +216,14 @@ class FHEContext:
         n = len(values)
         if n == 0:
             raise ValueError("Cannot encode empty vector")
-        slot_count = self._poly_modulus_degree // 2
+        slot_count = self.config.poly_modulus_degree // 2
         if n > slot_count:
             raise ValueError(f"Vector length {n} exceeds slot count {slot_count}")
         # Replicate cyclically: replicated[k] = values[k mod n]. The cyclic-wrap
         # diagonal matmul relies on every slot carrying x[k mod n], not zeros.
         replicated = [values[k % n] for k in range(slot_count)]
         pt = CKKSPlaintext(self._backend_ctx)
-        self._encoder.encode(pt, replicated, self._scale)
+        self._encoder.encode(pt, replicated, self.config.scale)
         return PlaintextVector(self, pt, n)
 
     def decode(self, plaintext: PlaintextVector) -> List[float]:
