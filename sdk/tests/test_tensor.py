@@ -1,8 +1,8 @@
 import pytest
 
-pytest.importorskip("core._backend", reason="Run scripts/run_tests.sh to build _backend first")
+pytest.importorskip("fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first")
 
-from api.tensor import PlaintextTensor  # noqa: E402
+from fhe_ml.ckks.containers.tensor import PlaintextTensor  # noqa: E402
 
 
 class TestPlaintextTensor2D:

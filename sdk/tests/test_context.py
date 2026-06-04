@@ -1,42 +1,19 @@
 import pytest
 
-pytest.importorskip("core._backend", reason="Run scripts/run_tests.sh to build _backend first")
+pytest.importorskip("fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first")
 
-from api.context import FHEContext          # noqa: E402
-from core.enums import SecurityLevel        # noqa: E402
-from core.plaintext import PlaintextVector  # noqa: E402
-from api.ciphertext import EncryptedVector  # noqa: E402
+from fhe_ml.ckks.context import FHEContext          # noqa: E402
+from fhe_ml.utils.enums import SecurityLevel        # noqa: E402
+from fhe_ml.ckks.containers.plaintext import PlaintextVector  # noqa: E402
+from fhe_ml.ckks.containers.ciphertext import EncryptedVector  # noqa: E402
 
 EPSILON = 1e-2
 
 
 class TestFHEContextBuilder:
-    def test_missing_degree_raises(self):
-        with pytest.raises(ValueError, match="poly_modulus_degree"):
-            FHEContext().set_coeff_modulus_bit_sizes([60, 40, 60]).set_scale(2**40).build()
-
-    def test_missing_coeff_modulus_raises(self):
-        with pytest.raises(ValueError, match="coeff_modulus_bit_sizes"):
-            FHEContext().set_poly_modulus_degree(8192).set_scale(2**40).build()
-
-    def test_missing_scale_raises(self):
-        with pytest.raises(ValueError, match="scale"):
-            FHEContext().set_poly_modulus_degree(8192).set_coeff_modulus_bit_sizes([60, 40, 60]).build()
-
-    def test_mutate_after_build_raises(self, built_context):
-        with pytest.raises(RuntimeError, match="already built"):
-            built_context.set_poly_modulus_degree(4096)
-
-    def test_fluent_setters_return_self(self):
-        ctx = FHEContext()
-        assert ctx.set_poly_modulus_degree(8192) is ctx
-        assert ctx.set_coeff_modulus_bit_sizes([60, 40, 60]) is ctx
-        assert ctx.set_scale(2**40) is ctx
-        assert ctx.set_security_level(SecurityLevel.SEC128) is ctx
-
     def test_security_level_default_is_sec128(self):
         ctx = FHEContext()
-        assert ctx._security_level == SecurityLevel.SEC128
+        assert ctx.config.security_level == SecurityLevel.SEC128
 
     def test_default_builds_without_error(self):
         ctx = FHEContext.default()

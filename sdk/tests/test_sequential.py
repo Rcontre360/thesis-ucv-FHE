@@ -1,10 +1,10 @@
 import pytest
 
-pytest.importorskip("core._backend", reason="Run scripts/run_tests.sh to build _backend first")
+pytest.importorskip("fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first")
 
-from api.sequential import Sequential  # noqa: E402
-from api.layers.linear import Linear  # noqa: E402
-from api.functions.relu import ReLU  # noqa: E402
+from fhe_ml.sequential import Sequential  # noqa: E402
+from fhe_ml.layers.linear import Linear  # noqa: E402
+from fhe_ml.layers.relu import ReLU  # noqa: E402
 
 EPSILON = 1e-2
 
