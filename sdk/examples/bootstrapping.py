@@ -15,10 +15,8 @@ N=65536 and a >=16 GB GPU.
 Run: from the sdk/ dir, `/usr/bin/python3.12 examples/bootstrapping.py`.
 """
 
-from api import FHEContext
-from api.layers.linear import Linear
-from api.sequential import Sequential
-from core.enums import SecurityLevel
+from fhe_ml import FHEContext, SecurityLevel, Sequential
+from fhe_ml.layers import Linear
 
 DEPTH = 30  # identity Linear layers — deeper than the ~28-level fresh budget
 
