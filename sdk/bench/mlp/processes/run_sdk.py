@@ -7,7 +7,7 @@ from bench.shared.io import emit, load_weights, load_inputs
 from bench.shared.measure import Measure, Timer, phase_metrics
 from bench.shared.metrics import r2_score, pred_fidelity
 
-from core._backend import device_pool_used_bytes
+from fhe_ml.backend._backend import device_pool_used_bytes
 
 
 def run(case_dir: str) -> None:

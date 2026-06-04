@@ -2,13 +2,13 @@ from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
 
-from core._backend import CKKSCiphertext, CKKSPlaintext
-from core.errors import ShapeError
-from core.plaintext import PlaintextVector
-from api.tensor import PlaintextTensor
+from fhe_ml.backend._backend import CKKSCiphertext, CKKSPlaintext
+from fhe_ml.utils.errors import ShapeError
+from fhe_ml.ckks.containers.plaintext import PlaintextVector
+from fhe_ml.ckks.containers.tensor import PlaintextTensor
 
 if TYPE_CHECKING:
-    from api.context import FHEContext
+    from fhe_ml.ckks.context import FHEContext
 
 
 class EncryptedVector:
@@ -81,7 +81,7 @@ class EncryptedVector:
         # W is (out, in); read it as Wᵀ of shape (n_rows, n_cols).
         n_rows = in_features
         n_cols = out_features
-        slot_count = self._context._poly_modulus_degree // 2
+        slot_count = 1 << (self._context.config.log_n - 1)
         diag_len = min(slot_count, n_rows * n_cols)
 
         md = np.asarray(matrix._data, dtype=float)

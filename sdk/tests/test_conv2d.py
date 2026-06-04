@@ -1,11 +1,11 @@
 import pytest
 
-pytest.importorskip("core._backend", reason="Run scripts/run_tests.sh to build _backend first")
+pytest.importorskip("fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first")
 
-from api.layers.conv2d import Conv2D  # noqa: E402
-from api.layers.linear import Linear  # noqa: E402
-from api.sequential import Sequential  # noqa: E402
-from api.input import Input  # noqa: E402
+from fhe_ml.layers.conv2d import Conv2D  # noqa: E402
+from fhe_ml.layers.linear import Linear  # noqa: E402
+from fhe_ml.sequential import Sequential  # noqa: E402
+from fhe_ml.layers.input import Input  # noqa: E402
 
 EPSILON = 1e-2
 
@@ -153,8 +153,8 @@ class TestConv2DInSequential:
         assert inp_flat.size == inp_nested.size == 9
 
     def test_activation_as_first_layer_raises(self):
-        from api.functions.relu import ReLU
-        from core.errors import LayerConfigError
+        from fhe_ml.layers.relu import ReLU
+        from fhe_ml.utils.errors import LayerConfigError
         # an activation cannot be the first layer — rejected at construction
         with pytest.raises(LayerConfigError, match="must sit between two weighted layers"):
             Sequential([ReLU(), Linear(2, 2, [[1.0, 0.0], [0.0, 1.0]])])

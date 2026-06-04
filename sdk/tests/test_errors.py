@@ -1,11 +1,11 @@
 import pytest
 
-pytest.importorskip("core._backend", reason="Run scripts/run_tests.sh to build _backend first")
+pytest.importorskip("fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first")
 
-from core.errors import FHESDKError, ShapeError, LayerConfigError  # noqa: E402
-from core.utils.validate import check_array  # noqa: E402
-from api.layers.conv2d import Conv2D  # noqa: E402
-from api.layers.linear import Linear  # noqa: E402
+from fhe_ml.utils.errors import FHESDKError, ShapeError, LayerConfigError  # noqa: E402
+from fhe_ml.utils.validate import check_array  # noqa: E402
+from fhe_ml.layers.conv2d import Conv2D  # noqa: E402
+from fhe_ml.layers.linear import Linear  # noqa: E402
 
 
 class TestErrorHierarchy:

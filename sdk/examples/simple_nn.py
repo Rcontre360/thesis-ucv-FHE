@@ -6,10 +6,8 @@ All arithmetic runs homomorphically on GPU via CKKS.
 Weights and biases are plaintext; only the input is encrypted.
 """
 
-from api import FHEContext
-from api.layers.linear import Linear
-from api.functions.relu import ReLU
-from api.sequential import Sequential
+from fhe_ml import FHEContext, Sequential
+from fhe_ml.layers import Linear, ReLU
 
 # ---------------------------------------------------------------------------
 # Weights and biases (normally loaded from a trained model)

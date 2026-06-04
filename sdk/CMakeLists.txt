@@ -85,4 +85,4 @@ find_package(HEonGPU REQUIRED)
 find_package(pybind11 REQUIRED)
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 
-add_subdirectory(src/backend)
+add_subdirectory(src/fhe_ml/backend)

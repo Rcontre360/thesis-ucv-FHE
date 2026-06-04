@@ -1,19 +1,12 @@
-"""Square activation — x -> x^2.
-
-The simplest polynomial activation that fits any leveled HE scheme:
-multiplicative depth 1, no parameters, no calibration. Used by CryptoNets
-and serves as the cross-backend (CKKS / TFHE / our SDK) benchmark
-activation.
-"""
-
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple
 
 import numpy as np
+import torch.nn as nn
 
-from core.layer import Layer
+from fhe_ml.layers.base import Layer
 
 if TYPE_CHECKING:
-    from api.ciphertext import EncryptedVector
+    from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 
 
 class Square(Layer):
@@ -28,3 +21,11 @@ class Square(Layer):
 
     def forward_plain(self, x: np.ndarray) -> np.ndarray:
         return x ** 2
+
+    @classmethod
+    def from_torch(
+        cls,
+        module: nn.Module,
+        input_shape: Tuple[int, ...],
+    ) -> Tuple["Square", Tuple[int, ...]]:
+        return cls(), input_shape

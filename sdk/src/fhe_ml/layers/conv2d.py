@@ -1,25 +1,16 @@
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
+import torch.nn as nn
 
-from core.errors import LayerConfigError, ShapeError
-from core.layer import AffineLayer
-from core.utils.validate import check_array
-from api.tensor import PlaintextTensor
+from fhe_ml.utils.errors import LayerConfigError, ShapeError
+from fhe_ml.layers.base import AffineLayer
+from fhe_ml.utils.validate import check_array
+from fhe_ml.ckks.containers.tensor import PlaintextTensor
 
 
 class Conv2D(AffineLayer):
-    """2-D convolution as a single plaintext-matrix matmul.
-
-    Materialises the conv at construction time as a sparse matrix of shape
-    (C_out·H_out·W_out, C_in·H·W) and runs it through the Halevi-Shoup matmul,
-    so output is replicated and chains directly into Linear/Conv2D. Costs
-    O(min(in, out)) plain-muls vs `1 + log₂(k²)` for im2col, traded for
-    generality over any H, W, k, stride.
-
-    weight has shape (C_out, C_in, k_h, k_w); bias has length C_out. I/O is
-    flat row-major: [c0·H·W slots | c1·H·W slots | ...].
-    """
+    """2-D convolution as a single plaintext-matrix matmul."""
 
     def __init__(
         self,
@@ -92,7 +83,6 @@ class Conv2D(AffineLayer):
         return M
 
     def prepare_input(self, raw_data: object) -> List[float]:
-        """Reshape flat / 2-D (H,W) / 3-D (C,H,W) data (or numpy) to flat C·H·W."""
         arr = check_array(raw_data, name="Conv2D input")
         H, W = self.input_shape
         C = self.in_channels
@@ -112,3 +102,32 @@ class Conv2D(AffineLayer):
         else:
             raise ShapeError(f"expected 1-D/2-D/3-D input, got {arr.ndim}-D")
         return arr.reshape(-1).tolist()
+
+    @classmethod
+    def from_torch(
+        cls,
+        module: nn.Conv2d,
+        input_shape: Tuple[int, ...],
+    ) -> Tuple["Conv2D", Tuple[int, int, int]]:
+        if len(input_shape) != 3:
+            raise ShapeError(
+                f"Conv2D expects (C, H, W) input shape, got {input_shape}"
+            )
+        C_in, H, W = input_shape
+        if C_in != module.in_channels:
+            raise ShapeError(
+                f"Conv2d expects {module.in_channels} input channels, got {C_in}"
+            )
+        stride = module.stride[0] if isinstance(module.stride, tuple) else module.stride
+        bias = module.bias.detach().numpy() if module.bias is not None else None
+        layer = cls(
+            in_channels=module.in_channels,
+            out_channels=module.out_channels,
+            kernel_size=module.kernel_size,
+            input_shape=(H, W),
+            weight=module.weight.detach().numpy(),
+            bias=bias,
+            stride=stride,
+        )
+        H_out, W_out = layer.output_shape
+        return layer, (module.out_channels, H_out, W_out)

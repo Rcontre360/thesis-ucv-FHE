@@ -15,11 +15,11 @@ This is a CUDA library — every install runs `nvcc`. The CI / development targe
 | Component | Required version | Notes |
 | --- | --- | --- |
 | NVIDIA GPU | Compute capability ≥ 7.0 (Volta or newer) | Pascal and older lack the tensor-core primitives HEonGPU uses. |
-| NVIDIA driver | ≥ 535 | Whatever ships with CUDA 12.8. |
-| **CUDA Toolkit** | **12.8** | `nvcc --version` must report 12.8. Set `CUDA_HOME` so `find_package(CUDAToolkit)` resolves. |
+| NVIDIA driver | ≥ 535 | Whatever ships with a CUDA 12.x toolkit. |
+| **CUDA Toolkit** | **12.x** | Tested across the CUDA 12 series (e.g. 12.4). Set `CUDA_HOME` so `find_package(CUDAToolkit)` resolves. |
 | Python | 3.11 or 3.12 | 3.13 untested; 3.10 and below not supported. |
 | CMake | ≥ 3.30 | HEonGPU's requirement. `pip install cmake` works if your distro ships an older one. |
-| GCC / G++ | 11–13 | Must be CUDA-12.8 compatible. GCC 14 is rejected by `nvcc`. |
+| GCC / G++ | 11–13 | Must be compatible with your CUDA 12.x toolkit. GCC 14 is rejected by `nvcc`. |
 | **GMP** | development headers | HEonGPU links against GMP for big-integer math. Install via `gmp-devel` (RHEL/Amazon Linux) or `libgmp-dev` (Debian/Ubuntu). |
 | **NTL** | development headers | HEonGPU uses NTL (Number Theory Library) for CKKS cosine approximation. Install via `ntl-devel` (RHEL/Amazon Linux) or `libntl-dev` (Debian/Ubuntu). Requires GMP. |
 | **ZLIB** | development headers | HEonGPU's rapids-cmake helper links against ZLIB. Install via `zlib-devel` (RHEL/Amazon Linux) or `zlib1g-dev` (Debian/Ubuntu). |
@@ -124,7 +124,7 @@ pip install fhe-sdk
 The install completed but the runtime can't locate the C++ library — usually because `CUDA_HOME` / `LD_LIBRARY_PATH` is unset. Re-run the install in a fresh terminal after sourcing your CUDA env, e.g.:
 
 ```bash
-export CUDA_HOME=/usr/local/cuda-12.8
+export CUDA_HOME=/usr/local/cuda-12.4   # or wherever your CUDA 12.x toolkit lives
 export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 ```
 
@@ -153,7 +153,7 @@ If both print `True`, the GPU build is correctly loaded. You can confirm the ins
 
 ### `nvcc fatal: Unsupported gnu version!`
 
-You're on GCC 14 (or newer). CUDA 12.8 only supports GCC 11–13. Install GCC 12 alongside and point `CC` / `CXX` at it before installing:
+You're on GCC 14 (or newer). The CUDA 12.x toolchain only supports GCC 11–13. Install GCC 12 alongside and point `CC` / `CXX` at it before installing:
 
 ```bash
 sudo apt install -y gcc-12 g++-12       # Debian/Ubuntu

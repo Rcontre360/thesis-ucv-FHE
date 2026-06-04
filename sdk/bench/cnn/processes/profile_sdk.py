@@ -9,7 +9,7 @@ from bench.cnn.sdk_model import to_sdk_model, build_context
 from bench.shared.io import load_weights, load_inputs, results_dir
 from bench.shared.measure import cuda_sync
 
-from core._backend import device_pool_used_bytes
+from fhe_ml.backend._backend import device_pool_used_bytes
 
 MB: int = 1024 ** 2
 FIELDS: list[str] = ["layer_idx", "layer_name", "time_s", "mem_delta_mb", "mem_after_mb"]
