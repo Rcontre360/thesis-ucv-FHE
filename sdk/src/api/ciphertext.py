@@ -81,7 +81,7 @@ class EncryptedVector:
         # W is (out, in); read it as Wᵀ of shape (n_rows, n_cols).
         n_rows = in_features
         n_cols = out_features
-        slot_count = self._context.config.poly_modulus_degree // 2
+        slot_count = 1 << (self._context.config.log_n - 1)
         diag_len = min(slot_count, n_rows * n_cols)
 
         md = np.asarray(matrix._data, dtype=float)
