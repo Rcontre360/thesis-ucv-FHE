@@ -1,18 +1,16 @@
-from typing import TYPE_CHECKING, Tuple
+from typing import Tuple
 
 import numpy as np
 import torch.nn as nn
 
+from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 from fhe_ml.layers.base import Layer
-
-if TYPE_CHECKING:
-    from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 
 
 class Square(Layer):
     """y = x * x. Consumes one multiplicative level; no parameters."""
 
-    def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
+    def __call__(self, x: EncryptedVector) -> EncryptedVector:
         x = x._context._prepare_for(x, 1)
         return x * x
 

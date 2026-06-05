@@ -1,21 +1,19 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch.nn as nn
 
+from fhe_ml.ckks.containers.ciphertext import EncryptedVector
+from fhe_ml.ckks.containers.tensor import PlaintextTensor
 from fhe_ml.utils.errors import ShapeError
-
-if TYPE_CHECKING:
-    from fhe_ml.ckks.containers.ciphertext import EncryptedVector
-    from fhe_ml.ckks.containers.tensor import PlaintextTensor
 
 
 class Layer(ABC):
     """Sequential element: EncryptedVector -> EncryptedVector."""
 
     @abstractmethod
-    def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
+    def __call__(self, x: EncryptedVector) -> EncryptedVector:
         ...
 
     @abstractmethod
@@ -50,14 +48,14 @@ class AffineLayer(Layer):
 
     in_features: int
     out_features: int
-    _weight: "PlaintextTensor"
+    _weight: PlaintextTensor
     _bias: Optional[List[float]]
 
     def __init__(
         self,
         in_features: int,
         out_features: int,
-        weight: "PlaintextTensor",
+        weight: PlaintextTensor,
         bias: Optional[List[float]],
     ) -> None:
         self.in_features = in_features
@@ -65,7 +63,7 @@ class AffineLayer(Layer):
         self._weight = weight
         self._bias = bias
 
-    def __call__(self, x: "EncryptedVector") -> "EncryptedVector":
+    def __call__(self, x: EncryptedVector) -> EncryptedVector:
         if x.size != self.in_features:
             raise ShapeError(
                 f"input size {x.size} != in_features {self.in_features}"
