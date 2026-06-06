@@ -6,7 +6,7 @@ import torch
 from bench.shared.config import SDK_ROOT, resolve_samples
 from bench.cnn.model import build_network, N_CLASSES, CHANNELS, IMAGE_SHAPE
 from bench.shared.io import emit, load_weights, load_inputs
-from bench.shared.measure import Measure, Timer, phase_metrics
+from bench.shared.measure import Measure, phase_metrics
 from bench.shared.metrics import accuracy, fidelity
 
 import orion
@@ -37,10 +37,13 @@ def run(case_dir: str) -> None:
     x_calib = data["x_calib"]
     float_logits = data["float_logits"]
 
-    x_lat = x_test[:counts.latency]
-    x_acc = x_test[:counts.accuracy]
-    y_acc = y_test[:counts.accuracy]
-    float_lat = float_logits[:counts.latency]
+    # Single encrypted loop sized to counts.accuracy; counts.latency is 0 by
+    # config because orion_net.eval() is NOT a clear-equivalent of the encrypted
+    # path (see config.toml header).
+    n = counts.accuracy
+    x_acc = x_test[:n]
+    y_acc = y_test[:n]
+    float_acc = float_logits[:n]
 
     model = load_weights(build_network(), case_dir).cpu().eval()
 
@@ -52,7 +55,7 @@ def run(case_dir: str) -> None:
         orion_net.fc.bias.copy_(model[3].bias.detach())
     orion_net.eval()
 
-    enc_logits = np.empty((counts.latency, N_CLASSES), dtype=np.float64)
+    enc_logits = np.empty((n, N_CLASSES), dtype=np.float64)
 
     with Measure() as m_keygen:
         orion.init_scheme(orion_config)
@@ -65,35 +68,33 @@ def run(case_dir: str) -> None:
         input_level = orion.compile(orion_net)
 
     with Measure() as m_infer:
-        for i, x in enumerate(x_lat):
+        for i, x in enumerate(x_acc):
             img = torch.tensor(x.reshape(1, CHANNELS, h, w), dtype=torch.float32)
             ctxt = orion.encrypt(orion.encode(img, input_level))
             orion_net.he()
             out = orion_net(ctxt).decrypt().decode()
             enc_logits[i] = np.asarray(out).reshape(-1)[:N_CLASSES]
 
-    orion_net.eval()
-    with torch.no_grad(), Timer() as t_acc:
-        x = torch.tensor(x_acc, dtype=torch.float32).reshape(-1, CHANNELS, h, w)
-        acc_logits = orion_net(x).cpu().numpy()
-    approx_accuracy = accuracy(acc_logits[:, :N_CLASSES].argmax(axis=1), y_acc)
-
-    agreement, output_mae, precision = fidelity(float_lat, enc_logits)
+    per_sample_s = m_infer.elapsed_s / n
+    enc_top1 = accuracy(enc_logits.argmax(axis=1), y_acc)
+    agreement, output_mae, precision = fidelity(float_acc, enc_logits)
 
     emit({
         "backend": "orion",
         "float_accuracy": accuracy(float_logits.argmax(axis=1), y_test),
-        "approx_accuracy": approx_accuracy,
-        "accuracy": accuracy(enc_logits.argmax(axis=1), y_test[:counts.latency]),
+        # approx_accuracy and accuracy are equal here: the same encrypted loop
+        # produces both. Both columns retained for cross-backend table consistency.
+        "approx_accuracy": enc_top1,
+        "accuracy": enc_top1,
         "agreement": agreement,
         "output_mae": output_mae,
         "precision_bits": precision,
 
         "keygen_s": m_keygen.elapsed_s,
         "compile_s": m_compile.elapsed_s,
-        "latency_s": m_infer.elapsed_s / counts.latency,
-        "accuracy_per_sample_s": t_acc.elapsed_s / counts.accuracy,
-        "latency_n": counts.latency,
+        "latency_s": per_sample_s,
+        "accuracy_per_sample_s": per_sample_s,
+        "latency_n": counts.latency,  # 0 — no separate latency loop, see config
         "accuracy_n": counts.accuracy,
 
         **phase_metrics({"keygen": m_keygen, "compile": m_compile, "infer": m_infer}),
