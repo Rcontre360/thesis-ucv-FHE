@@ -1,9 +1,7 @@
-from typing import TYPE_CHECKING, List
+from typing import List
 
 from fhe_ml.ckks.containers.ciphertext import EncryptedVector
-
-if TYPE_CHECKING:
-    from fhe_ml.ckks.context import FHEContext
+from fhe_ml.ckks.context import FHEContext
 
 
 class Input:
@@ -12,7 +10,7 @@ class Input:
     _ct: EncryptedVector
     _size: int
 
-    def __init__(self, context: "FHEContext", flat_data: List[float]) -> None:
+    def __init__(self, context: FHEContext, flat_data: List[float]) -> None:
         self._ct = context.encrypt(flat_data)
         self._size = len(flat_data)
 

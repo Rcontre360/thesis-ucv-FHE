@@ -1,6 +1,11 @@
-from typing import List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import numpy as np
+
+from fhe_ml.backend._backend import CKKSPlaintext
+
+if TYPE_CHECKING:
+    from fhe_ml.ckks.context import FHEContext
 
 
 def _infer_shape(data: object) -> Tuple[int, ...]:
@@ -40,6 +45,7 @@ class PlaintextTensor:
 
     _data: List
     _shape: Tuple[int, ...]
+    _encoded_diagonals: Optional[List[Optional[CKKSPlaintext]]]
 
     def __init__(self, data: List) -> None:
         shape = _infer_shape(data)
@@ -53,6 +59,35 @@ class PlaintextTensor:
         _validate_shape(data, shape)
         self._data = data
         self._shape = shape
+        self._encoded_diagonals = None
+
+    def encode(self, context: "FHEContext") -> None:
+        """Pre-encode all diagonals at depth 0 for use by EncryptedVector.matmul.
+
+        Must be called before passing this tensor to a ciphertext matmul.
+        Sequential.compile() does this automatically for weight matrices;
+        call it manually only when using PlaintextTensor outside Sequential.
+        """
+        if self.ndim != 2:
+            raise ValueError(
+                f"encode() requires a 2D PlaintextTensor, got {self.ndim}D"
+            )
+        if self._encoded_diagonals is not None:
+            return
+        n_cols, n_rows = self._shape
+        slot_count = 1 << (context.config.log_n - 1)
+        diag_len = min(slot_count, n_rows * n_cols)
+        md = self.to_numpy()
+        k = np.arange(diag_len)
+        col = k % n_cols
+        encoded: List[Optional[CKKSPlaintext]] = []
+        for local_i in range(n_rows):
+            diag = md[col, (local_i + k) % n_rows]
+            if diag.any():
+                encoded.append(context.encode(diag.tolist())._pt)
+            else:
+                encoded.append(None)
+        self._encoded_diagonals = encoded
 
     @property
     def shape(self) -> Tuple[int, ...]:

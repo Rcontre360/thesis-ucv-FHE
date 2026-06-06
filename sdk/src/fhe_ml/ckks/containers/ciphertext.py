@@ -65,6 +65,8 @@ class EncryptedVector:
 
         Input and output ciphertexts are replicated to slot_count
         (enc_x[k] = x[k mod in], result[k] = y[k mod out]).
+        Requires the matrix to have been pre-encoded via PlaintextTensor.encode
+        (called automatically by Sequential.compile).
         """
         if not isinstance(matrix, PlaintextTensor):
             raise TypeError(f"Expected PlaintextTensor, got {type(matrix).__name__}")
@@ -72,30 +74,30 @@ class EncryptedVector:
             raise ShapeError(
                 f"matmul requires a 2D PlaintextTensor, got {matrix.ndim}D"
             )
+        if matrix._encoded_diagonals is None:
+            raise RuntimeError(
+                "PlaintextTensor has not been encoded. Call Sequential.compile(context) "
+                "before inference, or PlaintextTensor.encode(context) for standalone use."
+            )
         out_features, in_features = matrix.shape
         if in_features != self._n_values:
             raise ShapeError(
                 f"Matrix columns {in_features} != vector size {self._n_values}"
             )
 
-        # W is (out, in); read it as Wᵀ of shape (n_rows, n_cols).
         n_rows = in_features
         n_cols = out_features
-        slot_count = 1 << (self._context.config.log_n - 1)
-        diag_len = min(slot_count, n_rows * n_cols)
+        encoded_diagonals = matrix._encoded_diagonals
 
-        md = np.asarray(matrix._data, dtype=float)
-        k = np.arange(diag_len)
-        col = k % n_cols
-
-        # Rotate the ciphertext by 1 incrementally — needs only rotate-by-1 keys.
         rotated = self.copy()
         result: Optional[EncryptedVector] = None
 
         for local_i in range(n_rows):
-            diag = md[col, (local_i + k) % n_rows]
-            if diag.any():
-                pt = self._encode_and_align(diag.tolist())
+            stored_pt = encoded_diagonals[local_i]
+            if stored_pt is not None:
+                pt = stored_pt.copy()
+                while pt.depth < self._ct.depth:
+                    self._context._ops.mod_drop_plain_inplace(pt)
                 term = rotated.copy()
                 self._context._ops.multiply_plain_inplace(term._ct, pt)
                 self._context._ops.rescale_inplace(term._ct)

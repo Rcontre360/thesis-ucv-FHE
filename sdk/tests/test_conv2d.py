@@ -20,6 +20,7 @@ class TestConv2D:
             kernel_size=2, input_shape=(3, 3),
             weight=weight,
         )
+        layer._weight.encode(built_context)
         x = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]
         flat = [v for row in x for v in row]
         ct = built_context.encrypt(flat)
@@ -37,6 +38,7 @@ class TestConv2D:
             kernel_size=2, input_shape=(3, 3),
             weight=weight, bias=bias,
         )
+        layer._weight.encode(built_context)
         flat = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
         ct = built_context.encrypt(flat)
         result = layer(ct).decrypt()
@@ -55,6 +57,7 @@ class TestConv2D:
             kernel_size=2, input_shape=(3, 3),
             weight=weight,
         )
+        layer._weight.encode(built_context)
         flat = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
         ct = built_context.encrypt(flat)
         result = layer(ct).decrypt()
@@ -77,6 +80,7 @@ class TestConv2D:
             kernel_size=2, input_shape=(2, 2),
             weight=weight,
         )
+        layer._weight.encode(built_context)
         # ch0 = [[1,2],[3,4]], ch1 = [[10,20],[30,40]]
         flat = [1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0]
         ct = built_context.encrypt(flat)
@@ -93,6 +97,7 @@ class TestConv2D:
             kernel_size=2, input_shape=(4, 4),
             weight=weight, stride=2,
         )
+        layer._weight.encode(built_context)
         flat = [float(v) for v in range(1, 17)]  # 1..16
         ct = built_context.encrypt(flat)
         result = layer(ct).decrypt()
@@ -108,6 +113,7 @@ class TestConv2D:
             kernel_size=2, input_shape=(3, 3),
             weight=weight,
         )
+        layer._weight.encode(built_context)
         ct = built_context.encrypt([0.1, 0.2, 0.3])
         with pytest.raises(ValueError):
             layer(ct)
@@ -131,7 +137,7 @@ class TestConv2DInSequential:
         model = Sequential([
             Conv2D(1, 1, 2, (3, 3), conv_w),
             Linear(4, 1, lin_w),
-        ])
+        ]).compile(built_context)
         inp = model.input(built_context, [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
         assert isinstance(inp, Input)
         out = model(inp).decrypt()

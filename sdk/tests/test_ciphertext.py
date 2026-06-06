@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 pytest.importorskip("fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first")
@@ -104,6 +105,7 @@ class TestEncryptedVectorMatmul:
     def test_matmul_identity(self, built_context):
         x = built_context.encrypt([3.0, 5.0])
         W = PlaintextTensor([[1.0, 0.0], [0.0, 1.0]])
+        W.encode(built_context)
         result = x.matmul(W)
         assert result.size == 2
         dec = built_context.decrypt(result)
@@ -113,6 +115,7 @@ class TestEncryptedVectorMatmul:
     def test_matmul_projection(self, built_context):
         x = built_context.encrypt([2.0, 4.0, 6.0])
         W = PlaintextTensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        W.encode(built_context)
         result = x.matmul(W)
         assert result.size == 2
         dec = built_context.decrypt(result)
@@ -128,6 +131,7 @@ class TestEncryptedVectorMatmul:
     def test_matmul_shape_mismatch_raises(self, built_context):
         x = built_context.encrypt([1.0, 2.0, 3.0])
         W = PlaintextTensor([[1.0, 0.0], [0.0, 1.0]])
+        W.encode(built_context)
         with pytest.raises(ValueError, match="columns"):
             x.matmul(W)
 
@@ -150,6 +154,7 @@ class TestEncryptedVectorMatmul:
             [0.0, 0.0, 1.0, 1.0],
             [1.0, 0.0, 0.0, 1.0],
         ])
+        W.encode(built_context)
         result = x.matmul(W)
         assert result.size == 8
         dec = result.decrypt()
@@ -162,8 +167,25 @@ class TestEncryptedVectorMatmul:
         # Under replicated I/O this works without any tile-period bookkeeping.
         x = built_context.encrypt([1.0, 2.0, 3.0, 4.0])
         W1 = PlaintextTensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
+        W1.encode(built_context)
         y = x.matmul(W1)                    # size=2 (extracts x[0], x[1])
         W2 = PlaintextTensor([[1.0, 1.0]])  # 1x2: out=1, in=2 (sum)
+        W2.encode(built_context)
         z = y.matmul(W2)                    # size=1
         assert z.size == 1
         assert abs(z.decrypt()[0] - 3.0) < EPSILON
+
+    def test_matmul_dense_32x16_vs_numpy(self, built_context):
+        rng = np.random.default_rng(seed=20250101)
+        x_np = rng.uniform(-1.0, 1.0, size=16)
+        W_np = rng.uniform(-1.0, 1.0, size=(32, 16))
+        expected = W_np @ x_np
+
+        x = built_context.encrypt(x_np.tolist())
+        W = PlaintextTensor(W_np.tolist())
+        W.encode(built_context)
+        result = x.matmul(W)
+        assert result.size == 32
+
+        dec = np.asarray(built_context.decrypt(result))
+        assert np.max(np.abs(dec - expected)) < 5e-2

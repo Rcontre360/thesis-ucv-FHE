@@ -1,20 +1,18 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import torch.nn as nn
 
-from fhe_ml.utils.errors import LayerConfigError
-from fhe_ml.layers.base import AffineLayer, Layer
-from fhe_ml.utils import to_numpy
-from fhe_ml.layers.relu import ReLU
-from fhe_ml.layers.input import Input
-from fhe_ml.layers.conv2d import Conv2D
-from fhe_ml.layers.linear import Linear
+from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 from fhe_ml.ckks.containers.tensor import PlaintextTensor
-
-if TYPE_CHECKING:
-    from fhe_ml.ckks.containers.ciphertext import EncryptedVector
-    from fhe_ml.ckks.context import FHEContext
+from fhe_ml.ckks.context import FHEContext
+from fhe_ml.layers.base import AffineLayer, Layer
+from fhe_ml.layers.conv2d import Conv2D
+from fhe_ml.layers.input import Input
+from fhe_ml.layers.linear import Linear
+from fhe_ml.layers.relu import ReLU
+from fhe_ml.utils import to_numpy
+from fhe_ml.utils.errors import LayerConfigError
 
 
 class Sequential:
@@ -41,7 +39,7 @@ class Sequential:
                     "must sit between two weighted layers (Linear/Conv2D)."
                 )
         self._layers = list(layers)
-        self._context: Optional["FHEContext"] = None
+        self._context: Optional[FHEContext] = None
         self._activation_ranges: Dict[int, np.ndarray] = {}
 
     @classmethod
@@ -69,20 +67,24 @@ class Sequential:
             layers.append(layer)
         return cls(layers)
 
-    def input(self, context: "FHEContext", raw_data: object) -> Input:
+    def input(self, context: FHEContext, raw_data: object) -> Input:
         flat = self._layers[0].prepare_input(raw_data)
         return Input(context, flat)
 
     def compile(
-        self, context: "FHEContext", calibration_data: object = None
+        self, context: FHEContext, calibration_data: object = None
     ) -> "Sequential":
         self._context = context
         for layer in self._layers:
             if isinstance(layer, ReLU) and layer._degrees is None:
-                layer._set_degrees(context.config.relu_degrees)
+                layer.set_degrees(context.config.relu_degrees)
         if calibration_data is not None:
             self._calibrate(calibration_data)
             self._fold_calibration()
+
+        for layer in self._layers:
+            if isinstance(layer, AffineLayer):
+                layer._weight.encode(context)
 
         total_depth = sum(l.mult_depth() for l in self._layers)
         if total_depth > context._usable_levels():
@@ -134,7 +136,7 @@ class Sequential:
             for batch in calibration_data:
                 yield to_numpy(batch)
 
-    def __call__(self, x: Union[Input, "EncryptedVector"]) -> "EncryptedVector":
+    def __call__(self, x: Union[Input, EncryptedVector]) -> EncryptedVector:
         if isinstance(x, Input):
             x = x.ciphertext
         for layer in self._layers:
