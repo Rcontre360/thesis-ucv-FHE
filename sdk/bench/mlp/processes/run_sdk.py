@@ -40,6 +40,11 @@ def run(case_dir: str) -> None:
     encrypted_r2 = r2_score(y_acc, enc_preds)
     output_mae, precision = pred_fidelity(float_acc, enc_preds)
 
+    plain_preds = np.array([
+        float(np.asarray(sdk_model.forward_plain(x))[0]) for x in x_acc
+    ])
+    plain_mae, plain_precision = pred_fidelity(float_acc, plain_preds)
+
     emit({
         "backend": "sdk",
         "float_r2": r2_score(y_test, float_preds),
@@ -49,6 +54,8 @@ def run(case_dir: str) -> None:
         "r2": encrypted_r2,
         "output_mae": output_mae,
         "precision_bits": precision,
+        "plain_mae": plain_mae,
+        "plain_precision_bits": plain_precision,
 
         "keygen_s": m_keygen.elapsed_s,
         "compile_s": m_compile.elapsed_s,

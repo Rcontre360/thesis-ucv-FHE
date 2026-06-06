@@ -45,6 +45,18 @@ def run(case_dir: str) -> None:
     enc_top1 = accuracy(enc_logits.argmax(axis=1), y_acc)
     agreement, output_mae, precision = fidelity(float_acc, enc_logits)
 
+    # Plain-SDK pass: same network, same polynomial-ReLU / folded-calibration
+    # path as the encrypted run, but evaluated without encryption. Drift here
+    # is the SDK's approximation error alone — pair with the encrypted
+    # metrics to isolate encryption noise.
+    # forward_plain expects flat input (1·28·28=784); only the encrypted
+    # path goes through Conv2D.prepare_input which reshapes to (28, 28).
+    plain_logits = np.stack([
+        np.asarray(sdk_model.forward_plain(x))[:N_CLASSES]
+        for x in x_acc
+    ])
+    plain_agreement, plain_mae, plain_precision = fidelity(float_acc, plain_logits)
+
     emit({
         "backend": "sdk",
         "float_accuracy": accuracy(float_logits.argmax(axis=1), y_test),
@@ -55,6 +67,9 @@ def run(case_dir: str) -> None:
         "agreement": agreement,
         "output_mae": output_mae,
         "precision_bits": precision,
+        "plain_agreement": plain_agreement,
+        "plain_mae": plain_mae,
+        "plain_precision_bits": plain_precision,
 
         "keygen_s": m_keygen.elapsed_s,
         "compile_s": m_compile.elapsed_s,
