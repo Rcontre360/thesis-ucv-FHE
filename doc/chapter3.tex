@@ -67,7 +67,7 @@ La biblioteca desarrollada expone una interfaz de alto nivel en Python para cons
 
 \subsection{Estructura del código}
 
-El código de la biblioteca se organiza en capas de abstracción, de la más cercana al hardware a la más cercana al usuario:
+La biblioteca se organiza en estructuras de datos y objetos que abstraen la configuración y complejidad del esquema de cifrado lo mas posible del usuario.
 
 \begin{itemize}
     \item \textit{Backend}: la capa más baja, escrita en C++ y CUDA, que envuelve a HEonGPU y expone sus operaciones a Python mediante enlaces (\textit{bindings}) construidos con pybind11.
@@ -109,9 +109,9 @@ El flujo de uso consta de cuatro pasos:
 
 La biblioteca no implementa desde cero las primitivas del esquema CKKS, sino que delega el cómputo criptográfico a un \textit{backend} especializado y acelerado por GPU.
 
-\subsection{HEonGPU y los enlaces con pybind11}
+\subsection{HEonGPU}
 
-El \textit{backend} criptográfico es HEonGPU \cite{HEonGPU}, una biblioteca escrita en C++ y CUDA que implementa el esquema CKKS sobre la GPU. HEonGPU proporciona las primitivas de bajo nivel del esquema: la creación del contexto, la codificación y decodificación, el cifrado y descifrado, las operaciones homomórficas (suma, multiplicación, reescalado, relinealización y rotación) y el \textit{bootstrapping}. Se eligió este \textit{backend} porque ejecuta dichas operaciones sobre la GPU, y porque ofrece una implementación de CKKS con soporte de \textit{bootstrapping}.
+El \textit{backend} criptográfico es HEonGPU \cite{HEonGPU}, una biblioteca escrita en C++ y CUDA que implementa el esquema CKKS sobre la GPU. Proporciona las primitivas de bajo nivel del esquema: la creación del contexto, la codificación y decodificación, el cifrado y descifrado, las operaciones homomórficas (suma, multiplicación, reescalado, relinealización y rotación) y el \textit{bootstrapping}. Se eligió este \textit{backend} porque ejecuta dichas operaciones sobre la GPU, y porque ofrece una implementación de CKKS con soporte de \textit{bootstrapping}.
 
 Se construyó una capa de enlaces (\textit{bindings}) con pybind11, que expone los objetos de C++ como objetos nativos de Python y gestiona la traducción de tipos y la transferencia de datos entre ambos lenguajes. Estos enlaces se organizan por responsabilidad, agrupando por separado la creación del contexto, los componentes criptográficos (codificador, cifrador, descifrador y generador de claves), los tipos de claves, los objetos de datos (textos cifrados y en claro), el operador de operaciones homomórficas y las enumeraciones expuestas a Python. Sobre esta capa de enlaces se construye la envoltura en Python que el resto de la biblioteca utiliza.
 
@@ -213,7 +213,7 @@ Las pruebas automatizadas cubren los componentes de la biblioteca por separado: 
 
 \section{Bibliotecas de referencia}\label{sec:metodo_bibliotecas}
 
-Para evaluar el rendimiento de la biblioteca propuesta se la comparó frente a tres implementaciones de referencia. Estas implementaciones no comparten necesariamente el mismo esquema de cifrado ni se ejecutan sobre el mismo hardware. Las referencias seleccionadas fueron:
+Para evaluar el rendimiento de la biblioteca propuesta se la comparó frente a tres implementaciones de referencia. Estas implementaciones no comparten necesariamente el mismo esquema de cifrado. Las referencias seleccionadas fueron:
 
 \begin{itemize}
     \item PyTorch (texto plano): se eligió como línea base sin cifrado. Evalúa la red sobre datos en claro con aceleración por GPU y aporta la referencia tanto de exactitud (el resultado que la inferencia cifrada debería reproducir) como del coste de tiempo y memoria sin la sobrecarga del cifrado. Permite así aislar la pérdida de precisión y el sobrecoste atribuibles al cifrado homomórfico. Al no realizar generación de claves ni compilación criptográfica, solo se mide su fase de inferencia.
@@ -231,15 +231,15 @@ La \hyperref[tab:metodo_libs]{Tabla~\ref{tab:metodo_libs}} resume las diferencia
     \vspace{0.5em}
     \begin{tabular}{| l | l | l | l | l |}
         \hline
-        Implementación & Esquema & Hardware & Tipo de dato & \textit{Bootstrapping} \\
+        Implementación & Esquema & Hardware & Tipo de dato \\
         \hline
-        PyTorch & Ninguno & GPU & Flotante & --- \\
+        PyTorch & Ninguno & GPU & Flotante \\
         \hline
-        Biblioteca propuesta & CKKS & GPU & Real aproximado & Sí \\
+        Biblioteca propuesta & CKKS & GPU & Real aproximado \\
         \hline
-        Orion & CKKS & CPU & Real aproximado & Sí \\
+        Orion & CKKS & CPU & Real aproximado \\
         \hline
-        Concrete~ML & TFHE & GPU & Entero cuantizado & Sí \\
+        Concrete~ML & TFHE & GPU & Entero cuantizado \\
         \hline
     \end{tabular}
 \end{table}
