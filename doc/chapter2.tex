@@ -337,7 +337,7 @@ Existen varias estrategias para encontrar una aproximación polinómica adecuada
 
 Cada multiplicación homomórfica consume un nivel en el esquema CKKS, reduciendo el presupuesto de ruido y el módulo del texto cifrado. La evaluación de un polinomio de grado $d$ requiere una profundidad multiplicativa de $O(\sqrt d)$, utilizando algoritmos de evaluación paralela como el propuesto por Paterson y Stockmeyer \cite{Paterson1973}. Por lo tanto, un polinomio de aproximación de alto grado, aunque más preciso, aumentará significativamente la profundidad del circuito homomórfico. Esto exige parámetros criptográficos más grandes (mayor tamaño de módulo inicial), lo que a su vez incrementa el costo computacional y el tamaño de las claves.
 
-La elección del polinomio de aproximación es, por tanto, una decisión de diseño fundamental en la inferencia de redes neuronales homomórficas, donde se debe balancear la precisión del modelo con las limitaciones y costos del esquema de cifrado \cite{benaissa2021tenseal}.
+La elección del polinomio de aproximación es, por tanto, una decisión de diseño fundamental en la inferencia de redes neuronales homomórficas, donde se debe balancear la precisión del modelo con las limitaciones y costos del esquema de cifrado \cite{Orion}.
 
 \subsection{Inferencia de Redes Neuronales con CKKS}
 La inferencia de redes neuronales sobre datos cifrados con el esquema CKKS se realiza aprovechando las propiedades homomórficas de este esquema para la adición y la multiplicación. El objetivo es procesar las entradas de la red, que se encuentran cifradas, con los pesos de la red, que pueden estar cifrados o en texto plano, sin que en ningún momento se revele la información sensible.

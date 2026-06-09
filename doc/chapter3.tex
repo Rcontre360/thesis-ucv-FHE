@@ -1,89 +1,489 @@
-\chapter{Propuesta de Trabajo Especial de Grado}
+\chapter{Marco Metodológico}
 
-%%%%%%%%%%%%%%%
-El esquema de cifrado CKKS es una de las soluciones más eficientes al momento de trabajar con operaciones con números de punto flotante \cite{CKKS17}. Sin embargo, son pocas las implementaciones del mismo que aprovechan la GPU. Actualmente, las bibliotecas más prominentes que implementan el esquema CKKS usan exclusivamente la CPU \cite{SEAL, Halevi14, PALISADE}; aun así, recientemente se han desarrollado bibliotecas que implementan este esquema de cifrado usando la GPU. Entre estas bibliotecas está HEonGPU \cite{HEonGPU}, la cual implementa varios esquemas de cifrado homomórfico, incluyendo CKKS con bootstrapping.
+El presente trabajo tiene por objetivo desarrollar una biblioteca que permita ejecutar la inferencia de redes neuronales sobre datos cifrados con el esquema CKKS, aprovechando la capacidad de procesamiento paralelo de la GPU. Para constatar que la biblioteca cumple dicho objetivo, su evaluación se aborda desde dos perspectivas complementarias: la aproximación de los resultados cifrados respecto a los resultados obtenidos en texto plano; y la medición de su rendimiento.
 
-Los modelos de aprendizaje automático basados en redes neuronales que utilizan cifrado homomórfico usualmente usan los esquemas CKKS en la CPU \cite{SEAL} o TFHE en la GPU \cite{Concrete}. Usualmente, se aprovecha la privacidad de estas operaciones durante la inferencia. En el entrenamiento también es posible usar cifrado homomórfico; sin embargo, es menos costoso usar modelos ya entrenados y luego aplicar el cifrado durante la inferencia. Los modelos de redes neuronales pueden llegar a tener millones o cientos de millones de parámetros, esto hace costoso el cómputo durante la inferencia y poco viable si se usa solo la CPU. Además, usar cifrado homomórfico ya implica un costo mayor para cada operación realizada. Dependiendo del esquema utilizado, una operación de suma o multiplicación es más costosa que aplicarla sin usar un esquema de cifrado, y este costo es proporcional al nivel de seguridad del cifrado \cite{Acar18}.
-
-Para implementar redes neuronales que realicen operaciones con datos cifrados existen distintas herramientas. La mayoría de ellas son bibliotecas que nos permiten usar varios esquemas de cifrado (CKKS, BFV, TFHE), que usan la CPU \cite{SEAL, Halevi14, PALISADE}. Existen algunas otras que permiten usar la GPU, como Concrete \cite{Concrete}; sin embargo, este esquema fue diseñado trabajar sobre booleanos y no reales. Existen algunas implementaciones recientes del esquema CKKS sobre la GPU, estas implementan las operaciones básicas como suma, multiplicación, rotación, etc. \cite{Turkoglu22, HEonGPU}. Sin embargo, no existen herramientas que faciliten el uso de estas bibliotecas en modelos de aprendizaje automático. Por este motivo se propone la creación de una biblioteca que permita usar el esquema de CKKS, aprovechando el rendimiento de la GPU, sobre modelos de aprendizaje automático.
-
-%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%
-\section{Objetivo general}
-
-Desarrollar una biblioteca de código abierto en Python para el cómputo de operaciones tensoriales, utilizando el esquema de cifrado homomórfico CKKS de forma que se aproveche la unidad de procesamiento gráfico (GPU).
-
-\section{Objetivos específicos}
-
-\begin{itemize}
-    \item Diseñar una interfaz en Python que permita interactuar con las bibliotecas FIDESlib y OpenFHE, y usar las operaciones básicas del esquema de cifrado CKKS.
-    \item Implementar las clases y módulos que permitan realizar operaciones con tensores y matrices, abstrayendo la complejidad del esquema CKKS del usuario.
-    \item Crear casos de uso donde se ejemplifique cómo usar la biblioteca para aprovechar el cifrado homomórfico durante la inferencia en modelos de aprendizaje automático.
-    \item Comparar el rendimiento de capas de redes neuronales implementadas con capas que usan otras bibliotecas de cifrado homomórfico.
-\end{itemize}
-
-\section{Tecnologías necesarias}
-
-El desarrollo de la biblioteca propuesta es un sistema de múltiples capas de abstracción, cuyo objetivo es cerrar la brecha entre los entornos de programación de alto nivel utilizados en aprendizaje automático y la ejecución de operaciones criptográficas complejas aceleradas por hardware. Para lograr esto, se emplearán bibliotecas que permitan usar el esquema CKKS en el GPU y que nos permitan usar el esquema desde el lenguaje Python.
-
-\begin{itemize}
-    \item FIDESlib: Desarrollada en C++ y CUDA, esta biblioteca proporciona una implementación optimizada del esquema CKKS sobre el GPU \cite{FIDESlib}. 
-    
-    \item OpenFHE-Python y Pybind11: Para usar las primitivas matemáticas de FIDESlib en Python, se utilizará la interfaz oficial OpenFHE-Python \cite{OpenFHEPython}. Esta herramienta actúa como interface, empleando Pybind11 para crear \textit{bindings} que exponen los objetos complejos de C++ como objetos nativos de Python. La incorporación de Pybind11 es indispensable para servir como mecanismo formal de traducción de tipos y gestión de memoria entre ambos lenguajes, permitiendo además la personalización de \textit{bindings} en caso de requerir optimizaciones específicas para la manipulación de tensores o características exclusivas de FIDESlib.
-\end{itemize}
-
-Finalmente, la biblioteca propuesta se desarrollará en Python, abstrayendo la complejidad criptográfica para el usuario mediante estructuras de datos como tensores cifrados. Las operaciones sobre estos tensores invocarán los \textit{bindings} de OpenFHE-Python, los cuales delegarán la validación criptográfica a OpenFHE y el cálculo intensivo a la GPU a través de FIDESlib. Se emplearán bibliotecas adicionales del ecosistema de Python, como Matplotlib, para la visualización y análisis de los resultados de rendimiento.
-
-\section{Modelos a implementar y comparativas}
-
-Una vez finalizado el desarrollo de la biblioteca, el enfoque se centrará en la implementación de diferentes arquitecturas de redes neuronales para validar su funcionalidad. Específicamente, se construirán redes neuronales totalmente conectadas con un número variable de capas y neuronas, diseñadas tanto para tareas de regresión como de clasificación. Además, se implementará una red neuronal convolucional orientada a tareas de clasificación. Durante estas pruebas, también se evaluará el impacto de cambiar las funciones de activación dentro de estos modelos cifrados.
-
-Para validar la efectividad y eficiencia de la solución propuesta, se llevarán a cabo dos tipos de comparativas principales:
+Para ello se construyó un conjunto de pruebas que ejecuta dos arquitecturas representativas de redes neuronales (una red totalmente conectada y una red convolucional) usando cuatro implementaciones distintas: la biblioteca propuesta, una ejecución de referencia en texto plano y dos bibliotecas de cifrado homomórfico del estado del arte. El flujo de trabajo experimental consta de las siguientes fases:
 
 \begin{enumerate}
-    \item \textbf{Resultados:} Se compararán los resultados de inferencia obtenida por los modelos usando cifrado homomórfico, frente a los mismos modelos operando sobre datos sin cifrado. Esto permitirá medir la pérdida de precisión inducida por las aproximaciones polinómicas y la gestión del ruido del esquema CKKS.
-    \item \textbf{Rendimiento:} Se contrastarán los tiempos de ejecución y uso de memoria de la biblioteca propuesta contra otras herramientas disponibles en Python que permiten usar cifrado homomórfico, como TenSEAL \cite{benaissa2021tenseal} (la cual implementa CKKS) y Concrete ML \cite{ConcreteML} (basada en el esquema de cifrado TFHE). Es importante destacar que TenSEAL usa exclusivamente el CPU mientras que Concrete ML usa el GPU pero usa un esquema de cifrado distinto a CKKS.
+    \item Entrenamiento: se entrena una única vez cada arquitectura en texto plano sobre su conjunto de datos, y se almacenan los pesos resultantes. Todas las implementaciones cifradas parten de estos mismos pesos, de modo que las diferencias observadas se atribuyen exclusivamente al esquema de cifrado y no al proceso de entrenamiento.
+    \item Configuración de parámetros: para cada biblioteca se selecciona el conjunto de parámetros criptográficos con el que se ejecutará la red. En las bibliotecas basadas en CKKS, estos parámetros dependen de la red a evaluar.
+    \item Generación de claves: a partir de los parámetros anteriores, cada biblioteca de cifrado construye su contexto criptográfico y genera el conjunto de claves necesario (clave pública, clave de relinealización y claves de rotación o de Galois).
+    \item Compilación: el modelo entrenado se traduce a la representación interna de cada biblioteca, lo que incluye la calibración de los rangos de entrada y el ajuste de las aproximaciones polinómicas de las funciones de activación.
+    \item Inferencia: se cifra la entrada, se ejecuta la pasada hacia adelante sobre los datos cifrados y se descifra la salida.
+    \item Medición y consolidación: durante cada fase se registran las métricas de tiempo, memoria y fidelidad y los resultados de todas las implementaciones se consolidan para su análisis.
 \end{enumerate}
 
-\section{Planificación de actividades}
+%\begin{figure}[h!]
+%    \centering
+%    \includegraphics[width=0.9\textwidth]{images/bench_workflow.png}
+%    \caption{Flujo de trabajo del banco de pruebas.}
+%    \label{fig:bench_workflow}
+%\end{figure}
 
-Para cada uno de los objetivos específicos definidos, se han determinado las actividades necesarias para su cumplimiento. En la \hyperref[tab:plan_trabajo]{Tabla~\ref{tab:plan_trabajo}} se detalla el cronograma propuesto y se estima la duración de cada actividad en días:
+\section{Infraestructura de la solución}
+
+El desarrollo y la ejecución de los experimentos se llevaron a cabo utilizando los siguientes recursos de hardware y software.
+
+\subsection{Hardware}
+
+Los experimentos se ejecutaron sobre una instancia virtual de cómputo en la nube provista por el servicio RunPod \cite{RunPod}, el cual ofrece acceso bajo demanda a instancias virtualizadas equipadas con unidades de procesamiento gráfico. Los recursos asignados a la instancia fueron los siguientes:
+
+\begin{itemize}
+    \item GPU: una unidad NVIDIA GeForce RTX 3090, de arquitectura Ampere, con 24~GB de memoria de video (VRAM) y soporte para CUDA 12.4. La instancia disponía de acceso exclusivo a esta tarjeta. 
+    \item CPU: 32 núcleos virtuales (vCPU) asignados a la instancia, correspondientes a un procesador físico AMD EPYC 7H12.
+    \item Memoria RAM: 128~GB asignados a la instancia.
+    \item Sistema operativo: GNU/Linux con núcleo 6.8.
+\end{itemize}
+
+Se eligió una instancia en la nube debido a que el esquema CKKS acelerado por GPU requiere una tarjeta gráfica con una cantidad considerable de memoria de video, y a la conveniencia de disponer de un entorno reproducible y aislado para las mediciones de rendimiento.
+
+\subsection{Software}
+
+La biblioteca propuesta y el banco de pruebas se implementaron en el lenguaje Python. Cada biblioteca probada se instaló en un entorno virtual independiente. 
+
+\begin{itemize}
+    \item Entorno principal (Python 3.11): aloja la biblioteca propuesta, la ejecución de referencia en PyTorch y Concrete~ML.
+    \item Entorno de Orion (Python 3.12): aloja la biblioteca Orion y su versión de PyTorch.
+\end{itemize}
+
+Las principales bibliotecas de software empleadas, con sus respectivas versiones, fueron:
+
+\begin{itemize}
+    \item Python (versiones 3.11 y 3.12): lenguaje de programación principal.
+    \item NumPy (versión 1.26): biblioteca para operaciones con arreglos y matrices.
+    \item HEonGPU (versión 1.1.3): biblioteca escrita en C++ y CUDA que implementa el esquema CKKS sobre la GPU \cite{HEonGPU}. Encargado de ejecutar en la GPU las operaciones homomórficas.
+    \item CUDA (versión 12.4): plataforma de cómputo paralelo de NVIDIA sobre la que se compilan y ejecutan las operaciones de HEonGPU.
+    \item pybind11: utilizada para construir los enlaces (\textit{bindings}) que exponen a Python las clases de C++ y CUDA de HEonGPU.
+    \item PyTorch (versión 2.4.1 con CUDA 12.4): biblioteca para operaciones con tensores y aceleración por GPU, utilizada tanto para el entrenamiento de los modelos como para la ejecución de referencia en texto plano.
+    \item torchvision (versión 0.19): utilizada para la obtención del conjunto de datos MNIST.
+    \item scikit-learn: utilizada para la obtención del conjunto de datos California Housing, el particionado de los datos y su estandarización.
+    \item Matplotlib: biblioteca para la generación de gráficos y el análisis de los resultados de rendimiento.
+    \item pynvml: enlace de Python a la biblioteca NVML de NVIDIA, utilizada para medir el consumo de memoria de video.
+\end{itemize}
+
+\section{Diseño de la biblioteca}\label{sec:metodo_diseno}
+
+La biblioteca desarrollada expone una interfaz de alto nivel en Python para construir redes neuronales y ejecutar su inferencia sobre datos cifrados, ocultando al usuario la complejidad del esquema CKKS y la gestión de la memoria de la GPU. Su diseño se inspira en la forma de trabajar de las bibliotecas de aprendizaje profundo de uso común: el usuario describe la red como una secuencia de capas y la biblioteca se encarga de traducir esa descripción a operaciones homomórficas. En esta sección se describe la organización del código, las estructuras de datos sobre las que opera y la interfaz que se ofrece al usuario.
+
+\subsection{Estructura del código}
+
+La biblioteca se organiza en estructuras de datos y objetos que abstraen la configuración y complejidad del esquema de cifrado lo mas posible del usuario.
+
+\begin{itemize}
+    \item \textit{Backend}: la capa más baja, escrita en C++ y CUDA, que envuelve a HEonGPU y expone sus operaciones a Python mediante enlaces (\textit{bindings}) construidos con pybind11.
+    \item Esquema CKKS: una envoltura en Python sobre el \textit{backend} que encapsula el contexto criptográfico, la configuración del esquema, la generación de claves y las operaciones homomórficas básicas.
+    \item Capas: las capas de red neuronal (lineal, convolucional y las activaciones), que expresan las operaciones de la red en términos de las operaciones homomórficas de la capa anterior.
+    \item Modelo secuencial: el componente que compone las capas en una red completa y orquesta su compilación y su inferencia.
+    \item Utilidades: funciones auxiliares de conversión de datos, validación de formas y definición de errores propios de la biblioteca.
+\end{itemize}
+
+El proyecto se empaqueta con \textit{scikit-build-core} y CMake, que compilan la extensión del \textit{backend} y la integran como un módulo importable junto al código Python. Esta separación en capas permite que el usuario interactúe únicamente con las capas superiores (modelo secuencial y capas de red), sin necesidad de conocer los detalles criptográficos ni de la GPU.
+
+\subsection{Estructuras de datos}
+
+La biblioteca distingue explícitamente entre los datos cifrados y los datos en texto plano mediante estructuras separadas:
+
+\begin{itemize}
+    \item Vector cifrado: representa un vector de números reales empaquetado en las ranuras de un texto cifrado de CKKS. Es la estructura sobre la que operan las capas de la red y mantiene la información de su nivel dentro de la cadena de módulos. Sobre ella se definen las operaciones homomórficas (suma, resta, multiplicación, rotación, producto punto y multiplicación matriz-vector).
+    \item Vector en texto plano: representa un vector codificado pero sin cifrar, utilizado como operando en claro de algunas operaciones.
+    \item Tensor en texto plano: almacena los pesos de las capas (matrices en dos o tres dimensiones) en texto plano. Es responsable, además, de precomputar la representación de la matriz de pesos que requiere la multiplicación matriz-vector.
+    \item Entrada del modelo: estructura que cifra el vector de entrada de la red a partir de los datos en claro proporcionados por el usuario.
+\end{itemize}
+
+Esta separación entre estructuras en claro y cifradas refleja el modelo de uso del cifrado homomórfico en la inferencia: los pesos del modelo permanecen en texto plano, mientras que la entrada del usuario y todos los resultados intermedios viajan cifrados.
+
+\subsection{Interfaz de usuario y conversión desde PyTorch}
+
+La interfaz de la biblioteca es declarativa: el usuario construye un modelo secuencial enumerando sus capas, de forma análoga a otras bibliotecas de aprendizaje profundo. Además, la biblioteca ofrece una función de conversión que toma un modelo ya entrenado en PyTorch y construye automáticamente el modelo equivalente con cifrado homomórfico. Esto permite utilizar modelos entrenados con herramientas estándar.
+
+El flujo de uso consta de cuatro pasos:
+
+\begin{enumerate}
+    \item Construcción del modelo, ya sea definiendo las capas y pasando los pesos ya entrenados o convirtiendo un modelo de PyTorch.
+    \item Compilación del modelo contra un contexto criptográfico. Esto que prepara la red para la inferencia cifrada.
+    \item Cifrado de la entrada y transferencia al modelo para la inferencia.
+    \item Descifrado de la salida.
+\end{enumerate}
+
+\section{Backend CUDA}\label{sec:metodo_backend}
+
+La biblioteca no implementa desde cero las primitivas del esquema CKKS, sino que delega el cómputo criptográfico a un \textit{backend} especializado y acelerado por GPU.
+
+\subsection{HEonGPU}
+
+El \textit{backend} criptográfico es HEonGPU \cite{HEonGPU}, una biblioteca escrita en C++ y CUDA que implementa el esquema CKKS sobre la GPU. Proporciona las primitivas de bajo nivel del esquema: la creación del contexto, la codificación y decodificación, el cifrado y descifrado, las operaciones homomórficas (suma, multiplicación, reescalado, relinealización y rotación) y el \textit{bootstrapping}. Se eligió este \textit{backend} porque ejecuta dichas operaciones sobre la GPU, y porque ofrece una implementación de CKKS con soporte de \textit{bootstrapping}.
+
+Se construyó una capa de enlaces (\textit{bindings}) con pybind11, que expone los objetos de C++ como objetos nativos de Python y gestiona la traducción de tipos y la transferencia de datos entre ambos lenguajes. Estos enlaces se organizan por responsabilidad, agrupando por separado la creación del contexto, los componentes criptográficos (codificador, cifrador, descifrador y generador de claves), los tipos de claves, los objetos de datos (textos cifrados y en claro), el operador de operaciones homomórficas y las enumeraciones expuestas a Python. Sobre esta capa de enlaces se construye la envoltura en Python que el resto de la biblioteca utiliza.
+
+\subsection{Abstracción del \textit{backend}}
+
+La biblioteca oculta deliberadamente el \textit{backend} al usuario y solo expone una interfaz de alto nivel. Esta decisión de diseño responde a tres motivos: la complejidad criptográfica del esquema CKKS, que exige conocimientos especializados para usarse correctamente; y la seguridad, ya que una manipulación incorrecta de los objetos criptográficos podría comprometer las garantías del esquema o directamente arrojar errores.
+
+En consecuencia, lo que se expone al usuario son las abstracciones de alto nivel: el contexto criptográfico, las capas de red neuronal, el modelo secuencial y los vectores cifrados y en texto plano, junto con sus operaciones. Por el contrario, no se exponen los elementos internos del esquema: las claves (secreta, pública, de relinealización y de Galois), los niveles de los textos cifrados ni los objetos crudos del \textit{backend}. El usuario nunca manipula estos elementos de forma directa; la biblioteca los gestiona internamente durante la compilación y la inferencia.
+
+Ademas se exponen varios parametros de configuración de la libreria, esto debido a la dificultad de crear una selección automática de parámetros en función de la red neuronal desarrollada. 
+
+\subsection{Validaciones de configuración}
+
+Antes de construir el contexto criptográfico e invocar al \textit{backend}, la biblioteca valida la configuración de los parámetros del esquema. Esta validación se realiza en la capa de Python y valida lo siguiente:
+
+\begin{itemize}
+    \item que el grado del polinomio se encuentre entre los valores admitidos;
+    \item que los tamaños de los primos de la cadena de módulos estén dentro de un rango válido y que la cadena tenga la forma esperada (primos para la cadena $Q$ más el tamaño del primo auxiliar $P$);
+    \item que el tamaño total del módulo no exceda el tope que impone el nivel de seguridad elegido para ese grado de polinomio;
+    \item que, cuando se activa el \textit{bootstrapping}, la cadena de módulos sea suficientemente larga para alojar su circuito;
+    \item que los grados de los polinomios de activación sean impares y mayores o iguales que tres, como requiere la aproximación empleada.
+\end{itemize}
+
+Estas comprobaciones se ejecutan cada vez que se modifica un parámetro. La validación se sitúa en Python, antes de llegar al \textit{backend}, con mensajes de error claros, ademas varias de las validaciones no son evaluadas por el \textit{backend}. 
+
+\section{Detalles de implementación}\label{sec:metodo_implementacion}
+
+Esta sección describe cómo la biblioteca implementa internamente la red y su inferencia sobre datos cifrados. La inferencia se realiza capa por capa, traduciendo cada operación de la red a una secuencia de operaciones homomórficas del \textit{backend}.
+
+\subsection{Clase \textit{Sequential}}
+
+La clase \textit{Sequential} es el componente logico principal para la inferencia y compilacion. Para ejecutar la inferencia, recibe la entrada cifrada y aplica cada capa en orden, propagando un vector cifrado de una capa a la siguiente hasta obtener la salida cifrada de la red.
+
+Antes de poder inferir, el modelo debe llamar la funcion \textit{compile} contra un contexto criptográfico; este paso, que entre otras tareas calibra la red, se describe en la Sección~\ref{sec:metodo_calibracion}. La clase admite además construir la red enumerando las capas manualmente o, alternativamente, a partir de un modelo entrenado en PyTorch, traduciendo automáticamente las capas soportadas.
+
+\subsection{Multiplicación matriz-vector}
+
+La multiplicación matriz-vector es la operación central de las capas con pesos. La biblioteca la implementa mediante el método de diagonales de Halevi-Shoup, en su variante rectangular con envoltura cíclica, que permite multiplicar un vector cifrado por una matriz de pesos en texto plano de dimensiones arbitrarias. Para ello, tanto el vector de entrada como el de salida se manejan replicados sobre las ranuras del texto cifrado, lo que simplifica el direccionamiento de las diagonales cuando las dimensiones de la matriz no coinciden con el número de ranuras.
+
+Como decisión de implementación orientada al rendimiento, las diagonales de cada matriz de pesos se codifican una sola vez durante la compilación del modelo, y no en cada inferencia. De este modo, el costo de preparar los pesos se paga una única vez y se reutiliza en todas las inferencias posteriores.
+
+\subsection{Convolución}
+
+En lugar de implementar un operador de convolución específico, la biblioteca expresa cada capa convolucional como una única multiplicación matriz-vector. Para ello, a partir de los pesos del filtro se construye una matriz dispersa cuyas filas corresponden a las posiciones de salida y cuyas columnas corresponden a las posiciones de la entrada aplanada; cada fila contiene los pesos del filtro en las posiciones que cubre su ventana. Esta matriz se trata después igual que la de una capa lineal, reutilizando la multiplicación matriz-vector. Aprovechando la equivalencia entre la convolución y esta forma matricial (\textit{im2col}), la decisión de diseño relevante aquí es reutilizar una sola ruta de cómputo para ambas capas, en lugar de mantener dos implementaciones separadas.
+
+\subsection{Activación ReLU}
+
+Como el esquema CKKS solo admite sumas y multiplicaciones, la función de activación ReLU debe aproximarse por un polinomio. La biblioteca parte de la identidad
+\begin{equation}
+\mathrm{ReLU}(x) = \max(0, x) = x \cdot \frac{1 + \mathrm{signo}(x)}{2},
+\label{eq:relu_sign}
+\end{equation}
+que reduce el problema a aproximar la función signo. Aproximar el signo con un único polinomio no es viable: un polinomio de grado bajo es demasiado inexacto, y uno de grado alto oscila y diverge fuera de un intervalo estrecho. Por ello se emplea el método de composición propuesto por Cheon et al. \cite{CKKL19}, que aproxima el signo iterando un polinomio base $f_n$:
+\begin{equation}
+\mathrm{signo}(x) \approx \underbrace{(f_n \circ f_n \circ \cdots \circ f_n)}_{k \text{ veces}}(x), \qquad x \in [-1, 1].
+\label{eq:sign_composition}
+\end{equation}
+
+El polinomio base es el polinomio impar de grado $2n+1$
+\begin{equation}
+f_n(x) = \sum_{i=0}^{n} \frac{1}{4^{i}} \binom{2i}{i}\, x\,(1 - x^2)^{i},
+\label{eq:fn}
+\end{equation}
+que cumple $f_n(\pm 1) = \pm 1$ y tiene sus primeras $n$ derivadas nulas en $\pm 1$. Estas mesetas en $\pm 1$ hacen que $f_n$ aplique $[-1,1]$ sobre sí mismo empujando todo punto interior hacia $-1$ o $+1$ según su signo; al componer $f_n$ consigo mismo $k$ veces, la imagen se acerca progresivamente a $\pm 1$ y, por tanto, a la función signo. 
+
+A diferencia de un único polinomio de grado alto, esta construcción permanece acotada en $[-1,1]$ y, por tanto, es numéricamente estable. La precisión de la aproximación depende del grado $2n+1$ de cada componente y, sobre todo, del número de composiciones $k$: más composiciones aproximan mejor el signo, a costa de una mayor profundidad multiplicativa. La aproximación solo es válida si la entrada de la activación reside en $[-1, 1]$; mantenerla en ese intervalo es responsabilidad de la calibración descrita en la Sección~\ref{sec:metodo_calibracion}.
+
+A nivel de implementación, la imparidad de cada polinomio componente se aprovecha para reducir la profundidad multiplicativa que consume la activación. Como cada polinomio componente $p$ es impar de grado $2n+1$, todos sus coeficientes pares son nulos y se puede factorizar
+\[
+    p(x) \;=\; \sum_{k=0}^{n} c_{2k+1}\, x^{2k+1} \;=\; x \cdot \sum_{k=0}^{n} c_{2k+1}\, (x^2)^{k} \;=\; x \cdot q(x^2),
+\]
+donde $q(u) = \sum_{k=0}^{n} c_{2k+1}\, u^{k}$ tiene grado $n$ en la variable $u = x^2$. La evaluación se realiza en tres etapas: una multiplicación entre textos cifrados para obtener $u = x^2$, una evaluación de $q(u)$ mediante el esquema de Horner que consume $n$ niveles, y una multiplicación final $x \cdot q(x^2)$. La profundidad total resulta en $n+2$ niveles por polinomio componente, frente a $2n+1$ si se aplicara Horner directamente sobre $x$, esencialmente la mitad.
+
+\subsection{Gestión de niveles y ruido}
+
+Cada multiplicación homomórfica va seguida de una relinealización y un reescalado, que controlan el tamaño del texto cifrado y su factor de escala. La biblioteca debe asegurar que los operandos de cada operación se encuentren en el mismo nivel de la cadena de módulos. Para ello dispone de una operación que reduce el nivel de un texto cifrado hasta alinearlo con otro, descartando los primos sobrantes antes de operar.
+
+Para decidir si la red necesita \textit{bootstrapping}, cada capa expone un método que reporta su profundidad multiplicativa, es decir, el número de niveles de la cadena de módulos que su evaluación consume. Las capas lineal y convolucional consumen un único nivel, correspondiente a la multiplicación cifrado--texto que realizan. La capa de activación ReLU consume multiples niveles dependiendo de la configuración de polinomios usados.
+
+Durante la compilación del modelo, la biblioteca suma las profundidades multiplicativas de todas las capas y compara el total con los niveles que la cadena de módulos del contexto pone a disposición. Si la suma excede los niveles disponibles, se habilita el \textit{bootstrapping} en su variante SLIM para esa ejecución: se generan los parámetros del circuito y se extiende el conjunto de claves de Galois para cubrir las rotaciones que dicho circuito requiere. Si la suma cabe en la cadena, la red se ejecuta sin \textit{bootstrapping} y se ahorra ese coste.
+
+En tiempo de inferencia, antes de cada operación que requiere un cierto número de niveles, la biblioteca consulta el nivel actual del texto cifrado: si no alcanza para la operación pendiente, dispara automáticamente un refresco mediante \textit{bootstrapping}, incluso en medio de la evaluación de una capa de activación. Este mecanismo libera al usuario de gestionar manualmente cuándo refrescar los textos cifrados.
+
+\subsection{Calibración de la red}\label{sec:metodo_calibracion}
+
+La aproximación polinómica de ReLU solo es precisa cuando su entrada reside en el intervalo $[-1, 1]$; fuera de él, el error crece rápidamente. Sin embargo, las entradas que llegan a cada activación dependen de los datos y de los pesos, y no están acotadas de antemano. La calibración resuelve este problema durante la compilación del modelo, en dos pasos.
+
+El primer paso es la estimación de los rangos de las activaciones. La biblioteca recibe un conjunto de datos representativo y lo propaga por la red en texto plano, registrando para cada activación el valor absoluto máximo $B$ que alcanza su entrada. Ese máximo resume el rango de operación de la activación correspondiente.
+
+El segundo paso es el plegado de esos rangos en los pesos de las capas vecinas. En lugar de reescalar explícitamente el texto cifrado antes y después de cada activación (lo que consumiría operaciones y niveles), la biblioteca divide los pesos y el sesgo de la capa que precede a la activación por $B$ y multiplica los pesos de la capa siguiente por ese mismo $B$. Como ReLU es positivamente homogénea, es decir, $\mathrm{ReLU}(Bx) = B \cdot \mathrm{ReLU}(x)$ para $B > 0$, esta transformación es exacta: la red calcula exactamente lo mismo, pero la entrada que llega a la activación queda normalizada al intervalo $[-1, 1]$ donde la aproximación es precisa, y la escala se restaura en la capa posterior, sin ninguna operación homomórfica adicional. Todo el ajuste se realiza sobre los pesos en texto plano durante la compilación.
+
+Además de calibrar la red, la compilación determina, a partir de la profundidad multiplicativa total del modelo y de los niveles disponibles en el contexto, si la red requiere \textit{bootstrapping}, y en tal caso lo configura para esa ejecución.
+
+\section{Desarrollo guiado por pruebas}\label{sec:metodo_tdd}
+
+El desarrollo de la biblioteca siguió una estrategia guiada por pruebas (\textit{test-driven development}), aplicada de forma pragmática y no como un método estricto. El orden de trabajo fue el siguiente: primero se diseñó la interfaz pública, es decir, las clases y operaciones con las que interactúa el usuario; a continuación se escribieron pruebas para las operaciones más importantes y de mayor complejidad antes de implementarlas; después se realizó la implementación, iterando sobre ella hasta que las pruebas pasaran; y, finalmente, se hizo un último ajuste de la interfaz a la luz de lo aprendido durante la implementación.
+
+Las pruebas automatizadas cubren los componentes de la biblioteca por separado: la creación del contexto y las operaciones de codificación, cifrado y descifrado; la aritmética sobre vectores cifrados y la multiplicación matriz-vector; los tensores de pesos en texto plano; las capas lineal y convolucional; la aproximación polinómica de la activación; el modelo secuencial completo; y el manejo de errores ante configuraciones o entradas inválidas. Este conjunto de pruebas constituye la principal garantía de que las operaciones cifradas reproducen, dentro del margen de error de CKKS, el cómputo en texto plano.
+
+\section{Bibliotecas de referencia}\label{sec:metodo_bibliotecas}
+
+Para evaluar el rendimiento de la biblioteca propuesta se la comparó frente a tres implementaciones de referencia. Estas implementaciones no comparten necesariamente el mismo esquema de cifrado. Las referencias seleccionadas fueron:
+
+\begin{itemize}
+    \item PyTorch (texto plano): se eligió como línea base sin cifrado. Evalúa la red sobre datos en claro con aceleración por GPU y aporta la referencia tanto de exactitud (el resultado que la inferencia cifrada debería reproducir) como del coste de tiempo y memoria sin la sobrecarga del cifrado. Permite así aislar la pérdida de precisión y el sobrecoste atribuibles al cifrado homomórfico. Al no realizar generación de claves ni compilación criptográfica, solo se mide su fase de inferencia.
+
+    \item Orion: se eligió como referencia del mismo esquema de cifrado que emplea la biblioteca propuesta, CKKS \cite{Orion}. Es un \textit{framework} de inferencia de redes neuronales sobre cifrado homomórfico que soporta \textit{bootstrapping} y automatiza el empaquetado de los datos y la aproximación de las activaciones. En la configuración utilizada delega las primitivas criptográficas en el \textit{backend} Lattigo \cite{Lattigo}, escrito en el lenguaje Go, que ejecuta el cómputo sobre la CPU.
+
+    \item Concrete~ML: se eligió como representante de un esquema de cifrado distinto, TFHE \cite{ConcreteML}. A diferencia de CKKS, TFHE opera sobre enteros cuantizados y evalúa las funciones no lineales de forma exacta mediante \textit{bootstrapping} programable. 
+\end{itemize}
+
+La \hyperref[tab:metodo_libs]{Tabla~\ref{tab:metodo_libs}} resume las diferencias fundamentales entre la biblioteca propuesta y las implementaciones de referencia.
 
 \begin{table}[h]
     \centering
-    \begin{tabular}{|p{5.5cm}|p{7cm}|c|}
+    \caption{Comparativa de las implementaciones evaluadas.}\label{tab:metodo_libs}
+    \vspace{0.5em}
+    \begin{tabular}{| l | l | l | l | l |}
         \hline
-        \textbf{Objetivo} & \textbf{Actividad} & \textbf{Días} \\
+        Implementación & Esquema & Hardware & Tipo de dato \\
         \hline
-        % Spans 2 rows
-        \multirow{2}{=}{Implementar una interfaz en Python para interactuar con FIDESlib y OpenFHE}
-            & Investigar las API de FIDESlib y OpenFHE. & 5 \\
-        \cline{2-3}
-            & Implementar bindings para funciones relacionadas con el esquema CKKS. & 10 \\
+        PyTorch & Ninguno & GPU & Flotante \\
         \hline
-        % Spans 2 rows
-        \multirow{2}{=}{Implementar clases para operaciones con tensores y matrices}
-            & Diseñar la arquitectura de las clases para tensores y matrices cifradas. & 5 \\
-        \cline{2-3}
-            & Implementar pruebas unitarias para las operaciones con tensores. & 5 \\
+        Biblioteca propuesta & CKKS & GPU & Real aproximado \\
         \hline
-        % Spans 2 rows
-        \multirow{2}{=}{Definir casos de uso en modelos de Machine Learning}
-            & Implementar redes totalmente conectadas (regresión/clasificación) y convolucionales. & 10 \\
-        \cline{2-3}
-            & Realizar inferencia variando funciones de activación y comparar los resultados. & 10 \\
+        Orion & CKKS & CPU & Real aproximado \\
         \hline
-        % Spans 4 rows
-        \multirow{4}{=}{Comparar performance con otras bibliotecas}
-            & Configurar el entorno para las bibliotecas de referencia (TenSEAL y Concrete ML). & 5 \\
-        \cline{2-3}
-            & Implementar las mismas arquitecturas de redes usando TenSEAL y Concrete ML. & 10 \\
-        \cline{2-3}
-            & Ejecutar benchmarks de tiempo de ejecución y uso de memoria. & 10 \\
-        \cline{2-3}
-            & Analizar los resultados y redactar conclusiones. & 5 \\
+        Concrete~ML & TFHE & GPU & Entero cuantizado \\
         \hline
     \end{tabular}
-    \caption{Plan de Trabajo}
-    \label{tab:plan_trabajo}
 \end{table}
+
+\section{Conjuntos de datos y modelos de prueba}\label{sec:metodo_modelos}
+
+Para evaluar la biblioteca se definieron dos casos de uso correspondientes a dos arquitecturas de red representativas: una red totalmente conectada aplicada a un problema de regresión, y una red convolucional aplicada a un problema de clasificación. En ambos casos, los modelos se mantienen deliberadamente compactos, ya que la profundidad multiplicativa del circuito homomórfico y el consumo de memoria de la GPU crecen rápidamente con el tamaño de la red. Para cada red se describe, además de su conjunto de datos, su arquitectura y su entrenamiento, los parámetros de configuración con los que cada implementación la ejecutó, pues dichos parámetros dependen de la red.
+
+\subsection{Regresión: red totalmente conectada}
+
+El primer caso de uso es un problema de regresión sobre el conjunto de datos California Housing \cite{pace1997california}, el cual contiene 20\,640 muestras descritas por 8 características numéricas (ingreso medio, antigüedad de las viviendas, número de habitaciones, etc.), siendo el objetivo predecir el valor medio de la vivienda en cada distrito.
+
+La arquitectura empleada es una red totalmente conectada con dos capas ocultas y activación ReLU. Formalmente, define una función $f : \mathbb{R}^{8} \to \mathbb{R}$ de la forma
+\[
+f(x) = W_3\,\sigma\!\left(W_2\,\sigma\!\left(W_1 x + b_1\right) + b_2\right) + b_3,
+\]
+donde $\sigma$ es la función de activación ReLU aplicada componente a componente. Las dimensiones de las matrices de pesos $W_i$ y de los vectores de sesgo $b_i$ se resumen en la \hyperref[tab:arq_mlp]{Tabla~\ref{tab:arq_mlp}}.
+
+\begin{table}[h]
+    \centering
+    \caption{Dimensiones de los parámetros de la red de regresión.}\label{tab:arq_mlp}
+    \vspace{0.5em}
+    \begin{tabular}{| l | c | c |}
+        \hline
+        Capa & Matriz de pesos & Vector de sesgo \\
+        \hline
+        Primera capa oculta & $W_1 \in \mathbb{R}^{128 \times 8}$ & $b_1 \in \mathbb{R}^{128}$ \\
+        \hline
+        Segunda capa oculta & $W_2 \in \mathbb{R}^{64 \times 128}$ & $b_2 \in \mathbb{R}^{64}$ \\
+        \hline
+        Capa de salida & $W_3 \in \mathbb{R}^{1 \times 64}$ & $b_3 \in \mathbb{R}$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+El modelo se entrenó en texto plano durante 400 épocas, utilizando el optimizador Adam con una tasa de aprendizaje de $10^{-3}$, un tamaño de lote de 256 y la función de pérdida de error cuadrático medio (MSE). El conjunto de datos se dividió en un 80\,\% para entrenamiento y un 20\,\% para prueba. La métrica de calidad empleada para este problema de regresión es el coeficiente de determinación $R^2$.
+
+\subsubsection{Parámetros de configuración}
+
+Los parámetros con los que cada implementación ejecutó esta red se describen a continuación. En la biblioteca propuesta, los parámetros del esquema CKKS para esta red se resumen en la \hyperref[tab:metodo_ckks_mlp]{Tabla~\ref{tab:metodo_ckks_mlp}}.
+
+\begin{table}[h]
+    \centering
+    \caption{Parámetros CKKS de la biblioteca propuesta para la red de regresión.}\label{tab:metodo_ckks_mlp}
+    \vspace{0.5em}
+    \begin{tabular}{| l | c |}
+        \hline
+        Parámetro & Valor \\
+        \hline
+        Grado del polinomio ($N$) & $65\,536$ \\
+        \hline
+        Cadena de módulos (bits) & $[60,\, 52 \times 28,\, 60]$ \\
+        \hline
+        Factor de escala ($\Delta$) & $2^{52}$ \\
+        \hline
+        Nivel de seguridad & 128 bits \\
+        \hline
+        Aproximación de ReLU & 12 polinomios de grado 5 \\
+        \hline
+        \textit{Bootstrapping} (SLIM): \texttt{CtoS\_piece} & 3 \\
+        \hline
+        \hphantom{\textit{Bootstrapping} (SLIM): }\texttt{StoC\_piece} & 3 \\
+        \hline
+        \hphantom{\textit{Bootstrapping} (SLIM): }\texttt{taylor\_number} & 11 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+En la notación de la cadena de módulos, cada valor indica el tamaño en bits de un primo: el primero (60 bits) es el primo base de la cadena $Q$; los intermedios (28 primos de 52 bits) aportan la profundidad multiplicativa; y el último (60 bits) es el tamaño de los primos del módulo auxiliar $P$. La red dispone así de unas 28 multiplicaciones homomórficas secuenciales, y el factor de escala se fijó cercano al tamaño de los primos intermedios ($2^{52}$) para que el reescalado restituya la escala a un valor próximo a $\Delta$. El grado del polinomio $N = 65\,536$ habilita el \textit{bootstrapping} y ofrece un gran número de ranuras para el empaquetado SIMD, aunque su conjunto de claves de Galois consume la mayor parte de la memoria de video disponible.
+
+La activación ReLU se aproxima componiendo doce polinomios de grado cinco. Esta profundidad agota el presupuesto de niveles antes de completar la red, por lo que se activa el \textit{bootstrapping} en su variante SLIM. Su circuito se controla mediante tres parámetros de HEonGPU, fijados aquí en los valores por defecto de la biblioteca:
+
+% NOTA (pendiente): estos parámetros de bootstrapping (CtoS_piece, StoC_piece y
+% taylor_number) y la variante SLIM no están introducidos en los capítulos teóricos
+% previos. Conviene explicarlos allí.
+\begin{itemize}
+    \item \texttt{CtoS\_piece} $= 3$: número de factores en que se descompone la transformación lineal \textit{CoeffToSlot}, que lleva los coeficientes del polinomio a las ranuras. Un mayor número de factores produce un circuito con más etapas, pero cada una más económica y de menor consumo de niveles.
+    \item \texttt{StoC\_piece} $= 3$: análogo al anterior, pero para la transformación inversa \textit{SlotToCoeff}.
+    \item \texttt{taylor\_number} $= 11$: grado del polinomio (una aproximación de la función seno) con el que se evalúa la reducción modular (\textit{EvalMod}), el paso no polinómico del \textit{bootstrapping}. Un grado mayor incrementa la precisión del refresco, pero también la profundidad que consume.
+\end{itemize}
+
+Orion ejecutó esta red con la configuración del esquema tomada de su archivo predefinido ``ResNet'', ajustado para redes con activaciones ReLU profundas aproximadas mediante expansiones de Chebyshev. Sus parámetros se resumen en la \hyperref[tab:metodo_orion]{Tabla~\ref{tab:metodo_orion}}.
+
+\begin{table}[h]
+    \centering
+    \caption{Parámetros CKKS de Orion (configuración ``ResNet'').}\label{tab:metodo_orion}
+    \vspace{0.5em}
+    \begin{tabular}{| l | c |}
+        \hline
+        Parámetro & Valor \\
+        \hline
+        Grado del polinomio ($N$) & $2^{16} = 65\,536$ \\
+        \hline
+        Cadena de módulos $Q$ (bits) & $[55,\, 40 \times 10]$ \\
+        \hline
+        Módulo auxiliar $P$ (bits) & $[61 \times 3]$ \\
+        \hline
+        Factor de escala ($\Delta$) & $2^{40}$ \\
+        \hline
+        Peso de Hamming ($h$) & 192 \\
+        \hline
+        Primos para \textit{bootstrapping} (bits) & $[61 \times 8]$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Orion emplea el mismo grado de polinomio que la biblioteca propuesta, pero una cadena de módulos $Q$ más corta (un primo base de 55 bits seguido de diez de 40 bits), un módulo auxiliar $P$ de tres primos de 61 bits y un factor de escala $\Delta = 2^{40}$. Utiliza una clave secreta dispersa de peso de Hamming $h = 192$ y reserva ocho primos especiales de 61 bits para el \textit{bootstrapping}. Una particularidad de Orion es que incorpora la dimensión del lote de calibración en su empaquetado matricial; por ello, la calibración de rangos se realizó con un lote reducido de 8 muestras, suficiente para estimar el rango de la aproximación de Chebyshev sin que el tamaño de las matrices de diagonales creciera de forma prohibitiva.
+
+Concrete~ML, al basarse en TFHE, no utiliza los parámetros propios de CKKS, sino que se configura principalmente mediante la precisión de cuantización. Se empleó una cuantización de 6 bits ($n\_bits = 6$): cada peso y cada activación se representa con enteros de 6 bits. A diferencia de CKKS, donde la precisión es continua y está gobernada por el factor de escala, en TFHE la precisión es discreta y este número de bits es el principal compromiso entre exactitud y rendimiento, ya que el costo del \textit{bootstrapping} programable (la operación de tabla de búsqueda con la que TFHE evalúa las funciones no lineales) crece con él. A partir de esta precisión y del grafo del modelo cuantizado, el compilador de Concrete selecciona automáticamente el resto de los parámetros criptográficos de modo que se garantice un nivel de seguridad equivalente al del resto de las bibliotecas, esto es, 128 bits.
+
+\subsection{Clasificación: red convolucional}
+
+El segundo caso de uso es un problema de clasificación de imágenes sobre el conjunto de datos MNIST \cite{lecun1998mnist}, compuesto por 70\,000 imágenes en escala de grises de $28 \times 28$ píxeles, que representan dígitos manuscritos del 0 al 9 (10 clases).
+
+La arquitectura empleada es una red convolucional compacta que define una función $f : \mathbb{R}^{1 \times 28 \times 28} \to \mathbb{R}^{10}$ de la forma
+\[
+f(x) = W \, \operatorname{vec}\!\left(\sigma\!\left(\mathcal{C}(x)\right)\right) + b,
+\]
+donde $\mathcal{C}$ es una capa convolucional de 4 filtros de tamaño $7 \times 7$ y paso (\textit{stride}) 5, sin relleno, que transforma la imagen de entrada de $28 \times 28$ en un tensor de $4 \times 5 \times 5$; $\sigma$ es la activación ReLU; Las dimensiones de los parámetros de cada capa se resumen en la \hyperref[tab:arq_cnn]{Tabla~\ref{tab:arq_cnn}}.
+
+\begin{table}[h]
+    \centering
+    \caption{Dimensiones de los parámetros de la red de clasificación.}\label{tab:arq_cnn}
+    \vspace{0.5em}
+    \begin{tabular}{| l | c | c |}
+        \hline
+        Capa & Pesos & Sesgo \\
+        \hline
+        Convolucional (4 filtros $7 \times 7$, paso 5) & $\mathbb{R}^{4 \times 1 \times 7 \times 7}$ & $\mathbb{R}^{4}$ \\
+        \hline
+        Lineal (salida) & $W \in \mathbb{R}^{10 \times 100}$ & $b \in \mathbb{R}^{10}$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+El modelo se entrenó en texto plano durante 8 épocas, con el optimizador Adam, tasa de aprendizaje de $10^{-3}$, tamaño de lote de 256, recorte de gradiente a una norma máxima de 5,0 y la función de pérdida de entropía cruzada. Al igual que en el caso anterior, los datos se dividieron en un 80\,\% para entrenamiento y un 20\,\% para prueba, esta vez de forma estratificada para preservar la proporción de clases. Las métricas de calidad empleadas son la exactitud (\textit{accuracy}) y el acuerdo (\textit{agreement}) con el modelo en texto plano, descrito en la Sección~\ref{sec:metodo_metricas}.
+
+\subsubsection{Parámetros de configuración}
+
+Los parámetros del esquema CKKS de la biblioteca propuesta para esta red se resumen en la \hyperref[tab:metodo_ckks_cnn]{Tabla~\ref{tab:metodo_ckks_cnn}}.
+
+\begin{table}[h]
+    \centering
+    \caption{Parámetros CKKS de la biblioteca propuesta para la red de clasificación.}\label{tab:metodo_ckks_cnn}
+    \vspace{0.5em}
+    \begin{tabular}{| l | c |}
+        \hline
+        Parámetro & Valor \\
+        \hline
+        Grado del polinomio ($N$) & $65\,536$ \\
+        \hline
+        Cadena de módulos (bits) & $[60,\, 53 \times 27,\, 60]$ \\
+        \hline
+        Factor de escala ($\Delta$) & $2^{53}$ \\
+        \hline
+        Nivel de seguridad & 128 bits \\
+        \hline
+        Aproximación de ReLU & 10 polinomios de grado 5 \\
+        \hline
+        \textit{Bootstrapping} (SLIM): \texttt{CtoS\_piece} & 3 \\
+        \hline
+        \hphantom{\textit{Bootstrapping} (SLIM): }\texttt{StoC\_piece} & 3 \\
+        \hline
+        \hphantom{\textit{Bootstrapping} (SLIM): }\texttt{taylor\_number} & 10 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Esta red emplea una cadena de módulos con un primo intermedio menos (27 primos de 53 bits) y, en consecuencia, un factor de escala de $2^{53}$, y la aproximación de ReLU se compone de diez polinomios de grado cinco. El único parámetro de \textit{bootstrapping} que cambia es \texttt{taylor\_number}, fijado en $10$. 
+
+Las bibliotecas de referencia, Orion y Concrete~ML, se ejecutaron con la misma configuración descrita para la red de regresión.
+
+\subsection{Preprocesamiento}
+
+A los datos de entrada de ambos modelos se les aplicó una normalización estadística (estandarización), técnica que ajusta los datos para que tengan media 0 y desviación estándar 1. Para cada característica, la versión estandarizada $\bar{x}$ de una muestra $x$ se calcula como:
+\[
+\bar{x} = \frac{x - \mu}{\sigma},
+\]
+donde $\mu$ y $\sigma$ son la media y la desviación estándar de la característica, estimadas a partir del conjunto de entrenamiento. La estandarización es especialmente relevante en el contexto del cifrado homomórfico, ya que mantener las entradas en un rango acotado y centrado facilita el ajuste de las aproximaciones polinómicas de las funciones de activación, las cuales solo son precisas dentro de un intervalo limitado.
+
+\section{Metodología de evaluación}\label{sec:metodo_evaluacion}
+
+La evaluación comparativa consistió en medir, sobre los dos casos de uso descritos, el rendimiento de cada implementación y la fidelidad de sus resultados respecto a la ejecución en texto plano. A continuación se describen la orquestación de los experimentos, las fases medidas y las métricas registradas.
+
+\subsection{Orquestación y aislamiento de los experimentos}
+
+El banco de pruebas se orquesta desde un proceso coordinador que, para cada caso de uso, ejecuta primero el entrenamiento del modelo y luego invoca a cada implementación. Cada implementación se ejecuta en un proceso independiente, lanzado con el intérprete de Python de su entorno virtual correspondiente. Este aislamiento por subprocesos cumple dos funciones:
+
+\begin{enumerate}
+    \item Resolución de conflictos de dependencias: permite que cada biblioteca utilice su propia versión de PyTorch y demás dependencias, evitando los conflictos mutuamente incompatibles.
+    \item Aislamiento de la memoria: evita la contaminación cruzada del consumo de memoria de video entre bibliotecas, garantizando que las mediciones de una implementación no se vean afectadas por la memoria residual de otra.
+\end{enumerate}
+
+Antes de ejecutar las implementaciones, el coordinador mide una sola vez el consumo de memoria de video de base (la VRAM ocupada por el sistema antes de cualquier cómputo) y lo comunica a cada subproceso, de modo que las mediciones de memoria reporten únicamente el consumo atribuible a cada biblioteca. Cada subproceso escribe sus resultados en formato JSON, los cuales son recolectados y consolidados por el coordinador en una tabla de resultados. Para garantizar la reproducibilidad, todas las fuentes de aleatoriedad se inicializan con una semilla fija.
+
+\subsection{Fases medidas}
+
+De cada implementación cifrada se miden dos fases. La primera es la generación de claves (\textit{keygen}), en la que se construye el contexto criptográfico y se genera el conjunto de claves del esquema. La segunda es la inferencia (\textit{infer}), en la que se cifra la entrada, se evalúa la red sobre los datos cifrados y se descifra la salida. La ejecución de referencia en PyTorch, al operar en texto plano, solo atraviesa la fase de inferencia. Para cada fase se registran de forma independiente las métricas de tiempo y memoria descritas más adelante, lo que permite atribuir a cada etapa su consumo de recursos.
+
+\subsection{Conteo de muestras}
+
+La forma de obtener las métricas de calidad y de latencia depende de cada implementación, según si su ejecución en claro es equivalente a la cifrada.
+
+En la biblioteca propuesta y en Orion, ambas basadas en CKKS, la ejecución en claro no es equivalente a la cifrada: la aritmética aproximada y el ruido del cifrado hacen que el resultado cifrado difiera del que produciría la red sin cifrar. Por ello, las métricas de calidad deben medirse sobre la salida cifrada real. En estos casos se ejecuta un único bucle de inferencias cifradas sobre un conjunto de muestras de prueba, del que se obtienen tanto las métricas de calidad como la latencia por muestra.
+
+En Concrete~ML, en cambio, sí se separan dos conjuntos de muestras: las métricas de calidad se obtienen sobre un conjunto mayor (varias decenas de muestras) evaluado en su modo en claro (sin cifrar), mientras que la latencia se mide sobre un conjunto reducido (una o dos muestras) en modo cifrado real.
+
+La ejecución de referencia en PyTorch, al operar siempre en texto plano, evalúa todas sus muestras de la misma forma.
+
+\subsection{Métricas de rendimiento y fidelidad}\label{sec:metodo_metricas}
+
+Para cada fase de cada implementación se registraron las siguientes métricas:
+
+\begin{itemize}
+    \item Tiempo de ejecución.
+
+    \item Memoria de video (VRAM).
+    \begin{itemize}
+        \item el \textit{pico de memoria a nivel de dispositivo}, obtenido de NVML.
+        \item el \textit{pico del conjunto de trabajo}, obtenido del contador del manejador de memoria de cada biblioteca cuando está disponible.
+    \end{itemize}
+
+    \item Memoria principal (RAM). Se mide el pico de memoria residente del proceso.
+
+    \item Diferencias por fase. Para cada métrica de memoria se calcula la diferencia entre el pico de la fase actual y el de la fase cronológicamente anterior, lo que permite atribuir el incremento de memoria a una fase específica.
+\end{itemize}
+
+En cuanto a la calidad y fidelidad de las predicciones, se emplearon las siguientes métricas, según el tipo de problema:
+
+\begin{itemize}
+    \item Coeficiente de determinación ($R^2$): para el problema de regresión, mide la proporción de la varianza de la variable objetivo explicada por el modelo.
+
+    \item Exactitud (\textit{accuracy}): para el problema de clasificación, es la proporción de muestras clasificadas correctamente.
+
+    \item Acuerdo: proporción de muestras en las que la clase predicha por el modelo cifrado coincide con la del modelo en texto plano.
+
+    \item Error absoluto medio (MAE): promedio del valor absoluto de la diferencia entre las salidas del modelo cifrado y las del modelo en texto plano.
+
+\end{itemize}
+
+La distinción entre exactitud y fidelidad es importante: una implementación puede preservar la decisión del clasificador (acuerdo alto) aun cuando sus salidas numéricas difieran notablemente de las del modelo en claro.
+
+Para la biblioteca propuesta, las métricas de fidelidad se registran en dos variantes respecto al modelo de referencia en texto plano de PyTorch. La primera compara la salida cifrada con la referencia y refleja el error combinado de la aproximación polinómica y del ruido del cifrado. La segunda compara con la referencia la salida de la red ejecutada sin cifrar, pero con las mismas aproximaciones polinómicas y la misma calibración que la versión cifrada; esta refleja únicamente el error introducido por las aproximaciones. Comparar ambas variantes permite aislar la contribución del ruido del cifrado y separarla del error de aproximación.
+
+\subsection{Perfilado por capa}
+
+Además de las métricas agregadas por fase, se realizó un perfilado detallado de la inferencia de la biblioteca propuesta, midiendo el tiempo de ejecución y el consumo de memoria de video tras la evaluación de cada capa individual de la red. Este perfilado permite identificar qué operaciones constituyen los principales cuellos de botella del cómputo homomórfico (por ejemplo, las funciones de activación frente a las capas lineales, o la capa convolucional frente a las capas densas), información que resulta valiosa para orientar futuras optimizaciones de la biblioteca.
