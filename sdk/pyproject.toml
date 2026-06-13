@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "fhe-sdk"
-version = "0.1.5"
+version = "0.2.1"
 description = "Python SDK for GPU-accelerated CKKS homomorphic encryption inference"
 readme = "README.md"
 requires-python = ">=3.11"
