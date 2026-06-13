@@ -58,7 +58,7 @@ class ReLU(Layer):
                 "ReLU degrees unresolved; call Sequential.compile(context) "
                 "or ReLU.set_degrees(...) first."
             )
-        ctx = x._context
+        ctx = x.context
         # Composed f_n chain pushes inputs toward the sign of x (±1 in the working range).
         sign_approx = x
         for poly_coeffs in self._coeffs:

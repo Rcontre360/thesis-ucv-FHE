@@ -53,6 +53,7 @@ class TestEncryptedVectorArithmetic:
 
 class TestEncryptedVectorRotate:
     def test_rotate_zero_is_identity(self, built_context):
+        built_context.generate_rotation_keys([1])
         values = [1.0, 2.0, 3.0, 4.0]
         ct = built_context.encrypt(values)
         result = built_context.decrypt(ct.rotate(0))[:4]
@@ -60,6 +61,7 @@ class TestEncryptedVectorRotate:
             assert abs(expected - actual) < EPSILON
 
     def test_rotate_shifts_values(self, built_context):
+        built_context.generate_rotation_keys([1])
         ct = built_context.encrypt([1.0, 2.0, 3.0, 4.0])
         result = built_context.decrypt(ct.rotate(1))
         assert abs(result[0] - 2.0) < EPSILON
@@ -72,6 +74,7 @@ class TestEncryptedVectorMatmul:
         x = built_context.encrypt([3.0, 5.0])
         W = PlaintextTensor([[1.0, 0.0], [0.0, 1.0]])
         W.encode(built_context)
+        built_context.generate_rotation_keys(W.bsgs_shifts())
         result = x.matmul(W)
         assert result.size == 2
         dec = built_context.decrypt(result)
@@ -82,22 +85,18 @@ class TestEncryptedVectorMatmul:
         x = built_context.encrypt([2.0, 4.0, 6.0])
         W = PlaintextTensor([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
         W.encode(built_context)
+        built_context.generate_rotation_keys(W.bsgs_shifts())
         result = x.matmul(W)
         assert result.size == 2
         dec = built_context.decrypt(result)
         assert abs(dec[0] - 2.0) < EPSILON
         assert abs(dec[1] - 4.0) < EPSILON
 
-    def test_matmul_wrong_ndim_raises(self, built_context):
-        x = built_context.encrypt([1.0, 2.0])
-        T = PlaintextTensor([[[1.0, 0.0], [0.0, 1.0]], [[1.0, 0.0], [0.0, 1.0]]])
-        with pytest.raises(ValueError, match="2D PlaintextTensor"):
-            x.matmul(T)
-
     def test_matmul_shape_mismatch_raises(self, built_context):
         x = built_context.encrypt([1.0, 2.0, 3.0])
         W = PlaintextTensor([[1.0, 0.0], [0.0, 1.0]])
         W.encode(built_context)
+        built_context.generate_rotation_keys(W.bsgs_shifts())
         with pytest.raises(ValueError, match="columns"):
             x.matmul(W)
 
@@ -121,6 +120,7 @@ class TestEncryptedVectorMatmul:
             [1.0, 0.0, 0.0, 1.0],
         ])
         W.encode(built_context)
+        built_context.generate_rotation_keys(W.bsgs_shifts())
         result = x.matmul(W)
         assert result.size == 8
         dec = result.decrypt()
@@ -134,9 +134,11 @@ class TestEncryptedVectorMatmul:
         x = built_context.encrypt([1.0, 2.0, 3.0, 4.0])
         W1 = PlaintextTensor([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
         W1.encode(built_context)
+        built_context.generate_rotation_keys(W1.bsgs_shifts())
         y = x.matmul(W1)                    # size=2 (extracts x[0], x[1])
         W2 = PlaintextTensor([[1.0, 1.0]])  # 1x2: out=1, in=2 (sum)
         W2.encode(built_context)
+        built_context.generate_rotation_keys(W2.bsgs_shifts())
         z = y.matmul(W2)                    # size=1
         assert z.size == 1
         assert abs(z.decrypt()[0] - 3.0) < EPSILON
@@ -150,6 +152,7 @@ class TestEncryptedVectorMatmul:
         x = built_context.encrypt(x_np.tolist())
         W = PlaintextTensor(W_np.tolist())
         W.encode(built_context)
+        built_context.generate_rotation_keys(W.bsgs_shifts())
         result = x.matmul(W)
         assert result.size == 32
 

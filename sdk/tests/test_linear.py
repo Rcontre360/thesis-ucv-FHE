@@ -12,6 +12,7 @@ class TestLinear:
         W = [[1.0, 0.0], [0.0, 1.0]]
         layer = Linear(2, 2, W)
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         ct = built_context.encrypt([0.3, -0.7])
         result = layer(ct).decrypt()[:2]
         assert abs(result[0] - 0.3) < EPSILON
@@ -21,6 +22,7 @@ class TestLinear:
         W = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
         layer = Linear(3, 2, W)
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         ct = built_context.encrypt([0.1, 0.2, 0.3])
         assert layer(ct).size == 2
 
@@ -28,6 +30,7 @@ class TestLinear:
         W = [[2.0, 0.0], [0.0, 3.0]]
         layer = Linear(2, 2, W)
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         ct = built_context.encrypt([0.5, 0.4])
         result = layer(ct).decrypt()[:2]
         assert abs(result[0] - 1.0) < EPSILON
@@ -38,6 +41,7 @@ class TestLinear:
         b = [0.1, -0.2]
         layer = Linear(2, 2, W, bias=b)
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         ct = built_context.encrypt([0.3, 0.5])
         result = layer(ct).decrypt()[:2]
         assert abs(result[0] - 0.4) < EPSILON
@@ -46,6 +50,7 @@ class TestLinear:
     def test_wrong_input_size_raises(self, built_context):
         layer = Linear(2, 2, [[1.0, 0.0], [0.0, 1.0]])
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         ct = built_context.encrypt([0.1, 0.2, 0.3])
         with pytest.raises(ValueError):
             layer(ct)

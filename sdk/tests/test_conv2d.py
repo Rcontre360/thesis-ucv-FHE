@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 pytest.importorskip("fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first")
@@ -21,6 +22,7 @@ class TestConv2D:
             weight=weight,
         )
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         x = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]
         flat = [v for row in x for v in row]
         ct = built_context.encrypt(flat)
@@ -39,6 +41,7 @@ class TestConv2D:
             weight=weight, bias=bias,
         )
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         flat = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
         ct = built_context.encrypt(flat)
         result = layer(ct).decrypt()
@@ -58,6 +61,7 @@ class TestConv2D:
             weight=weight,
         )
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         flat = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
         ct = built_context.encrypt(flat)
         result = layer(ct).decrypt()
@@ -81,6 +85,7 @@ class TestConv2D:
             weight=weight,
         )
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         # ch0 = [[1,2],[3,4]], ch1 = [[10,20],[30,40]]
         flat = [1.0, 2.0, 3.0, 4.0, 10.0, 20.0, 30.0, 40.0]
         ct = built_context.encrypt(flat)
@@ -98,6 +103,7 @@ class TestConv2D:
             weight=weight, stride=2,
         )
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         flat = [float(v) for v in range(1, 17)]  # 1..16
         ct = built_context.encrypt(flat)
         result = layer(ct).decrypt()
@@ -114,6 +120,7 @@ class TestConv2D:
             weight=weight,
         )
         layer._weight.encode(built_context)
+        built_context.generate_rotation_keys(layer.bsgs_shifts())
         ct = built_context.encrypt([0.1, 0.2, 0.3])
         with pytest.raises(ValueError):
             layer(ct)
@@ -137,7 +144,7 @@ class TestConv2DInSequential:
         model = Sequential([
             Conv2D(1, 1, 2, (3, 3), conv_w),
             Linear(4, 1, lin_w),
-        ]).compile(built_context)
+        ]).compile(built_context, np.array([[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]]))
         inp = model.input(built_context, [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]])
         assert isinstance(inp, Input)
         out = model(inp).decrypt()

@@ -25,3 +25,30 @@ def check_array(
     if shape is not None and arr.shape != shape:
         raise ShapeError(f"{name} shape {arr.shape} != {shape}")
     return arr
+
+
+def infer_shape(data: object) -> Tuple[int, ...]:
+    if not isinstance(data, list):
+        return ()
+    if len(data) == 0:
+        return (0,)
+    return (len(data),) + infer_shape(data[0])
+
+
+def validate_shape(data: list, shape: Tuple[int, ...]) -> None:
+    if len(shape) == 1:
+        for j, elem in enumerate(data):
+            if not isinstance(elem, (int, float)):
+                raise ValueError(
+                    f"Expected numeric value at leaf index [{j}], got {type(elem).__name__}"
+                )
+        return
+    for i, row in enumerate(data):
+        if not isinstance(row, list):
+            raise ValueError(f"Expected list at index [{i}], got {type(row).__name__}")
+        if len(row) != shape[1]:
+            raise ValueError(
+                f"Dimension mismatch at index [{i}]: "
+                f"expected {shape[1]} elements, got {len(row)}"
+            )
+        validate_shape(row, shape[1:])

@@ -11,7 +11,7 @@ class Square(Layer):
     """y = x * x. Consumes one multiplicative level; no parameters."""
 
     def __call__(self, x: EncryptedVector) -> EncryptedVector:
-        x = x._context._prepare_for(x, 1)
+        x = x.context._prepare_for(x, 1)
         return x * x
 
     def mult_depth(self) -> int:

@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Iterable, List, Optional, Union
 
 from fhe_ml.backend._backend import (
     create_ckks_context_with_security,
@@ -67,6 +67,7 @@ class FHEContext:
         p_size = cfg.coeff_modulus_bit_sizes[-1]
         num_p = max(2, round(sum(q_bits) / (8 * p_size)))
         p_bits = [p_size] * num_p
+
         self._backend_ctx.set_coeff_modulus_bit_sizes(q_bits, p_bits)
         self._backend_ctx.generate()
 
@@ -77,9 +78,6 @@ class FHEContext:
         self._keygen.generate_public_key(self._pk, self._sk)
         self._rk = CKKSRelinkey(self._backend_ctx)
         self._keygen.generate_relin_key(self._rk, self._sk)
-
-        self._gk = CKKSGaloiskey(self._backend_ctx, self._base_shifts())
-        self._generate_galois_key(self._gk)
 
         self._encoder = CKKSEncoder(self._backend_ctx)
         self._encryptor = CKKSEncryptor(self._backend_ctx, self._pk)
@@ -98,6 +96,40 @@ class FHEContext:
             raise RuntimeError("Context must be built before rotating.")
         result_ct = self._ops.rotate_rows(ct._ct, self._gk, k)
         return EncryptedVector(self, result_ct, ct._n_values)
+
+    def multiply_plain_inplace(self, ct: CKKSCiphertext, pt: CKKSPlaintext) -> None:
+        self._ops.multiply_plain_inplace(ct, pt)
+
+    def rescale_inplace(self, ct: CKKSCiphertext) -> None:
+        self._ops.rescale_inplace(ct)
+
+    def multiply_plain_rescale(self, ct: CKKSCiphertext, pt: CKKSPlaintext) -> None:
+        self.multiply_plain_inplace(ct, pt)
+        self.rescale_inplace(ct)
+
+    def multiply_inplace(self, ct: CKKSCiphertext, other: CKKSCiphertext) -> None:
+        self._ops.multiply_inplace(ct, other)
+
+    def relinearize_inplace(self, ct: CKKSCiphertext) -> None:
+        self._ops.relinearize_inplace(ct, self._rk)
+
+    def add_inplace(self, ct: CKKSCiphertext, other: CKKSCiphertext) -> None:
+        self._ops.add_inplace(ct, other)
+
+    def add_plain_inplace(self, ct: CKKSCiphertext, pt: CKKSPlaintext) -> None:
+        self._ops.add_plain_inplace(ct, pt)
+
+    def sub_inplace(self, ct: CKKSCiphertext, other: CKKSCiphertext) -> None:
+        self._ops.sub_inplace(ct, other)
+
+    def sub_plain_inplace(self, ct: CKKSCiphertext, pt: CKKSPlaintext) -> None:
+        self._ops.sub_plain_inplace(ct, pt)
+
+    def mod_drop_inplace(self, ct: CKKSCiphertext) -> None:
+        self._ops.mod_drop_inplace(ct)
+
+    def mod_drop_plain_inplace(self, pt: CKKSPlaintext) -> None:
+        self._ops.mod_drop_plain_inplace(pt)
 
     def encode(self, values: List[float]) -> PlaintextVector:
         if not self._built:
@@ -138,35 +170,35 @@ class FHEContext:
         decoded = self._encoder.decode(pt)
         return decoded[:ciphertext.size]
 
-    def _base_shifts(self) -> List[int]:
-        return [1]
+    def generate_rotation_keys(self, shifts: Iterable[int]) -> None:
+        all_shifts = sorted({int(s) for s in shifts})
+        if not all_shifts:
+            return
+        gk = CKKSGaloiskey(self._backend_ctx, all_shifts)
+        self._generate_galois_key(gk)
+        self._gk = gk
 
     def _usable_levels(self) -> int:
         return self.encrypt([0.0])._ct.level
 
-    def _setup_bootstrapping(self) -> None:
-        if self._bootstrapping_ready:
-            return
+    def _setup_bootstrapping(self) -> List[int]:
         if self.config.bootstrap is None:
             raise RuntimeError(
                 "Bootstrapping required but FHEConfig.bootstrap is None. "
                 "Set bootstrap=BootstrapConfig(...) on the FHEConfig."
             )
-        boot = self.config.bootstrap
-        config = BootstrappingConfig(
-            boot.ctos_piece, boot.stoc_piece, boot.taylor_number, True
-        )
-        self._ops.generate_bootstrapping_params(
-            2 ** self.config.log_scale, config, BootstrappingType.SLIM
-        )
-        boot_shifts = self._ops.bootstrapping_key_indexs()
-        all_shifts = sorted(set(self._base_shifts()) | set(boot_shifts))
-        gk = CKKSGaloiskey(self._backend_ctx, all_shifts)
-        self._generate_galois_key(gk)
-        self._gk = gk
-        self._bootstrapping_ready = True
+        if not self._bootstrapping_ready:
+            boot = self.config.bootstrap
+            config = BootstrappingConfig(
+                boot.ctos_piece, boot.stoc_piece, boot.taylor_number, True
+            )
+            self._ops.generate_bootstrapping_params(
+                2 ** self.config.log_scale, config, BootstrappingType.SLIM
+            )
+            self._bootstrapping_ready = True
+        return list(self._ops.bootstrapping_key_indexs())
 
-    def _generate_galois_key(self, gk) -> None:
+    def _generate_galois_key(self, gk: CKKSGaloiskey) -> None:
         try:
             self._keygen.generate_galois_key(gk, self._sk, self.config.galois_keys_on_host)
         except TypeError:

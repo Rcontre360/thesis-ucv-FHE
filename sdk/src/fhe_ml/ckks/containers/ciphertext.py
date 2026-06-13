@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class EncryptedVector:
-    _context: "FHEContext"
+    context: "FHEContext"
     _ct: CKKSCiphertext
     _n_values: int
 
@@ -22,7 +22,7 @@ class EncryptedVector:
         ct: CKKSCiphertext,
         n_values: int,
     ) -> None:
-        self._context = context
+        self.context = context
         self._ct = ct
         self._n_values = n_values
 
@@ -36,78 +36,80 @@ class EncryptedVector:
         return self._ct.level
 
     def decrypt(self) -> List[float]:
-        return self._context.decrypt(self)
+        return self.context.decrypt(self)
 
     def copy(self) -> "EncryptedVector":
-        return EncryptedVector(self._context, self._ct.copy(), self._n_values)
+        return EncryptedVector(self.context, self._ct.copy(), self._n_values)
 
     def mod_drop_to(self, target_level: int) -> "EncryptedVector":
         """Drop modulus primes until `self.level == target_level` (no-op if already)."""
         res = self.copy()
         while res._ct.level > target_level:
-            self._context._ops.mod_drop_inplace(res._ct)
+            self.context.mod_drop_inplace(res._ct)
         return res
 
     def rotate(self, k: int) -> "EncryptedVector":
-        return self._context.rotate(self, k)
+        return self.context.rotate(self, k)
 
     def matmul(self, matrix: PlaintextTensor) -> "EncryptedVector":
-        """y = W @ x via the rectangular Halevi-Shoup cyclic-wrap diagonal method.
-
-        Input and output ciphertexts are replicated to slot_count
-        (enc_x[k] = x[k mod in], result[k] = y[k mod out]).
-        Requires the matrix to have been pre-encoded via PlaintextTensor.encode
-        (called automatically by Sequential.compile).
-        """
         if not isinstance(matrix, PlaintextTensor):
             raise TypeError(f"Expected PlaintextTensor, got {type(matrix).__name__}")
-        if matrix.ndim != 2:
-            raise ShapeError(
-                f"matmul requires a 2D PlaintextTensor, got {matrix.ndim}D"
-            )
         if matrix._encoded_diagonals is None:
             raise RuntimeError(
                 "PlaintextTensor has not been encoded. Call Sequential.compile(context) "
                 "before inference, or PlaintextTensor.encode(context) for standalone use."
             )
-        out_features, in_features = matrix.shape
+        n1, n2, (out_features, in_features) = matrix.meta
         if in_features != self._n_values:
             raise ShapeError(
                 f"Matrix columns {in_features} != vector size {self._n_values}"
             )
 
-        n_rows = in_features
-        n_cols = out_features
-        encoded_diagonals = matrix._encoded_diagonals
+        diagonals = matrix._encoded_diagonals
+        target_depth = self._ct.depth
 
-        rotated = self.copy()
+        # Baby steps: rot(x, k) for k in [0, n1), built incrementally with step 1.
+        baby: List[EncryptedVector] = [self.copy()]
+        for _ in range(1, n1):
+            baby.append(self.context.rotate(baby[-1], 1))
+
         result: Optional[EncryptedVector] = None
+        for j in range(n2):
+            shift = n1 * j
+            block: Optional[EncryptedVector] = None
 
-        for local_i in range(n_rows):
-            stored_pt = encoded_diagonals[local_i]
-            if stored_pt is not None:
+            for k in range(n1):
+                i = shift + k
+                stored_pt = diagonals[i] if i < len(diagonals) else None
+                if stored_pt is None:
+                    continue
                 pt = stored_pt.copy()
-                while pt.depth < self._ct.depth:
-                    self._context._ops.mod_drop_plain_inplace(pt)
-                term = rotated.copy()
-                self._context._ops.multiply_plain_inplace(term._ct, pt)
-                self._context._ops.rescale_inplace(term._ct)
-                result = term if result is None else result + term
-            if local_i < n_rows - 1:
-                rotated = self._context.rotate(rotated, 1)
+
+                while pt.depth < target_depth:
+                    self.context.mod_drop_plain_inplace(pt)
+
+                term = baby[k].copy()
+                self.context.multiply_plain_rescale(term._ct, pt)
+                block = term if block is None else block + term
+
+            if block is None:
+                continue
+
+            rotated_block = block if j == 0 else self.context.rotate(block, shift)
+            result = rotated_block if result is None else result + rotated_block
 
         if result is None:
             raise ShapeError("All matrix diagonals are zero")
-        return EncryptedVector(self._context, result._ct, out_features)
+        return EncryptedVector(self.context, result._ct, out_features)
 
     def __add__(
         self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
     ) -> "EncryptedVector":
         res = self.copy()
         if isinstance(other, EncryptedVector):
-            self._context._ops.add_inplace(res._ct, other._ct.copy())
+            self.context.add_inplace(res._ct, other._ct.copy())
         else:
-            self._context._ops.add_plain_inplace(res._ct, self._resolve_plain(other))
+            self.context.add_plain_inplace(res._ct, self._resolve_plain(other))
         return res
 
     def __sub__(
@@ -115,9 +117,9 @@ class EncryptedVector:
     ) -> "EncryptedVector":
         res = self.copy()
         if isinstance(other, EncryptedVector):
-            self._context._ops.sub_inplace(res._ct, other._ct.copy())
+            self.context.sub_inplace(res._ct, other._ct.copy())
         else:
-            self._context._ops.sub_plain_inplace(res._ct, self._resolve_plain(other))
+            self.context.sub_plain_inplace(res._ct, self._resolve_plain(other))
         return res
 
     def __mul__(
@@ -125,11 +127,11 @@ class EncryptedVector:
     ) -> "EncryptedVector":
         res = self.copy()
         if isinstance(other, EncryptedVector):
-            self._context._ops.multiply_inplace(res._ct, other._ct.copy())
-            self._context._ops.relinearize_inplace(res._ct, self._context._rk)
+            self.context.multiply_inplace(res._ct, other._ct.copy())
+            self.context.relinearize_inplace(res._ct)
+            self.context.rescale_inplace(res._ct)
         else:
-            self._context._ops.multiply_plain_inplace(res._ct, self._resolve_plain(other))
-        self._context._ops.rescale_inplace(res._ct)
+            self.context.multiply_plain_rescale(res._ct, self._resolve_plain(other))
         return res
 
     def __radd__(
@@ -166,7 +168,7 @@ class EncryptedVector:
             values_list: List[float] = [float(values)] * self._n_values
         else:
             values_list = list(values)
-        pt = self._context.encode(values_list)
+        pt = self.context.encode(values_list)
         while pt._pt.depth < self._ct.depth:
-            self._context._ops.mod_drop_plain_inplace(pt._pt)
+            self.context.mod_drop_plain_inplace(pt._pt)
         return pt._pt

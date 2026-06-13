@@ -1,185 +1,98 @@
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, NamedTuple, Optional, Tuple
 
 import numpy as np
 
 from fhe_ml.backend._backend import CKKSPlaintext
+from fhe_ml.utils.validate import infer_shape, validate_shape
 
 if TYPE_CHECKING:
     from fhe_ml.ckks.context import FHEContext
 
 
-def _infer_shape(data: object) -> Tuple[int, ...]:
-    if not isinstance(data, list):
-        return ()
-    if len(data) == 0:
-        return (0,)
-    return (len(data),) + _infer_shape(data[0])
-
-
-def _validate_shape(data: list, shape: Tuple[int, ...]) -> None:
-    if len(shape) == 1:
-        for j, elem in enumerate(data):
-            if not isinstance(elem, (int, float)):
-                raise ValueError(
-                    f"Expected numeric value at leaf index [{j}], got {type(elem).__name__}"
-                )
-        return
-    for i, row in enumerate(data):
-        if not isinstance(row, list):
-            raise ValueError(f"Expected list at index [{i}], got {type(row).__name__}")
-        if len(row) != shape[1]:
-            raise ValueError(
-                f"Dimension mismatch at index [{i}]: "
-                f"expected {shape[1]} elements, got {len(row)}"
-            )
-        _validate_shape(row, shape[1:])
+class TensorMeta(NamedTuple):
+    n1: int
+    n2: int
+    shape: Tuple[int, int]
 
 
 class PlaintextTensor:
-    """
-    Plaintext tensor for 2D or 3D data backed by a nested Python list.
-
-    2D  (rows, cols)         — e.g. weight matrix for a Linear layer
-    3D  (depth, rows, cols)  — e.g. conv filter bank or batched matrix
-    """
+    """Plaintext weight matrix (2D) backed by a nested Python list."""
 
     _data: List
-    _shape: Tuple[int, ...]
+    _meta: TensorMeta
     _encoded_diagonals: Optional[List[Optional[CKKSPlaintext]]]
 
     def __init__(self, data: List) -> None:
-        shape = _infer_shape(data)
-        if len(shape) not in (2, 3):
+        shape = infer_shape(data)
+        if len(shape) != 2:
             raise ValueError(
-                f"PlaintextTensor requires 2D or 3D data, got {len(shape)}D. "
-                "Pass a nested list of depth 2 (matrix) or 3 (cube)."
+                f"PlaintextTensor requires 2D data (a matrix), got {len(shape)}D. "
+                "Pass a nested list of depth 2."
             )
         if any(s == 0 for s in shape):
             raise ValueError(f"All dimensions must be non-zero, got shape {shape}.")
-        _validate_shape(data, shape)
+        validate_shape(data, shape)
+        n1, n2 = self._bsgs_factorization(shape[1])
         self._data = data
-        self._shape = shape
+        self._meta = TensorMeta(n1=n1, n2=n2, shape=shape)
         self._encoded_diagonals = None
 
-    def encode(self, context: "FHEContext") -> None:
-        """Pre-encode all diagonals at depth 0 for use by EncryptedVector.matmul.
+    @property
+    def meta(self) -> TensorMeta:
+        return self._meta
 
-        Must be called before passing this tensor to a ciphertext matmul.
-        Sequential.compile() does this automatically for weight matrices;
-        call it manually only when using PlaintextTensor outside Sequential.
-        """
-        if self.ndim != 2:
-            raise ValueError(
-                f"encode() requires a 2D PlaintextTensor, got {self.ndim}D"
-            )
+    @staticmethod
+    def _bsgs_factorization(in_features: int) -> Tuple[int, int]:
+        n1 = 1 if in_features <= 1 else 1 << max(0, round(np.log2(np.sqrt(in_features))))
+        n2 = (in_features + n1 - 1) // n1
+        return n1, n2
+
+    def encode(self, context: "FHEContext") -> None:
         if self._encoded_diagonals is not None:
             return
-        n_cols, n_rows = self._shape
+        out_features, in_features = self._meta.shape
+        n1, n2 = self._meta.n1, self._meta.n2
         slot_count = 1 << (context.config.log_n - 1)
-        diag_len = min(slot_count, n_rows * n_cols)
-        md = self.to_numpy()
-        k = np.arange(diag_len)
-        col = k % n_cols
-        encoded: List[Optional[CKKSPlaintext]] = []
-        for local_i in range(n_rows):
-            diag = md[col, (local_i + k) % n_rows]
-            if diag.any():
-                encoded.append(context.encode(diag.tolist())._pt)
-            else:
-                encoded.append(None)
+        md = self.to_numpy()  # (out_features, in_features)
+        s = np.arange(slot_count)
+        s_out = s % out_features
+
+        encoded: List[Optional[CKKSPlaintext]] = [None] * (n1 * n2)
+        for j in range(n2):
+            shift = n1 * j
+            for k in range(n1):
+                i = shift + k
+                if i >= in_features:
+                    continue
+                # full-slot diagonal, then fold in the giant rotation (-n1*j)
+                diag = md[s_out, (i + s) % in_features]
+                if not diag.any():
+                    continue
+                rotated = np.roll(diag, shift)
+                encoded[i] = context.encode(rotated.tolist())._pt
+
         self._encoded_diagonals = encoded
 
+    def bsgs_shifts(self) -> List[int]:
+        n1, n2 = self._meta.n1, self._meta.n2
+        shifts = [n1 * j for j in range(1, n2)]
+        if n1 > 1:
+            shifts.append(1)
+        return shifts
+
     @property
-    def shape(self) -> Tuple[int, ...]:
-        return self._shape
+    def shape(self) -> Tuple[int, int]:
+        return self._meta.shape
 
     @property
     def ndim(self) -> int:
-        return len(self._shape)
+        return len(self._meta.shape)
 
     def __len__(self) -> int:
-        return self._shape[0]
-
-    def __getitem__(self, idx: int) -> Union[List[float], "PlaintextTensor"]:
-        """Return row idx.  For 2D returns List[float]; for 3D returns a PlaintextTensor."""
-        if idx < 0 or idx >= self._shape[0]:
-            raise IndexError(
-                f"Index {idx} out of range for dimension 0 of size {self._shape[0]}"
-            )
-        row = self._data[idx]
-        if self.ndim == 2:
-            return row
-        return PlaintextTensor(row)
+        return self._meta.shape[0]
 
     def __repr__(self) -> str:
-        return f"PlaintextTensor(shape={self._shape})"
-
-    def get_diagonal(
-        self,
-        k: int,
-        max_size: Optional[int] = None,
-        axis: int = 0,
-        slice_index: int = 0,
-    ) -> List[float]:
-        """Return the k-th cyclically-wrapped diagonal of a 2D slice.
-
-        For 3D tensors, axis/slice_index pick the 2D slice (axis ignored for
-        2D). k=0 is the main diagonal, k>0 upper, k<0 lower. max_size caps the
-        element count (default: n_rows * n_cols).
-        """
-        if self.ndim == 2:
-            n_rows, n_cols = self._shape
-            mat: List[List[float]] = self._data  # type: ignore[assignment]
-        else:
-            depth, rows, cols = self._shape
-            if axis == 0:
-                if not (0 <= slice_index < depth):
-                    raise IndexError(
-                        f"slice_index {slice_index} out of range for axis 0 (size {depth})"
-                    )
-                mat = self._data[slice_index]  # type: ignore[assignment]
-                n_rows, n_cols = rows, cols
-            elif axis == 1:
-                if not (0 <= slice_index < rows):
-                    raise IndexError(
-                        f"slice_index {slice_index} out of range for axis 1 (size {rows})"
-                    )
-                mat = [
-                    [self._data[d][slice_index][c] for c in range(cols)]
-                    for d in range(depth)
-                ]
-                n_rows, n_cols = depth, cols
-            elif axis == 2:
-                if not (0 <= slice_index < cols):
-                    raise IndexError(
-                        f"slice_index {slice_index} out of range for axis 2 (size {cols})"
-                    )
-                mat = [
-                    [self._data[d][r][slice_index] for r in range(rows)]
-                    for d in range(depth)
-                ]
-                n_rows, n_cols = depth, rows
-            else:
-                raise ValueError(f"axis must be 0, 1, or 2 for a 3D tensor, got {axis}")
-
-        return self._diagonal_of(mat, n_rows, n_cols, k, max_size)
-
-    @staticmethod
-    def _diagonal_of(
-        mat: List[List[float]],
-        n_rows: int,
-        n_cols: int,
-        k: int,
-        max_size: Optional[int],
-    ) -> List[float]:
-        r_offset = 0 if k >= 0 else -k
-        c_offset = k if k >= 0 else 0
-        natural_size = min(n_rows, n_cols)
-        size = min(max_size, n_rows * n_cols) if max_size is not None else natural_size
-        return [
-            mat[(r_offset + i) % n_rows][(c_offset + i) % n_cols]
-            for i in range(size)
-        ]
+        return f"PlaintextTensor(shape={self._meta.shape})"
 
     @classmethod
     def from_numpy(cls, arr: object) -> "PlaintextTensor":

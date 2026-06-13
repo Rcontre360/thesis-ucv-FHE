@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 pytest.importorskip("fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first")
@@ -12,7 +13,7 @@ EPSILON = 1e-2
 class TestSequential:
     def test_single_linear(self, built_context):
         W = [[1.0, 0.0], [0.0, 1.0]]
-        model = Sequential([Linear(2, 2, W)]).compile(built_context)
+        model = Sequential([Linear(2, 2, W)]).compile(built_context, np.array([[0.3, -0.7]]))
         ct = built_context.encrypt([0.3, -0.7])
         result = model(ct).decrypt()[:2]
         assert abs(result[0] - 0.3) < EPSILON
@@ -27,7 +28,7 @@ class TestSequential:
         identity = [[1.0, 0.0], [0.0, 1.0]]
         relu = ReLU()
         relu.set_degrees((3,))
-        model = Sequential([Linear(2, 2, W), relu, Linear(2, 2, identity)]).compile(built_context)
+        model = Sequential([Linear(2, 2, W), relu, Linear(2, 2, identity)]).compile(built_context, np.array([[1.0, -1.0]]))
         ct = built_context.encrypt([1.0, -1.0])
         result = model(ct).decrypt()[:2]
         assert abs(result[0] - 1.0) < 0.2
@@ -38,7 +39,7 @@ class TestSequential:
         W2 = [[1.0, 0.0], [0.0, 1.0]]
         relu = ReLU()
         relu.set_degrees((3,))
-        model = Sequential([Linear(3, 2, W1), relu, Linear(2, 2, W2)]).compile(built_context)
+        model = Sequential([Linear(3, 2, W1), relu, Linear(2, 2, W2)]).compile(built_context, np.array([[0.1, 0.2, 0.3]]))
         ct = built_context.encrypt([0.1, 0.2, 0.3])
         assert model(ct).size == 2
 

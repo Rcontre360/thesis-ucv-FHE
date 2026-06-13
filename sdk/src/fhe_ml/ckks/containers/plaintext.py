@@ -7,12 +7,12 @@ if TYPE_CHECKING:
 
 
 class PlaintextVector:
-    _context: "FHEContext"
+    context: "FHEContext"
     _pt: CKKSPlaintext
     _n_values: int
 
     def __init__(self, context: "FHEContext", pt: CKKSPlaintext, n_values: int) -> None:
-        self._context = context
+        self.context = context
         self._pt = pt
         self._n_values = n_values
 
@@ -21,7 +21,7 @@ class PlaintextVector:
         return self._n_values
 
     def decode(self) -> List[float]:
-        return self._context.decode(self)
+        return self.context.decode(self)
 
     def _values_of(self, other: Union["PlaintextVector", List[float], float]) -> List[float]:
         if isinstance(other, PlaintextVector):
@@ -32,15 +32,15 @@ class PlaintextVector:
 
     def __add__(self, other: Union["PlaintextVector", List[float], float]) -> "PlaintextVector":
         values = self._values_of(other)
-        return self._context.encode([a + b for a, b in zip(self.decode(), values)])
+        return self.context.encode([a + b for a, b in zip(self.decode(), values)])
 
     def __sub__(self, other: Union["PlaintextVector", List[float], float]) -> "PlaintextVector":
         values = self._values_of(other)
-        return self._context.encode([a - b for a, b in zip(self.decode(), values)])
+        return self.context.encode([a - b for a, b in zip(self.decode(), values)])
 
     def __mul__(self, other: Union["PlaintextVector", List[float], float]) -> "PlaintextVector":
         values = self._values_of(other)
-        return self._context.encode([a * b for a, b in zip(self.decode(), values)])
+        return self.context.encode([a * b for a, b in zip(self.decode(), values)])
 
     def __radd__(self, other: Union["PlaintextVector", List[float], float]) -> "PlaintextVector":
         return self.__add__(other)

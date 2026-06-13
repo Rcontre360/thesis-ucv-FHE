@@ -39,7 +39,7 @@ class Sequential:
                     "must sit between two weighted layers (Linear/Conv2D)."
                 )
         self._layers = list(layers)
-        self._context: Optional[FHEContext] = None
+        self.context: Optional[FHEContext] = None
         self._activation_ranges: Dict[int, np.ndarray] = {}
 
     @classmethod
@@ -72,23 +72,29 @@ class Sequential:
         return Input(context, flat)
 
     def compile(
-        self, context: FHEContext, calibration_data: object = None
+        self, context: FHEContext, calibration_data: object
     ) -> "Sequential":
-        self._context = context
+        if calibration_data is None:
+            raise ValueError("compile() requires calibration_data (got None)")
+        self.context = context
         for layer in self._layers:
             if isinstance(layer, ReLU) and layer._degrees is None:
                 layer.set_degrees(context.config.relu_degrees)
-        if calibration_data is not None:
-            self._calibrate(calibration_data)
-            self._fold_calibration()
 
-        for layer in self._layers:
-            if isinstance(layer, AffineLayer):
-                layer._weight.encode(context)
+        self._calibrate(calibration_data)
+        self._fold_calibration()
+
+        affine_layers = [l for l in self._layers if isinstance(l, AffineLayer)]
+        shifts: set = set()
+        for layer in affine_layers:
+            shifts.update(layer.bsgs_shifts())
+        for layer in affine_layers:
+            layer._weight.encode(context)
 
         total_depth = sum(l.mult_depth() for l in self._layers)
         if total_depth > context._usable_levels():
-            context._setup_bootstrapping()
+            shifts.update(context._setup_bootstrapping())
+        context.generate_rotation_keys(shifts)
         return self
 
     @property

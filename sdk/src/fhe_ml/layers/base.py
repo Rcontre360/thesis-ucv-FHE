@@ -68,7 +68,7 @@ class AffineLayer(Layer):
             raise ShapeError(
                 f"input size {x.size} != in_features {self.in_features}"
             )
-        x = x._context._prepare_for(x, 1)
+        x = x.context._prepare_for(x, 1)
         out = x.matmul(self._weight)
         if self._bias is not None:
             out = out + self._bias
@@ -76,6 +76,9 @@ class AffineLayer(Layer):
 
     def mult_depth(self) -> int:
         return 1
+
+    def bsgs_shifts(self) -> List[int]:
+        return self._weight.bsgs_shifts()
 
     def forward_plain(self, x: np.ndarray) -> np.ndarray:
         out = np.asarray(x, dtype=float) @ self._weight.to_numpy().T
