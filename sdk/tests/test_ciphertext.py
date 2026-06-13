@@ -67,40 +67,6 @@ class TestEncryptedVectorRotate:
         assert abs(result[2] - 4.0) < EPSILON
 
 
-class TestEncryptedVectorDot:
-    def test_dot_result_size_is_one(self, built_context):
-        ct = built_context.encrypt([1.0, 2.0, 3.0])
-        assert ct.dot([1.0, 1.0, 1.0]).size == 1
-
-    def test_dot_general(self, built_context):
-        ct = built_context.encrypt([1.0, 2.0, 3.0])
-        # 1*4 + 2*5 + 3*6 = 32
-        assert abs(built_context.decrypt(ct.dot([4.0, 5.0, 6.0]))[0] - 32.0) < EPSILON
-
-    def test_dot_all_ones_weights_equals_sum(self, built_context):
-        values = [2.0, 3.0, 4.0, 5.0]
-        ct = built_context.encrypt(values)
-        assert abs(built_context.decrypt(ct.dot([1.0] * 4))[0] - 14.0) < EPSILON
-
-    def test_dot_zero_weights(self, built_context):
-        ct = built_context.encrypt([1.0, 2.0, 3.0])
-        assert abs(built_context.decrypt(ct.dot([0.0, 0.0, 0.0]))[0]) < EPSILON
-
-    def test_dot_negative_weights(self, built_context):
-        ct = built_context.encrypt([3.0, 3.0])
-        # 3*1 + 3*(-1) = 0
-        assert abs(built_context.decrypt(ct.dot([1.0, -1.0]))[0]) < EPSILON
-
-    def test_dot_single_element(self, built_context):
-        ct = built_context.encrypt([5.0])
-        assert abs(built_context.decrypt(ct.dot([2.0]))[0] - 10.0) < EPSILON
-
-    def test_dot_size_mismatch_raises(self, built_context):
-        ct = built_context.encrypt([1.0, 2.0, 3.0])
-        with pytest.raises(ValueError, match="weights length"):
-            ct.dot([1.0, 2.0])
-
-
 class TestEncryptedVectorMatmul:
     def test_matmul_identity(self, built_context):
         x = built_context.encrypt([3.0, 5.0])

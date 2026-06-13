@@ -51,15 +51,6 @@ class EncryptedVector:
     def rotate(self, k: int) -> "EncryptedVector":
         return self._context.rotate(self, k)
 
-    def dot(self, weights: List[float]) -> "EncryptedVector":
-        if len(weights) != self._n_values:
-            raise ShapeError(
-                f"weights length {len(weights)} != vector size {self._n_values}"
-            )
-        weighted = self * weights
-        summed = weighted._sum_slots(self._n_values)
-        return EncryptedVector(self._context, summed._ct, 1)
-
     def matmul(self, matrix: PlaintextTensor) -> "EncryptedVector":
         """y = W @ x via the rectangular Halevi-Shoup cyclic-wrap diagonal method.
 
@@ -179,31 +170,3 @@ class EncryptedVector:
         while pt._pt.depth < self._ct.depth:
             self._context._ops.mod_drop_plain_inplace(pt._pt)
         return pt._pt
-
-    def _sum_slots(self, n: int) -> "EncryptedVector":
-        """Sum the first n slots into slot 0 via power-of-2 decomposition.
-
-        Splits a non-power-of-2 `n` into a doubling-summed head plus a
-        recursive tail. Correct for replicated inputs at any n >= 1.
-        """
-        if n <= 1:
-            return self.copy()
-
-        bp2 = 1 << (n.bit_length() - 1)
-        if bp2 == n:
-            result = self.copy()
-            step = bp2 // 2
-            while step >= 1:
-                result = result + self._context.rotate(result, step)
-                step //= 2
-            return result
-
-        rest = self._context.rotate(self, bp2)._sum_slots(n - bp2)
-
-        result = self.copy()
-        step = bp2 // 2
-        while step >= 1:
-            result = result + self._context.rotate(result, step)
-            step //= 2
-
-        return result + rest

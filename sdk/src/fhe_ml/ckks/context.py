@@ -1,4 +1,3 @@
-import math
 from typing import List, Optional, Union
 
 from fhe_ml.backend._backend import (
@@ -79,7 +78,7 @@ class FHEContext:
         self._rk = CKKSRelinkey(self._backend_ctx)
         self._keygen.generate_relin_key(self._rk, self._sk)
 
-        self._gk = CKKSGaloiskey(self._backend_ctx, self._network_shifts())
+        self._gk = CKKSGaloiskey(self._backend_ctx, self._base_shifts())
         self._generate_galois_key(self._gk)
 
         self._encoder = CKKSEncoder(self._backend_ctx)
@@ -139,9 +138,8 @@ class FHEContext:
         decoded = self._encoder.decode(pt)
         return decoded[:ciphertext.size]
 
-    def _network_shifts(self) -> List[int]:
-        slot_count = 1 << (self.config.log_n - 1)
-        return [2**k for k in range(int(math.log2(slot_count)))]
+    def _base_shifts(self) -> List[int]:
+        return [1]
 
     def _usable_levels(self) -> int:
         return self.encrypt([0.0])._ct.level
@@ -162,7 +160,7 @@ class FHEContext:
             2 ** self.config.log_scale, config, BootstrappingType.SLIM
         )
         boot_shifts = self._ops.bootstrapping_key_indexs()
-        all_shifts = sorted(set(self._network_shifts()) | set(boot_shifts))
+        all_shifts = sorted(set(self._base_shifts()) | set(boot_shifts))
         gk = CKKSGaloiskey(self._backend_ctx, all_shifts)
         self._generate_galois_key(gk)
         self._gk = gk
