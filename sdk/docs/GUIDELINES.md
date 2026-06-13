@@ -100,11 +100,11 @@ class EncryptedVector:
     def size(self) -> int: ...     # 3. public
 
     def decrypt(self) -> ...: ...
-    def dot(self, ...) -> ...: ...
+    def matmul(self, ...) -> ...: ...
     def __add__(self, ...) -> ...: ...
 
     def _encode_and_align(self, ...): ...  # 4. private
-    def _sum_slots(self, n: int): ...
+    def _resolve_plain(self, ...): ...
 ```
 
 ---
@@ -121,15 +121,14 @@ Only add a comment when the logic is not self-evident from the code. Do not use 
 def __add__(self, other): ...
 
 # WRONG — docstring restating what the signature already says
-def dot(self, weights: List[float]) -> "EncryptedVector":
-    """Inner product with a plaintext weight vector."""
+def matmul(self, matrix: PlaintextTensor) -> "EncryptedVector":
+    """Matrix-vector product."""
     ...
 
 # CORRECT — comment only where the why is non-obvious
-def _sum_slots(self, n: int) -> "EncryptedVector":
-    # rotation tree: each step doubles the number of slots accumulated
-    step = 1
-    while step < n:
+def matmul(self, matrix: PlaintextTensor) -> "EncryptedVector":
+    # walk the diagonals, rotating the input by one slot each step
+    for i in range(n_rows):
         ...
 ```
 

@@ -2,7 +2,7 @@
 # Release fhe-sdk: test, bump the version, publish to PyPI, then tag + push.
 #
 # Usage:
-#   ./scripts/release.sh 0.2.0          # run after your last commit
+#   ./scripts/release.sh 0.2.0 "BSGS cached baby steps"   # run after last commit
 #
 # Order (each step aborts the release on failure):
 #   1) run the test suite
@@ -21,12 +21,13 @@
 #   - `~/.pypirc` with valid PyPI credentials
 set -euo pipefail
 
-if [ $# -ne 1 ]; then
-    echo "usage: $0 <version>   e.g. $0 0.2.0" >&2
+if [ $# -ne 2 ]; then
+    echo "usage: $0 <version> <message>   e.g. $0 0.2.0 \"BSGS cached baby steps\"" >&2
     exit 2
 fi
 VERSION="${1#v}"               # accept "0.2.0" or "v0.2.0"
 TAG="v${VERSION}"
+MESSAGE="$2"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SDK_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -56,8 +57,9 @@ python -m build --sdist
 # 4) publish.
 twine upload dist/*.tar.gz
 
-# 5) + 6) tag last, then push the commit and the tag.
-git tag "${TAG}"
+# 5) + 6) tag last (annotated, with the message you passed), then push the
+#         commit and the tag.
+git tag -a "${TAG}" -m "${MESSAGE}"
 git push
 git push origin "${TAG}"
 
