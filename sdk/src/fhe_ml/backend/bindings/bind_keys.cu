@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <heongpu/heongpu.hpp>
+#include <sstream>
 
 namespace py = pybind11;
 using namespace heongpu;
@@ -34,7 +35,24 @@ void register_keys(py::module_& m)
         "CKKSKeyGenerator.generate_relin_key(rk, sk).")
         .def(py::init([](CKKSContext& ctx) { return CKKSRelinkey(ctx); }),
              py::arg("context"),
-             "Allocate an empty relin key bound to the given context.");
+             "Allocate an empty relin key bound to the given context.")
+        .def("to_bytes",
+             [](CKKSRelinkey& self) {
+                 std::ostringstream os;
+                 self.save(os);
+                 return py::bytes(os.str());
+             },
+             "Serialize the relin key to bytes (self-describing; no context needed to load).")
+        .def_static("from_bytes",
+             [](const py::bytes& data) {
+                 CKKSRelinkey k;
+                 std::string buf = data;
+                 std::istringstream is(buf);
+                 k.load(is);
+                 return k;
+             },
+             py::arg("data"),
+             "Reconstruct a relin key from bytes produced by to_bytes().");
 
     py::class_<CKKSGaloiskey>(m, "CKKSGaloiskey",
         "CKKS Galois (rotation) key.\n"
@@ -61,7 +79,24 @@ void register_keys(py::module_& m)
                  }),
              py::arg("context"), py::arg("shifts"),
              "Galois key for exactly the rotation steps in the given list.\n"
-             "Use for bootstrapping: pass bootstrapping_key_indexs() as the shift list.");
+             "Use for bootstrapping: pass bootstrapping_key_indexs() as the shift list.")
+        .def("to_bytes",
+             [](CKKSGaloiskey& self) {
+                 std::ostringstream os;
+                 self.save(os);
+                 return py::bytes(os.str());
+             },
+             "Serialize the Galois key (incl. its shift set) to bytes.")
+        .def_static("from_bytes",
+             [](const py::bytes& data) {
+                 CKKSGaloiskey k;
+                 std::string buf = data;
+                 std::istringstream is(buf);
+                 k.load(is);
+                 return k;
+             },
+             py::arg("data"),
+             "Reconstruct a Galois key from bytes produced by to_bytes().");
 
     py::class_<CKKSKeygen>(m, "CKKSKeyGenerator",
         "Key generator for CKKS. Fills pre-allocated key objects from a secret key.")

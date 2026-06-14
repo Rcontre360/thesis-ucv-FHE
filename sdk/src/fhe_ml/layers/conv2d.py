@@ -1,12 +1,10 @@
-from typing import List, Optional, Tuple, Union
-
 import numpy as np
 import torch.nn as nn
 
-from fhe_ml.utils.errors import LayerConfigError, ShapeError
-from fhe_ml.layers.base import AffineLayer
-from fhe_ml.utils.validate import check_array
 from fhe_ml.ckks.containers.tensor import PlaintextTensor
+from fhe_ml.layers.base import AffineLayer
+from fhe_ml.utils.errors import LayerConfigError, ShapeError
+from fhe_ml.utils.validate import check_array
 
 
 class Conv2D(AffineLayer):
@@ -16,10 +14,10 @@ class Conv2D(AffineLayer):
         self,
         in_channels: int,
         out_channels: int,
-        kernel_size: Union[int, Tuple[int, int]],
-        input_shape: Tuple[int, int],
+        kernel_size: int | tuple[int, int],
+        input_shape: tuple[int, int],
         weight: object,
-        bias: Optional[object] = None,
+        bias: object | None = None,
         stride: int = 1,
     ) -> None:
         if isinstance(kernel_size, int):
@@ -53,7 +51,7 @@ class Conv2D(AffineLayer):
         out_features = out_channels * H_out * W_out
         self.in_features = in_features
         self.out_features = out_features
-        bias_list: Optional[List[float]] = (
+        bias_list: list[float] | None = (
             np.repeat(bias, H_out * W_out).tolist() if bias is not None else None
         )
         super().__init__(
@@ -77,12 +75,12 @@ class Conv2D(AffineLayer):
         M = np.zeros((self.out_features, self.in_features))
         rows = np.arange(P)[:, None]
         for oc in range(self.out_channels):
-            block = M[oc * P:(oc + 1) * P]
+            block = M[oc * P : (oc + 1) * P]
             for ic in range(self.in_channels):
                 block[rows, win[ic]] = weight[oc, ic].reshape(-1)
         return M
 
-    def prepare_input(self, raw_data: object) -> List[float]:
+    def prepare_input(self, raw_data: object) -> list[float]:
         arr = check_array(raw_data, name="Conv2D input")
         H, W = self.input_shape
         C = self.in_channels
@@ -107,12 +105,10 @@ class Conv2D(AffineLayer):
     def from_torch(
         cls,
         module: nn.Conv2d,
-        input_shape: Tuple[int, ...],
-    ) -> Tuple["Conv2D", Tuple[int, int, int]]:
+        input_shape: tuple[int, ...],
+    ) -> tuple["Conv2D", tuple[int, int, int]]:
         if len(input_shape) != 3:
-            raise ShapeError(
-                f"Conv2D expects (C, H, W) input shape, got {input_shape}"
-            )
+            raise ShapeError(f"Conv2D expects (C, H, W) input shape, got {input_shape}")
         C_in, H, W = input_shape
         if C_in != module.in_channels:
             raise ShapeError(

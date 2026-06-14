@@ -1,15 +1,12 @@
-from typing import TYPE_CHECKING, List, Optional, Union
-
-import numpy as np
+from typing import TYPE_CHECKING, Union
 
 from fhe_ml.backend._backend import CKKSCiphertext, CKKSPlaintext
-from fhe_ml.utils.errors import ShapeError
 from fhe_ml.ckks.containers.plaintext import PlaintextVector
 from fhe_ml.ckks.containers.tensor import PlaintextTensor
+from fhe_ml.utils.errors import ShapeError
 
 if TYPE_CHECKING:
     from fhe_ml.ckks.context import FHEContext
-
 
 class EncryptedVector:
     context: "FHEContext"
@@ -35,9 +32,6 @@ class EncryptedVector:
         """Remaining usable multiplication levels in this ciphertext."""
         return self._ct.level
 
-    def decrypt(self) -> List[float]:
-        return self.context.decrypt(self)
-
     def copy(self) -> "EncryptedVector":
         return EncryptedVector(self.context, self._ct.copy(), self._n_values)
 
@@ -56,8 +50,9 @@ class EncryptedVector:
             raise TypeError(f"Expected PlaintextTensor, got {type(matrix).__name__}")
         if matrix._encoded_diagonals is None:
             raise RuntimeError(
-                "PlaintextTensor has not been encoded. Call Sequential.compile(context) "
-                "before inference, or PlaintextTensor.encode(context) for standalone use."
+                "PlaintextTensor has not been encoded. Call "
+                "Sequential.compile(context) before inference, or "
+                "PlaintextTensor.encode(context) for standalone use."
             )
         n1, n2, (out_features, in_features) = matrix.meta
         if in_features != self._n_values:
@@ -69,14 +64,14 @@ class EncryptedVector:
         target_depth = self._ct.depth
 
         # Baby steps: rot(x, k) for k in [0, n1), built incrementally with step 1.
-        baby: List[EncryptedVector] = [self.copy()]
+        baby: list[EncryptedVector] = [self.copy()]
         for _ in range(1, n1):
             baby.append(self.context.rotate(baby[-1], 1))
 
-        result: Optional[EncryptedVector] = None
+        result: EncryptedVector | None = None
         for j in range(n2):
             shift = n1 * j
-            block: Optional[EncryptedVector] = None
+            block: EncryptedVector | None = None
 
             for k in range(n1):
                 i = shift + k
@@ -103,7 +98,7 @@ class EncryptedVector:
         return EncryptedVector(self.context, result._ct, out_features)
 
     def __add__(
-        self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
+        self, other: Union["EncryptedVector", PlaintextVector, list[float], float]
     ) -> "EncryptedVector":
         res = self.copy()
         if isinstance(other, EncryptedVector):
@@ -113,7 +108,7 @@ class EncryptedVector:
         return res
 
     def __sub__(
-        self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
+        self, other: Union["EncryptedVector", PlaintextVector, list[float], float]
     ) -> "EncryptedVector":
         res = self.copy()
         if isinstance(other, EncryptedVector):
@@ -123,7 +118,7 @@ class EncryptedVector:
         return res
 
     def __mul__(
-        self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
+        self, other: Union["EncryptedVector", PlaintextVector, list[float], float]
     ) -> "EncryptedVector":
         res = self.copy()
         if isinstance(other, EncryptedVector):
@@ -135,22 +130,22 @@ class EncryptedVector:
         return res
 
     def __radd__(
-        self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
+        self, other: Union["EncryptedVector", PlaintextVector, list[float], float]
     ) -> "EncryptedVector":
         return self.__add__(other)
 
     def __rsub__(
-        self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
+        self, other: Union["EncryptedVector", PlaintextVector, list[float], float]
     ) -> "EncryptedVector":
         return (self * -1).__add__(other)
 
     def __rmul__(
-        self, other: Union["EncryptedVector", PlaintextVector, List[float], float]
+        self, other: Union["EncryptedVector", PlaintextVector, list[float], float]
     ) -> "EncryptedVector":
         return self.__mul__(other)
 
     def _resolve_plain(
-        self, other: Union[PlaintextVector, List[float], float]
+        self, other: PlaintextVector | list[float] | float
     ) -> CKKSPlaintext:
         """Resolve a non-ciphertext operand to a depth-aligned CKKSPlaintext."""
         if isinstance(other, PlaintextVector):
@@ -163,9 +158,9 @@ class EncryptedVector:
             return other._pt
         return self._encode_and_align(other)
 
-    def _encode_and_align(self, values: Union[List[float], float]) -> CKKSPlaintext:
+    def _encode_and_align(self, values: list[float] | float) -> CKKSPlaintext:
         if isinstance(values, (int, float)):
-            values_list: List[float] = [float(values)] * self._n_values
+            values_list: list[float] = [float(values)] * self._n_values
         else:
             values_list = list(values)
         pt = self.context.encode(values_list)

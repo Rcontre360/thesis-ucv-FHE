@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, NamedTuple, Optional, Tuple
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
@@ -12,17 +12,17 @@ if TYPE_CHECKING:
 class TensorMeta(NamedTuple):
     n1: int
     n2: int
-    shape: Tuple[int, int]
+    shape: tuple[int, int]
 
 
 class PlaintextTensor:
     """Plaintext weight matrix (2D) backed by a nested Python list."""
 
-    _data: List
+    _data: list
     _meta: TensorMeta
-    _encoded_diagonals: Optional[List[Optional[CKKSPlaintext]]]
+    _encoded_diagonals: list[CKKSPlaintext | None] | None
 
-    def __init__(self, data: List) -> None:
+    def __init__(self, data: list) -> None:
         shape = infer_shape(data)
         if len(shape) != 2:
             raise ValueError(
@@ -42,8 +42,10 @@ class PlaintextTensor:
         return self._meta
 
     @staticmethod
-    def _bsgs_factorization(in_features: int) -> Tuple[int, int]:
-        n1 = 1 if in_features <= 1 else 1 << max(0, round(np.log2(np.sqrt(in_features))))
+    def _bsgs_factorization(in_features: int) -> tuple[int, int]:
+        n1 = (
+            1 if in_features <= 1 else 1 << max(0, round(np.log2(np.sqrt(in_features))))
+        )
         n2 = (in_features + n1 - 1) // n1
         return n1, n2
 
@@ -57,7 +59,7 @@ class PlaintextTensor:
         s = np.arange(slot_count)
         s_out = s % out_features
 
-        encoded: List[Optional[CKKSPlaintext]] = [None] * (n1 * n2)
+        encoded: list[CKKSPlaintext | None] = [None] * (n1 * n2)
         for j in range(n2):
             shift = n1 * j
             for k in range(n1):
@@ -73,7 +75,7 @@ class PlaintextTensor:
 
         self._encoded_diagonals = encoded
 
-    def bsgs_shifts(self) -> List[int]:
+    def bsgs_shifts(self) -> list[int]:
         n1, n2 = self._meta.n1, self._meta.n2
         shifts = [n1 * j for j in range(1, n2)]
         if n1 > 1:
@@ -81,7 +83,7 @@ class PlaintextTensor:
         return shifts
 
     @property
-    def shape(self) -> Tuple[int, int]:
+    def shape(self) -> tuple[int, int]:
         return self._meta.shape
 
     @property
@@ -98,7 +100,9 @@ class PlaintextTensor:
     def from_numpy(cls, arr: object) -> "PlaintextTensor":
         """Construct from a numpy array (or any object with .tolist())."""
         if not hasattr(arr, "tolist"):
-            raise TypeError(f"Expected an array-like with .tolist(), got {type(arr).__name__}")
+            raise TypeError(
+                f"Expected an array-like with .tolist(), got {type(arr).__name__}"
+            )
         return cls(arr.tolist())  # type: ignore[union-attr]
 
     def to_numpy(self) -> np.ndarray:

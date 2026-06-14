@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple, Union
+from collections.abc import Iterator
 
 import numpy as np
 import torch.nn as nn
@@ -6,6 +6,7 @@ import torch.nn as nn
 from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 from fhe_ml.ckks.containers.tensor import PlaintextTensor
 from fhe_ml.ckks.context import FHEContext
+from fhe_ml.client import Client
 from fhe_ml.layers.base import AffineLayer, Layer
 from fhe_ml.layers.conv2d import Conv2D
 from fhe_ml.layers.input import Input
@@ -18,7 +19,7 @@ from fhe_ml.utils.errors import LayerConfigError
 class Sequential:
     """Chain of layers for encrypted-vector inference."""
 
-    def __init__(self, layers: List[Layer]) -> None:
+    def __init__(self, layers: list[Layer]) -> None:
         if not layers:
             raise ValueError("Sequential requires at least one layer")
         for i, layer in enumerate(layers):
@@ -39,14 +40,14 @@ class Sequential:
                     "must sit between two weighted layers (Linear/Conv2D)."
                 )
         self._layers = list(layers)
-        self.context: Optional[FHEContext] = None
-        self._activation_ranges: Dict[int, np.ndarray] = {}
+        self.context: FHEContext | None = None
+        self._activation_ranges: dict[int, np.ndarray] = {}
 
     @classmethod
     def from_torch(
         cls,
         model: nn.Module,
-        input_shape: Tuple[int, ...],
+        input_shape: tuple[int, ...],
     ) -> "Sequential":
         """Build from a torch model. `input_shape` is one sample's shape."""
         torch_map = {
@@ -54,7 +55,7 @@ class Sequential:
             nn.Conv2d: Conv2D,
             nn.ReLU: ReLU,
         }
-        layers: List[Layer] = []
+        layers: list[Layer] = []
         shape = tuple(input_shape)
         for m in model.cpu():
             if isinstance(m, nn.Flatten):
@@ -67,13 +68,11 @@ class Sequential:
             layers.append(layer)
         return cls(layers)
 
-    def input(self, context: FHEContext, raw_data: object) -> Input:
+    def input(self, client: Client, raw_data: object) -> Input:
         flat = self._layers[0].prepare_input(raw_data)
-        return Input(context, flat)
+        return Input(client, flat)
 
-    def compile(
-        self, context: FHEContext, calibration_data: object
-    ) -> "Sequential":
+    def compile(self, context: FHEContext, calibration_data: object) -> "Sequential":
         if calibration_data is None:
             raise ValueError("compile() requires calibration_data (got None)")
         self.context = context
@@ -84,21 +83,25 @@ class Sequential:
         self._calibrate(calibration_data)
         self._fold_calibration()
 
-        affine_layers = [l for l in self._layers if isinstance(l, AffineLayer)]
+        affine_layers = [
+            layer for layer in self._layers if isinstance(layer, AffineLayer)
+        ]
         shifts: set = set()
         for layer in affine_layers:
             shifts.update(layer.bsgs_shifts())
         for layer in affine_layers:
             layer._weight.encode(context)
 
-        total_depth = sum(l.mult_depth() for l in self._layers)
+        total_depth = sum(layer.mult_depth() for layer in self._layers)
         if total_depth > context._usable_levels():
             shifts.update(context._setup_bootstrapping())
-        context.generate_rotation_keys(shifts)
+        # Record the shifts the model needs on the config; the client reads them
+        # (via FHEConfig.serialize) to generate the matching Galois keys.
+        context.config.set_galois_shifts(shifts)
         return self
 
     @property
-    def activation_ranges(self) -> Dict[int, np.ndarray]:
+    def activation_ranges(self) -> dict[int, np.ndarray]:
         return dict(self._activation_ranges)
 
     def forward_plain(self, x: np.ndarray) -> np.ndarray:
@@ -113,15 +116,13 @@ class Sequential:
             for i, layer in enumerate(self._layers)
             if not isinstance(layer, AffineLayer)
         }
-        ranges: Dict[int, np.ndarray] = {}
+        ranges: dict[int, np.ndarray] = {}
         for batch in self._iter_batches(calibration_data):
             x = np.atleast_2d(batch)
             for i, layer in enumerate(self._layers):
                 if i in act_idx:
                     peak = np.abs(x).max(axis=0)
-                    ranges[i] = (
-                        peak if i not in ranges else np.maximum(ranges[i], peak)
-                    )
+                    ranges[i] = peak if i not in ranges else np.maximum(ranges[i], peak)
                 x = layer.forward_calibration(x)
         self._activation_ranges = ranges
 
@@ -129,20 +130,24 @@ class Sequential:
         for i, b in self._activation_ranges.items():
             pre, post = self._layers[i - 1], self._layers[i + 1]
             b = np.maximum(np.asarray(b, dtype=float), 1e-12)
-            pre._weight = PlaintextTensor.from_numpy(pre._weight.to_numpy() / b[:, None])
+            pre._weight = PlaintextTensor.from_numpy(
+                pre._weight.to_numpy() / b[:, None]
+            )
             if pre._bias is not None:
                 pre._bias = (np.asarray(pre._bias, dtype=float) / b).tolist()
-            post._weight = PlaintextTensor.from_numpy(post._weight.to_numpy() * b[None, :])
+            post._weight = PlaintextTensor.from_numpy(
+                post._weight.to_numpy() * b[None, :]
+            )
 
     @staticmethod
-    def _iter_batches(calibration_data: object):
+    def _iter_batches(calibration_data: object) -> Iterator[np.ndarray]:
         if hasattr(calibration_data, "ndim") and calibration_data.ndim == 2:
             yield to_numpy(calibration_data)
         else:
             for batch in calibration_data:
                 yield to_numpy(batch)
 
-    def __call__(self, x: Union[Input, EncryptedVector]) -> EncryptedVector:
+    def __call__(self, x: Input | EncryptedVector) -> EncryptedVector:
         if isinstance(x, Input):
             x = x.ciphertext
         for layer in self._layers:

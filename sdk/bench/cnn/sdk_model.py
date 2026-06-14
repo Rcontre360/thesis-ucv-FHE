@@ -14,7 +14,7 @@ def build_context() -> FHEContext:
         bootstrap=BootstrapConfig(ctos_piece=3, stoc_piece=3, taylor_number=10),
         relu_degrees=(5,) * 10,
     )
-    return FHEContext(config).build()
+    return FHEContext(config)
 
 
 def to_sdk_model(model: torch.nn.Module) -> Sequential:

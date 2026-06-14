@@ -7,6 +7,7 @@ from bench.shared.io import emit, load_weights, load_inputs
 from bench.shared.measure import Measure, phase_metrics
 from bench.shared.metrics import accuracy, fidelity
 
+from fhe_ml import Client
 from fhe_ml.backend._backend import device_pool_used_bytes
 
 
@@ -30,16 +31,21 @@ def run(case_dir: str) -> None:
     model = load_weights(build_network(), case_dir).eval()
     enc_logits = np.empty((n, N_CLASSES), dtype=np.float64)
 
-    with Measure(alloc_probe=device_pool_used_bytes) as m_keygen:
-        ctx = build_context()
+    ctx = build_context()
 
     with Measure(alloc_probe=device_pool_used_bytes) as m_compile:
         sdk_model = to_sdk_model(model).compile(ctx, x_calib)
 
+    # Keys now live on the client and depend on the shifts compile() recorded,
+    # so client keygen runs after compile (the old build()-time keygen is gone).
+    with Measure(alloc_probe=device_pool_used_bytes) as m_keygen:
+        client = Client(ctx)
+    ctx.set_client_params(client.key_params())
+
     with Measure(alloc_probe=device_pool_used_bytes) as m_infer:
         for i, x in enumerate(x_acc):
             img = x.reshape(h, w)
-            enc_logits[i] = sdk_model(sdk_model.input(ctx, img.tolist())).decrypt()[:N_CLASSES]
+            enc_logits[i] = client.decrypt(sdk_model(sdk_model.input(client, img.tolist())))[:N_CLASSES]
 
     per_sample_s = m_infer.elapsed_s / n
     enc_top1 = accuracy(enc_logits.argmax(axis=1), y_acc)
