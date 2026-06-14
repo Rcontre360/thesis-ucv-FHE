@@ -1,36 +1,50 @@
 import numpy as np
 import pytest
 
-pytest.importorskip("fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first")
+pytest.importorskip(
+    "fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first"
+)
 
-from fhe_ml.sequential import Sequential  # noqa: E402
+from fhe_ml.client import Client  # noqa: E402
 from fhe_ml.layers.linear import Linear  # noqa: E402
 from fhe_ml.layers.relu import ReLU  # noqa: E402
+from fhe_ml.sequential import Sequential  # noqa: E402
 
 EPSILON = 1e-2
+
+
+def _wire(server, model):
+    """After compile, make a client for the model's shifts and load its keys."""
+    client = Client(server)
+    server.set_client_params(client.key_params())
+    return client
 
 
 class TestSequential:
     def test_single_linear(self, built_context):
         W = [[1.0, 0.0], [0.0, 1.0]]
-        model = Sequential([Linear(2, 2, W)]).compile(built_context, np.array([[0.3, -0.7]]))
-        ct = built_context.encrypt([0.3, -0.7])
-        result = model(ct).decrypt()[:2]
+        model = Sequential([Linear(2, 2, W)]).compile(
+            built_context, np.array([[0.3, -0.7]])
+        )
+        client = _wire(built_context, model)
+        ct = client.encrypt([0.3, -0.7])
+        result = client.decrypt(model(ct))[:2]
         assert abs(result[0] - 0.3) < EPSILON
         assert abs(result[1] - (-0.7)) < EPSILON
 
     def test_linear_then_relu(self, built_context):
         # Composite ReLU with degrees=(3,) approximates true ReLU; pick inputs far
         # from the kink at 0 (where Gibbs oscillation hurts the most).
-        # Set degrees explicitly so compile() doesn't override with the much
-        # deeper default chain.
         W = [[1.0, 0.0], [0.0, 1.0]]
         identity = [[1.0, 0.0], [0.0, 1.0]]
         relu = ReLU()
         relu.set_degrees((3,))
-        model = Sequential([Linear(2, 2, W), relu, Linear(2, 2, identity)]).compile(built_context, np.array([[1.0, -1.0]]))
-        ct = built_context.encrypt([1.0, -1.0])
-        result = model(ct).decrypt()[:2]
+        model = Sequential([Linear(2, 2, W), relu, Linear(2, 2, identity)]).compile(
+            built_context, np.array([[1.0, -1.0]])
+        )
+        client = _wire(built_context, model)
+        ct = client.encrypt([1.0, -1.0])
+        result = client.decrypt(model(ct))[:2]
         assert abs(result[0] - 1.0) < 0.2
         assert abs(result[1] - 0.0) < 0.2
 
@@ -39,8 +53,11 @@ class TestSequential:
         W2 = [[1.0, 0.0], [0.0, 1.0]]
         relu = ReLU()
         relu.set_degrees((3,))
-        model = Sequential([Linear(3, 2, W1), relu, Linear(2, 2, W2)]).compile(built_context, np.array([[0.1, 0.2, 0.3]]))
-        ct = built_context.encrypt([0.1, 0.2, 0.3])
+        model = Sequential([Linear(3, 2, W1), relu, Linear(2, 2, W2)]).compile(
+            built_context, np.array([[0.1, 0.2, 0.3]])
+        )
+        client = _wire(built_context, model)
+        ct = client.encrypt([0.1, 0.2, 0.3])
         assert model(ct).size == 2
 
     def test_empty_layers_raises(self):

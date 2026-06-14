@@ -1,5 +1,3 @@
-from typing import Optional, Tuple
-
 import numpy as np
 
 from fhe_ml.utils.errors import ShapeError
@@ -8,8 +6,8 @@ from fhe_ml.utils.errors import ShapeError
 def check_array(
     data: object,
     *,
-    ndim: Optional[int] = None,
-    shape: Optional[Tuple[int, ...]] = None,
+    ndim: int | None = None,
+    shape: tuple[int, ...] | None = None,
     name: str = "input",
 ) -> np.ndarray:
     """Convert array-like `data` to a float ndarray, validating rank/shape.
@@ -27,7 +25,7 @@ def check_array(
     return arr
 
 
-def infer_shape(data: object) -> Tuple[int, ...]:
+def infer_shape(data: object) -> tuple[int, ...]:
     if not isinstance(data, list):
         return ()
     if len(data) == 0:
@@ -35,12 +33,13 @@ def infer_shape(data: object) -> Tuple[int, ...]:
     return (len(data),) + infer_shape(data[0])
 
 
-def validate_shape(data: list, shape: Tuple[int, ...]) -> None:
+def validate_shape(data: list, shape: tuple[int, ...]) -> None:
     if len(shape) == 1:
         for j, elem in enumerate(data):
             if not isinstance(elem, (int, float)):
                 raise ValueError(
-                    f"Expected numeric value at leaf index [{j}], got {type(elem).__name__}"
+                    f"Expected numeric value at leaf index [{j}], "
+                    f"got {type(elem).__name__}"
                 )
         return
     for i, row in enumerate(data):

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple
 
 import numpy as np
 import torch.nn as nn
@@ -13,30 +12,26 @@ class Layer(ABC):
     """Sequential element: EncryptedVector -> EncryptedVector."""
 
     @abstractmethod
-    def __call__(self, x: EncryptedVector) -> EncryptedVector:
-        ...
+    def __call__(self, x: EncryptedVector) -> EncryptedVector: ...
 
     @abstractmethod
-    def mult_depth(self) -> int:
-        ...
+    def mult_depth(self) -> int: ...
 
     @abstractmethod
-    def forward_plain(self, x: np.ndarray) -> np.ndarray:
-        ...
+    def forward_plain(self, x: np.ndarray) -> np.ndarray: ...
 
     @classmethod
     @abstractmethod
     def from_torch(
         cls,
         module: nn.Module,
-        input_shape: Tuple[int, ...],
-    ) -> Tuple["Layer", Tuple[int, ...]]:
-        ...
+        input_shape: tuple[int, ...],
+    ) -> tuple["Layer", tuple[int, ...]]: ...
 
     def forward_calibration(self, x: np.ndarray) -> np.ndarray:
         return self.forward_plain(x)
 
-    def prepare_input(self, raw_data: object) -> List[float]:
+    def prepare_input(self, raw_data: object) -> list[float]:
         raise NotImplementedError(
             f"{type(self).__name__} cannot be a model's input layer; "
             "use a weighted layer (Linear, Conv2D, ...) as the first element."
@@ -49,14 +44,14 @@ class AffineLayer(Layer):
     in_features: int
     out_features: int
     _weight: PlaintextTensor
-    _bias: Optional[List[float]]
+    _bias: list[float] | None
 
     def __init__(
         self,
         in_features: int,
         out_features: int,
         weight: PlaintextTensor,
-        bias: Optional[List[float]],
+        bias: list[float] | None,
     ) -> None:
         self.in_features = in_features
         self.out_features = out_features
@@ -65,9 +60,7 @@ class AffineLayer(Layer):
 
     def __call__(self, x: EncryptedVector) -> EncryptedVector:
         if x.size != self.in_features:
-            raise ShapeError(
-                f"input size {x.size} != in_features {self.in_features}"
-            )
+            raise ShapeError(f"input size {x.size} != in_features {self.in_features}")
         x = x.context._prepare_for(x, 1)
         out = x.matmul(self._weight)
         if self._bias is not None:
@@ -77,7 +70,7 @@ class AffineLayer(Layer):
     def mult_depth(self) -> int:
         return 1
 
-    def bsgs_shifts(self) -> List[int]:
+    def bsgs_shifts(self) -> list[int]:
         return self._weight.bsgs_shifts()
 
     def forward_plain(self, x: np.ndarray) -> np.ndarray:

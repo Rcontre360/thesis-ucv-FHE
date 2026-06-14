@@ -1,13 +1,13 @@
+import json
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
 
 from fhe_ml.utils.enums import SecurityLevel
 
-
 _SECURITY_CAPS = {
     SecurityLevel.SEC128: {12: 109, 13: 218, 14: 438, 15: 881, 16: 1761},
-    SecurityLevel.SEC192: {12: 74,  13: 149, 14: 300, 15: 605, 16: 1212},
-    SecurityLevel.SEC256: {12: 57,  13: 115, 14: 232, 15: 465, 16: 930},
+    SecurityLevel.SEC192: {12: 74, 13: 149, 14: 300, 15: 605, 16: 1212},
+    SecurityLevel.SEC256: {12: 57, 13: 115, 14: 232, 15: 465, 16: 930},
 }
 _VALID_LOG_N = {12, 13, 14, 15, 16}
 _PRIME_BITS_MIN = 30
@@ -24,7 +24,7 @@ class _ValidatedDataclass:
         self._validate()
         object.__setattr__(self, "_post_init_done", True)
 
-    def __setattr__(self, name: str, value) -> None:
+    def __setattr__(self, name: str, value: object) -> None:
         if name == "_post_init_done" or not getattr(self, "_post_init_done", False):
             object.__setattr__(self, name, value)
             return
@@ -47,6 +47,7 @@ class _ValidatedDataclass:
 @dataclass
 class BootstrapConfig(_ValidatedDataclass):
     """SLIM bootstrap circuit knobs."""
+
     ctos_piece: int = 3
     stoc_piece: int = 3
     taylor_number: int = 11
@@ -74,15 +75,58 @@ class BootstrapConfig(_ValidatedDataclass):
 @dataclass
 class FHEConfig(_ValidatedDataclass):
     """CKKS parameters for FHEContext. Validates on every attribute write."""
+
     log_n: int = 14
-    coeff_modulus_bit_sizes: List[int] = field(
+    coeff_modulus_bit_sizes: list[int] = field(
         default_factory=lambda: [60, 40, 40, 40, 40, 60]
     )
     log_scale: int = 40
     security_level: SecurityLevel = SecurityLevel.SEC128
     galois_keys_on_host: bool = False
-    bootstrap: Optional[BootstrapConfig] = None
-    relu_degrees: Tuple[int, ...] = (7,) * 12
+    bootstrap: BootstrapConfig | None = None
+    relu_degrees: tuple[int, ...] = (7,) * 12
+    galois_shifts: tuple[int, ...] = ()
+
+    def set_galois_shifts(self, shifts: Iterable[int]) -> None:
+        object.__setattr__(
+            self, "galois_shifts", tuple(sorted({int(s) for s in shifts}))
+        )
+
+    def serialize(self) -> str:
+        return json.dumps(
+            {
+                "log_n": self.log_n,
+                "coeff_modulus_bit_sizes": list(self.coeff_modulus_bit_sizes),
+                "log_scale": self.log_scale,
+                "security_level": self.security_level.name,
+                "galois_keys_on_host": self.galois_keys_on_host,
+                "bootstrap": None
+                if self.bootstrap is None
+                else {
+                    "ctos_piece": self.bootstrap.ctos_piece,
+                    "stoc_piece": self.bootstrap.stoc_piece,
+                    "taylor_number": self.bootstrap.taylor_number,
+                },
+                "relu_degrees": list(self.relu_degrees),
+                "galois_shifts": list(self.galois_shifts),
+            }
+        )
+
+    @classmethod
+    def deserialize(cls, blob: str) -> "FHEConfig":
+        d = json.loads(blob)
+        boot = d["bootstrap"]
+        cfg = cls(
+            log_n=d["log_n"],
+            coeff_modulus_bit_sizes=list(d["coeff_modulus_bit_sizes"]),
+            log_scale=d["log_scale"],
+            security_level=SecurityLevel.__members__[d["security_level"]],
+            galois_keys_on_host=d["galois_keys_on_host"],
+            bootstrap=None if boot is None else BootstrapConfig(**boot),
+            relu_degrees=tuple(d["relu_degrees"]),
+        )
+        cfg.set_galois_shifts(d.get("galois_shifts", []))
+        return cfg
 
     def _validate(self) -> None:
         self._validate_log_n()
@@ -125,7 +169,9 @@ class FHEConfig(_ValidatedDataclass):
             raise ValueError(f"log_scale must be a positive int, got {self.log_scale}")
 
     def _validate_bootstrap_type(self) -> None:
-        if self.bootstrap is not None and not isinstance(self.bootstrap, BootstrapConfig):
+        if self.bootstrap is not None and not isinstance(
+            self.bootstrap, BootstrapConfig
+        ):
             raise TypeError(
                 f"bootstrap must be a BootstrapConfig or None, "
                 f"got {type(self.bootstrap).__name__}"
@@ -144,10 +190,10 @@ class FHEConfig(_ValidatedDataclass):
         total_bits = sum(q_bits) + num_p * p_size
         if total_bits > cap:
             raise ValueError(
-                f"total modulus bits ({total_bits}) exceed the {self.security_level.name} "
-                f"cap ({cap} bits) for log_n={self.log_n} (N=2^{self.log_n}). "
-                f"Lower the bit sizes, shorten the chain, raise log_n, or use "
-                f"SecurityLevel.NONE (insecure)."
+                f"total modulus bits ({total_bits}) exceed the "
+                f"{self.security_level.name} cap ({cap} bits) for log_n={self.log_n} "
+                f"(N=2^{self.log_n}). Lower the bit sizes, shorten the chain, raise "
+                f"log_n, or use SecurityLevel.NONE (insecure)."
             )
 
     def _validate_coefficient_validator(self) -> None:
@@ -156,7 +202,7 @@ class FHEConfig(_ValidatedDataclass):
         num_p = max(2, round(sum(q_bits) / (8 * p_size)))
         total_p = num_p * p_size
         for i in range(0, len(q_bits), num_p):
-            chunk = q_bits[i:i + num_p]
+            chunk = q_bits[i : i + num_p]
             if sum(chunk) > total_p:
                 raise ValueError(
                     f"coefficient_validator: Q chunk {chunk} (sum={sum(chunk)}) "
@@ -169,13 +215,15 @@ class FHEConfig(_ValidatedDataclass):
             return
         q_size = len(self.coeff_modulus_bit_sizes) - 1
         b = self.bootstrap
-        min_q_size = b.ctos_piece + b.stoc_piece + b.taylor_number + _SLIM_BOOTSTRAP_OVERHEAD
+        min_q_size = (
+            b.ctos_piece + b.stoc_piece + b.taylor_number + _SLIM_BOOTSTRAP_OVERHEAD
+        )
         if q_size < min_q_size:
             raise ValueError(
                 f"Q chain size ({q_size}) is too short for the bootstrap config "
-                f"(ctos={b.ctos_piece}, stoc={b.stoc_piece}, taylor={b.taylor_number}): "
-                f"need at least {min_q_size} Q primes. Lengthen coeff_modulus_bit_sizes "
-                f"or use smaller bootstrap parameters."
+                f"(ctos={b.ctos_piece}, stoc={b.stoc_piece}, "
+                f"taylor={b.taylor_number}): need at least {min_q_size} Q primes. "
+                f"Lengthen coeff_modulus_bit_sizes or use smaller bootstrap params."
             )
 
     def _validate_relu_degrees(self) -> None:

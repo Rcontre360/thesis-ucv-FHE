@@ -3,7 +3,6 @@ import pytest
 
 from fhe_ml.layers.relu import ReLU, _fn_coeffs
 
-
 # Exact rational coefficients for the first few f_n (ePrint 2019/417, Table 1).
 # Format: array indexed by power; even-power slots are zero.
 F1_EXACT = np.array([0.0, 3 / 2, 0.0, -1 / 2])

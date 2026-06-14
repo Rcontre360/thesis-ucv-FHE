@@ -69,10 +69,17 @@ target-version = ["py311"]
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+extend-exclude = ["temp", "external", "build", "dist", "bench"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "ANN"]
-ignore = ["ANN101", "ANN102"]
+
+[tool.ruff.lint.per-file-ignores]
+# Star imports off the curated fhe_ml.backend surface — kept concise on purpose.
+"src/fhe_ml/client.py" = ["F403", "F405"]
+"src/fhe_ml/ckks/context.py" = ["F403", "F405"]
+# Tests don't need full type annotations.
+"tests/*" = ["ANN"]
 
 [tool.mypy]
 python_version = "3.11"

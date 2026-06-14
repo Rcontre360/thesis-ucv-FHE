@@ -1,12 +1,10 @@
-from typing import List, Optional, Tuple
-
 import numpy as np
 import torch.nn as nn
 
-from fhe_ml.utils.errors import ShapeError
-from fhe_ml.layers.base import AffineLayer
-from fhe_ml.utils.validate import check_array
 from fhe_ml.ckks.containers.tensor import PlaintextTensor
+from fhe_ml.layers.base import AffineLayer
+from fhe_ml.utils.errors import ShapeError
+from fhe_ml.utils.validate import check_array
 
 
 class Linear(AffineLayer):
@@ -17,17 +15,17 @@ class Linear(AffineLayer):
         in_features: int,
         out_features: int,
         weight: object,
-        bias: Optional[object] = None,
+        bias: object | None = None,
     ) -> None:
         weight = check_array(weight, shape=(out_features, in_features), name="weight")
-        bias_list: Optional[List[float]] = None
+        bias_list: list[float] | None = None
         if bias is not None:
             bias_list = check_array(bias, shape=(out_features,), name="bias").tolist()
         super().__init__(
             in_features, out_features, PlaintextTensor.from_numpy(weight), bias_list
         )
 
-    def prepare_input(self, raw_data: object) -> List[float]:
+    def prepare_input(self, raw_data: object) -> list[float]:
         arr = check_array(raw_data, name="Linear input")
         if arr.ndim != 1:
             raise ShapeError(
@@ -35,17 +33,15 @@ class Linear(AffineLayer):
                 "did you mean to use Conv2D as the first layer?"
             )
         if arr.size != self.in_features:
-            raise ShapeError(
-                f"input size {arr.size} != in_features {self.in_features}"
-            )
+            raise ShapeError(f"input size {arr.size} != in_features {self.in_features}")
         return arr.tolist()
 
     @classmethod
     def from_torch(
         cls,
         module: nn.Linear,
-        input_shape: Tuple[int, ...],
-    ) -> Tuple["Linear", Tuple[int, ...]]:
+        input_shape: tuple[int, ...],
+    ) -> tuple["Linear", tuple[int, ...]]:
         expected = int(np.prod(input_shape))
         if expected != module.in_features:
             raise ShapeError(

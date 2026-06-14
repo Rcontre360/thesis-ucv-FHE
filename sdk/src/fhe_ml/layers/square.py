@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import numpy as np
 import torch.nn as nn
 
@@ -18,12 +16,12 @@ class Square(Layer):
         return 1
 
     def forward_plain(self, x: np.ndarray) -> np.ndarray:
-        return x ** 2
+        return x**2
 
     @classmethod
     def from_torch(
         cls,
         module: nn.Module,
-        input_shape: Tuple[int, ...],
-    ) -> Tuple["Square", Tuple[int, ...]]:
+        input_shape: tuple[int, ...],
+    ) -> tuple["Square", tuple[int, ...]]:
         return cls(), input_shape

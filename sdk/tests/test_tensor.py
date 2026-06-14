@@ -1,7 +1,9 @@
 import numpy as np
 import pytest
 
-pytest.importorskip("fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first")
+pytest.importorskip(
+    "fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first"
+)
 
 from fhe_ml.ckks.containers.tensor import PlaintextTensor  # noqa: E402
 
