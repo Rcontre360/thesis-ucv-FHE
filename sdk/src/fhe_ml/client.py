@@ -1,15 +1,9 @@
 from collections.abc import Iterable
-from dataclasses import dataclass
 
 from fhe_ml.backend import *
 from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 from fhe_ml.ckks.context import FHEContext
-
-
-@dataclass
-class KeyParams:
-    relin_key: CKKSRelinkey
-    galois_key: CKKSGaloiskey | None
+from fhe_ml.ckks.keyparams import KeyParams
 
 
 class Client:

@@ -1,12 +1,8 @@
-from typing import TYPE_CHECKING
-
 from fhe_ml.backend import *
 from fhe_ml.ckks.config import FHEConfig
 from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 from fhe_ml.ckks.containers.plaintext import PlaintextVector
-
-if TYPE_CHECKING:
-    from fhe_ml.client import KeyParams
+from fhe_ml.ckks.keyparams import KeyParams
 
 
 class FHEContext:
@@ -51,7 +47,7 @@ class FHEContext:
     def default(cls) -> "FHEContext":
         return cls(FHEConfig())
 
-    def set_client_params(self, params: "KeyParams") -> None:
+    def set_client_params(self, params: KeyParams) -> None:
         self._rk = params.relin_key
         if params.galois_key is not None:
             self._gk = params.galois_key

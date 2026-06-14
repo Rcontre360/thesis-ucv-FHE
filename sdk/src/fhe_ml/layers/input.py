@@ -1,9 +1,5 @@
-from typing import TYPE_CHECKING
-
 from fhe_ml.ckks.containers.ciphertext import EncryptedVector
-
-if TYPE_CHECKING:
-    from fhe_ml.client import Client
+from fhe_ml.client import Client
 
 
 class Input:
@@ -12,7 +8,7 @@ class Input:
     _ct: EncryptedVector
     _size: int
 
-    def __init__(self, client: "Client", flat_data: list[float]) -> None:
+    def __init__(self, client: Client, flat_data: list[float]) -> None:
         self._ct = client.encrypt(flat_data)
         self._size = len(flat_data)
 

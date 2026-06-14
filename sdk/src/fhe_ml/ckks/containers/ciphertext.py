@@ -8,7 +8,6 @@ from fhe_ml.utils.errors import ShapeError
 if TYPE_CHECKING:
     from fhe_ml.ckks.context import FHEContext
 
-
 class EncryptedVector:
     context: "FHEContext"
     _ct: CKKSCiphertext

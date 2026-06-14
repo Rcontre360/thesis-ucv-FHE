@@ -15,7 +15,16 @@ N=65536 and a >=16 GB GPU.
 Run: from the sdk/ dir, `/usr/bin/python3.12 examples/bootstrapping.py`.
 """
 
-from fhe_ml import BootstrapConfig, FHEConfig, FHEContext, SecurityLevel, Sequential
+import numpy as np
+
+from fhe_ml import (
+    BootstrapConfig,
+    Client,
+    FHEConfig,
+    FHEContext,
+    SecurityLevel,
+    Sequential,
+)
 from fhe_ml.layers import Linear
 
 DEPTH = 30
@@ -28,7 +37,7 @@ config = FHEConfig(
     galois_keys_on_host=True,
     bootstrap=BootstrapConfig(),
 )
-ctx = FHEContext(config).build()
+ctx = FHEContext(config)
 
 identity = [
     [1.0, 0.0, 0.0, 0.0],
@@ -41,12 +50,16 @@ model = Sequential([Linear(4, 4, identity) for _ in range(DEPTH)])
 print(f"network depth : {DEPTH} levels")
 print(f"fresh budget  : {ctx._usable_levels()} levels  -> network overflows it")
 
-model.compile(ctx)
-print(f"bootstrapping enabled: {ctx._bootstrapping_ready}  "
-      f"(refreshes fire lazily during inference)")
-
 data = [0.1, 0.2, 0.3, 0.4]
-result = model(model.input(ctx, data)).decrypt()
+model.compile(ctx, np.array([data]))
+client = Client(ctx)  # owns the secret key; makes the eval keys
+ctx.set_client_params(client.key_params())  # server loads relin + galois keys
+print(
+    f"bootstrapping enabled: {ctx._bootstrapping_ready}  "
+    f"(refreshes fire lazily during inference)"
+)
+
+result = client.decrypt(model(model.input(client, data)))
 
 print(f"\ninput  : {data}")
 print(f"output : {[round(v, 4) for v in result]}")

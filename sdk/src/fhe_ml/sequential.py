@@ -1,15 +1,12 @@
 from collections.abc import Iterator
-from typing import TYPE_CHECKING
 
 import numpy as np
 import torch.nn as nn
 
-if TYPE_CHECKING:
-    from fhe_ml.client import Client
-
 from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 from fhe_ml.ckks.containers.tensor import PlaintextTensor
 from fhe_ml.ckks.context import FHEContext
+from fhe_ml.client import Client
 from fhe_ml.layers.base import AffineLayer, Layer
 from fhe_ml.layers.conv2d import Conv2D
 from fhe_ml.layers.input import Input
@@ -71,7 +68,7 @@ class Sequential:
             layers.append(layer)
         return cls(layers)
 
-    def input(self, client: "Client", raw_data: object) -> Input:
+    def input(self, client: Client, raw_data: object) -> Input:
         flat = self._layers[0].prepare_input(raw_data)
         return Input(client, flat)
 
