@@ -9,6 +9,7 @@ from bench.cnn.sdk_model import to_sdk_model, build_context
 from bench.shared.io import load_weights, load_inputs, results_dir
 from bench.shared.measure import cuda_sync
 
+from fhe_ml import Client
 from fhe_ml.backend._backend import device_pool_used_bytes
 
 MB: int = 1024 ** 2
@@ -25,7 +26,10 @@ def run(case_dir: str) -> None:
     ctx = build_context()
     sdk_model = to_sdk_model(model).compile(ctx, x_calib)
 
-    vec = sdk_model.input(ctx, sample.tolist()).ciphertext
+    client = Client(ctx)
+    ctx.set_client_params(client.key_params())
+
+    vec = sdk_model.input(client, sample.tolist()).ciphertext
 
     rows: list[dict] = []
     for i, layer in enumerate(sdk_model._layers):

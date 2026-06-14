@@ -7,6 +7,7 @@ from bench.shared.io import emit, load_weights, load_inputs
 from bench.shared.measure import Measure, phase_metrics
 from bench.shared.metrics import r2_score, pred_fidelity
 
+from fhe_ml import Client
 from fhe_ml.backend._backend import device_pool_used_bytes
 
 
@@ -26,15 +27,18 @@ def run(case_dir: str) -> None:
     model = load_weights(build_network(), case_dir).eval()
     enc_preds = np.empty(n, dtype=np.float64)
 
-    with Measure(alloc_probe=device_pool_used_bytes) as m_keygen:
-        ctx = build_context()
+    ctx = build_context()
 
     with Measure(alloc_probe=device_pool_used_bytes) as m_compile:
         sdk_model = to_sdk_model(model).compile(ctx, x_calib)
 
+    with Measure(alloc_probe=device_pool_used_bytes) as m_keygen:
+        client = Client(ctx)
+    ctx.set_client_params(client.key_params())
+
     with Measure(alloc_probe=device_pool_used_bytes) as m_infer:
         for i, x in enumerate(x_acc):
-            enc_preds[i] = sdk_model(sdk_model.input(ctx, x.tolist())).decrypt()[0]
+            enc_preds[i] = client.decrypt(sdk_model(sdk_model.input(client, x.tolist())))[0]
 
     per_sample_s = m_infer.elapsed_s / n
     encrypted_r2 = r2_score(y_acc, enc_preds)
