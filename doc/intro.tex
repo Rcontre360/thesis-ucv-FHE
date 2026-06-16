@@ -12,16 +12,19 @@ A pesar de su potencial, la aplicación práctica del cifrado homomórfico, espe
 
 El presente trabajo aborda esta limitación proponiendo el desarrollo de una librería Python que aproveche la capacidad de procesamiento paralelo de las Unidades de Procesamiento Gráfico (GPU) para acelerar las operaciones tensoriales bajo el esquema de cifrado homomórfico CKKS. Nuestro objetivo es facilitar la inferencia privada de modelos de aprendizaje automático, ofreciendo una herramienta eficiente que combine la seguridad criptográfica con el rendimiento computacional necesario para aplicaciones del mundo real.
 
-El resto de este trabajo se estructura en tres capítulos, cada uno diseñado para sentar las bases teóricas y justificar la propuesta:
+El resto de este trabajo se estructura en cuatro capítulos, cada uno diseñado para sentar las bases teóricas y justificar la propuesta:
 
 \begin{itemize}
-   \item \textbf{Capítulo 1: Fundamentos del Cifrado Homomórfico}:
+   \item \textbf{Capítulo 1: Conceptos de Cifrado}:
+Este capítulo introduce las nociones básicas del cifrado que el resto del trabajo utiliza. Se presenta la definición formal de un esquema de cifrado, los dos grandes enfoques con que se construyen los esquemas modernos y la limitación común a todos los esquemas convencionales: la imposibilidad de operar sobre los datos cifrados sin descifrarlos previamente. Esta limitación motiva el cifrado totalmente homomórfico, que articula el resto del trabajo.
+
+   \item \textbf{Capítulo 2: Fundamentos del Cifrado Homomórfico}:
 Este capítulo introduce los conceptos esenciales del cifrado homomórfico. Se exploran sus orígenes, la problemática del ruido inherente a estos esquemas, las diferencias entre cifrado parcialmente, algo y totalmente homomórfico, y las técnicas de gestión del ruido como el \textit{bootstrapping}. Se detallan los problemas matemáticos subyacentes, como aprendizjae con errores y aprendizaje con errores sobre anillos, y se presenta en profundidad el esquema CKKS, incluyendo sus mecanismos de codificación, generación de claves y operaciones homomórficas.
 
-   \item \textbf{Capítulo 2: Cifrado Homomórfico Aplicado al Aprendizaje Automatico}:
-Aquí se examina la intersección entre el cifrado homomórfico y el aprendizaje automático. Se discute cómo las arquitecturas de redes neuronales, tanto profundas como convolucionales, pueden adaptarse para operar sobre datos cifrados. Se profundiza en la implementación de operaciones lineales clave (producto punto, multiplicación matriz-vector y convoluciones) en el dominio homomórfico, y se aborda el desafío de las funciones de activación no lineales y sus aproximaciones polinómicas. 
+   \item \textbf{Capítulo 3: Cifrado Homomórfico Aplicado al Aprendizaje Automatico}:
+Aquí se examina la intersección entre el cifrado homomórfico y el aprendizaje automático. Se discute cómo las arquitecturas de redes neuronales, tanto profundas como convolucionales, pueden adaptarse para operar sobre datos cifrados. Se profundiza en la implementación de operaciones lineales clave (producto punto, multiplicación matriz-vector y convoluciones) en el dominio homomórfico, y se aborda el desafío de las funciones de activación no lineales y sus aproximaciones polinómicas.
 
-   \item \textbf{Capítulo 3: Propuesta de Trabajo Especial de Grado}:
-Este capítulo presenta la propuesta central del presente trabajo. Se explica el objetivo general y los objetivos específicos que guiarán el desarrollo de la librería. Se identifican las tecnologías clave a utilizar para la creacion de la libreria. Finalmente, se detalla un plan de actividades que describe las fases de implementación, pruebas y comparación de rendimiento con otras soluciones existentes.
+   \item \textbf{Capítulo 4: Marco Metodológico}:
+Este capítulo presenta el marco metodológico del trabajo: la infraestructura de hardware y software empleada, el diseño y la implementación de la biblioteca propuesta, las bibliotecas de referencia con las que se compara, los conjuntos de datos y las arquitecturas de redes neuronales sobre las que se evalúa, y la metodología de medición y evaluación.
 \end{itemize}
 
