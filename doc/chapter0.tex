@@ -1,0 +1,135 @@
+\chapter{Conceptos de Cifrado}
+
+El cifrado es el procedimiento mediante el cual un mensaje se transforma en una representación ininteligible para quien no posea cierta información secreta, denominada clave. Esta transformación permite que los datos viajen por canales inseguros, se almacenen en repositorios ajenos o se procesen por terceros sin que su contenido quede expuesto.
+
+Más allá de preservar la confidencialidad del mensaje, los esquemas criptográficos modernos ofrecen también garantías de integridad, que aseguran que el contenido no ha sido alterado en tránsito, y de autenticidad, que verifican la identidad del emisor \cite{KatzLindell}. Estas propiedades son fundamentales para el mundo moderno: protocolos de red, cifrado de disco, mensajería instantánea, transacciones bancarias y firmas digitales.
+
+\section{Los esquemas de cifrado}
+
+Un esquema de cifrado se define formalmente como una terna de algoritmos que opera sobre tres conjuntos: el espacio de mensajes $\mathcal{M}$, que contiene los textos planos posibles; el espacio de cifrados $\mathcal{C}$, que contiene las versiones cifradas de esos mensajes; y el espacio de claves $\mathcal{K}$, del que se extrae la información secreta que permite cifrar y descifrar \cite{KatzLindell}.
+
+Los tres algoritmos del esquema son los siguientes:
+
+\begin{itemize}
+    \item Generación de claves: el algoritmo $\text{Gen}$ produce de manera aleatoria una clave $k \in \mathcal{K}$ a partir de un parámetro de seguridad que determina la dificultad del esquema.
+    \item Cifrado: la función $\text{Enc}: \mathcal{K} \times \mathcal{M} \to \mathcal{C}$ toma una clave $k$ y un mensaje $m \in \mathcal{M}$, y devuelve un texto cifrado $c = \text{Enc}_k(m) \in \mathcal{C}$.
+    \item Descifrado: la función $\text{Dec}: \mathcal{K} \times \mathcal{C} \to \mathcal{M}$ toma una clave $k$ y un texto cifrado $c$, y recupera el mensaje original.
+\end{itemize}
+
+Para que el esquema sea útil, debe cumplir la propiedad de corrección: descifrar un texto cifrado con la misma clave con que se cifró debe devolver el mensaje original. Formalmente, para todo $m \in \mathcal{M}$ y toda clave $k \in \mathcal{K}$ se exige
+\begin{equation}
+    \text{Dec}_k(\text{Enc}_k(m)) = m.
+    \label{eq:correctness}
+\end{equation}
+
+La seguridad del esquema descansa enteramente en la clave, no en el secreto del algoritmo. Este principio, formulado por Auguste Kerckhoffs en 1883 \cite{Kerckhoffs1883}, supone que el adversario conoce por completo los procedimientos $\text{Gen}$, $\text{Enc}$ y $\text{Dec}$, y que sólo la clave $k$ permanece oculta. Bajo este supuesto, un esquema se considera seguro cuando ningún adversario con recursos computacionales realistas pueda distinguir los cifrados de dos mensajes elegidos por él mismo sin conocer la clave.
+
+\section{Cifrado simétrico}
+
+Un esquema de cifrado se denomina simétrico cuando la misma clave $k$ se utiliza tanto para cifrar como para descifrar \cite{KatzLindell}. Emisor y receptor deben acordar previamente esa clave por un canal seguro y mantenerla en secreto frente a cualquier tercero; esta exigencia, conocida como problema de distribución de la clave, motivará más adelante la aparición del cifrado asimétrico.
+
+Los primeros esquemas históricos de cifrado simétrico son anteriores al cómputo electrónico, mientras que los estándares modernos se construyen sobre operaciones definidas en cuerpos finitos. A continuación se presentan dos ejemplos representativos: el cifrado César, como ilustración clásica de la estructura formal de un esquema simétrico, y el AES, como estándar simétrico vigente.
+
+\subsection{Cifrado César}
+
+El cifrado César considera el alfabeto como el conjunto de enteros $\mathbb{Z}_{26} = \{0, 1, \dots, 25\}$, asociando cada letra a un valor numérico. La clave $k \in \mathbb{Z}_{26}$ representa el número de posiciones que se desplaza cada letra. Dado un mensaje $m \in \mathbb{Z}_{26}$, entendido como una letra individual del texto plano, el cifrado y el descifrado se definen, respectivamente, como
+\begin{equation}
+    \text{Enc}_k(m) = (m + k) \pmod{26}, \qquad \text{Dec}_k(c) = (c - k) \pmod{26}.
+\end{equation}
+
+La transformación se aplica letra por letra a lo largo del mensaje. El espacio de claves $\mathcal{K}$ tiene únicamente 26 elementos, de modo que un adversario puede probar exhaustivamente todas las claves posibles y reconocer la correcta mediante inspección del texto resultante. El esquema sirve hoy como ejemplo de los componentes formales de un esquema de cifrado, no como mecanismo de protección \cite{KatzLindell}.
+
+\subsection{AES}
+
+El AES (\textit{Advanced Encryption Standard}) opera sobre bloques de 128 bits del texto plano, organizados como una matriz $4 \times 4$ de bytes \cite{KatzLindell}. Cada byte se interpreta como un conjunto de $2^8 = 256$ ($\mathbb{F}_{2^8}$) valores dotado de operaciones de suma y multiplicación bien definidas: la suma corresponde a la operación O exclusivo (XOR) entre los bits de dos bytes, y la multiplicación se define identificando cada byte con un polinomio de grado menor que ocho y reduciendo el resultado del producto módulo un polinomio fijo. Esto permite expresar las transformaciones internas de AES en términos rigurosos y, a la vez, implementarlas como operaciones eficientes a nivel de bits.
+
+A partir de la clave del usuario, de 128, 192 o 256 bits, un algoritmo produce una secuencia de claves de ronda $K_0, K_1, \dots, K_{N_r}$, donde $N_r$ es el número de rondas (10, 12 o 14, según el tamaño de la clave). La clave del usuario constituye el bloque inicial $K_0$, y cada clave de ronda subsiguiente se construye a partir de la anterior aplicando, en orden, una rotación cíclica de bytes, una sustitución mediante la misma caja-S empleada en el cifrado, y una suma O exclusivo con una constante de ronda prefijada distinta para cada paso. Estas operaciones entremezclan los bits de la clave original a lo largo de toda la secuencia, de modo que dos claves de ronda consecutivas no comparten una relación lineal sencilla que un adversario pudiera aprovechar.
+
+Cada ronda combina cuatro transformaciones aplicadas en sucesión sobre el estado actual:
+
+\begin{itemize}
+    \item Sustitución de bytes: cada byte del estado se reemplaza por otro siguiendo una tabla fija conocida como caja-S, derivada de la inversión en $\mathbb{F}_{2^8}$ combinada con una transformación afín.
+    \item Desplazamiento de filas: cada fila del estado se desplaza cíclicamente un número distinto de posiciones.
+    \item Mezcla de columnas: cada columna del estado se multiplica por una matriz fija con $2^8$ entradas, esparciendo cada byte sobre toda la columna.
+    \item Suma de la clave de ronda: el estado se combina con la clave de ronda correspondiente mediante la operación O exclusivo (XOR).
+\end{itemize}
+
+El cifrado se obtiene aplicando una suma inicial de la clave $K_0$, seguida de $N_r - 1$ rondas completas y una ronda final que omite la mezcla de columnas. El descifrado utiliza las operaciones inversas aplicadas en orden inverso. AES sostiene las garantías de confidencialidad en aplicaciones como la seguridad de las comunicaciones en redes, el cifrado de discos duros y las plataformas de mensajería extremo a extremo.
+
+\section{Cifrado asimétrico}
+
+En el cifrado asimétrico cada parte posee un par de claves $(pk, sk)$, una pública y otra privada \cite{KatzLindell}. La clave pública $pk$ se difunde sin restricciones, mientras que la clave privada $sk$ se mantiene en secreto. Cualquiera puede cifrar un mensaje destinado a un receptor utilizando su clave pública; sólo el receptor, en posesión de la clave privada correspondiente, puede descifrarlo. Este esquema elimina el problema de distribución de la clave que aqueja al cifrado simétrico, pues ya no se requiere un canal seguro previo para comunicar la clave.
+
+Dos construcciones fundacionales ilustran el enfoque asimétrico y se apoyan sobre dos problemas matemáticos clásicos: el protocolo de Diffie-Hellman, fundamentado en el problema del logaritmo discreto, y RSA, fundamentado en la factorización entera. Ambos se desarrollan a continuación.
+
+\subsection{Diffie-Hellman}
+
+El protocolo de Diffie-Hellman, introducido en 1976 por Whitfield Diffie y Martin Hellman \cite{DH76}, permite que dos partes acuerden una clave secreta común sobre un canal inseguro. Sus parámetros públicos son un número primo grande $p$ y un generador $g$ del grupo multiplicativo $\mathbb{Z}_p^*$. Cada participante elige de manera independiente un número secreto y envía al otro un valor derivado:
+
+\begin{itemize}
+    \item Alicia elige $a \in \mathbb{Z}_p^*$ en secreto y envía $A = g^a \pmod{p}$.
+    \item Bernardo elige $b \in \mathbb{Z}_p^*$ en secreto y envía $B = g^b \pmod{p}$.
+\end{itemize}
+
+Tras el intercambio, cada parte combina su propio secreto con el valor recibido del otro:
+\begin{equation}
+    K = B^a \pmod{p} = (g^b)^a = g^{ab} \pmod{p} = (g^a)^b = A^b \pmod{p}.
+\end{equation}
+Ambos llegan así al mismo valor $K = g^{ab} \pmod{p}$, que utilizan como clave secreta compartida. Un adversario que observa el canal conoce $p$, $g$, $A$ y $B$, pero recuperar $K$ a partir de esa información requiere resolver el problema del logaritmo discreto: dado un grupo cíclico generado por $g$ y un elemento $h = g^x$, recuperar el exponente $x$ se considera computacionalmente intratable cuando el grupo es de tamaño suficiente.
+
+El protocolo de Diffie-Hellman no constituye en sí mismo un esquema de cifrado, sino un mecanismo de acuerdo de claves: el valor $K$ producido por el intercambio sirve como clave secreta compartida que las partes pueden emplear con un esquema simétrico para cifrar y descifrar los mensajes intercambiados. Para enviar un mensaje $m$, el emisor calcula
+\begin{equation}
+    c = \text{Enc}_K(m)
+\end{equation}
+mediante el cifrado simétrico elegido bajo la clave $K$, y transmite $c$; el receptor recupera $m = \text{Dec}_K(c)$ aplicando el descifrado simétrico con la misma $K$. Este patrón, conocido como cifrado híbrido es la base de protocolos de comunicación como TLS.
+
+\subsection{RSA}
+
+RSA, publicado por Rivest, Shamir y Adleman en 1978 \cite{RSA78}, fue el primer esquema asimétrico capaz de cifrar y firmar mensajes de manera práctica. Su par de claves se construye a partir de dos números primos grandes $p$ y $q$ elegidos en secreto. Sea $n = p \cdot q$ el módulo del esquema y $\varphi(n) = (p-1)(q-1)$ el valor de la función totient de Euler en $n$. Se elige un entero $e$ coprimo con $\varphi(n)$ y se calcula su inverso modular $d$ tal que
+\begin{equation}
+    e \cdot d \equiv 1 \pmod{\varphi(n)}.
+\end{equation}
+La clave pública es el par $(n, e)$, que se distribuye libremente; la clave privada es $d$, que permanece en secreto.
+
+Para enviar un mensaje confidencial $m \in \mathbb{Z}_n$ al dueño del par de claves, el emisor toma la clave pública $(n, e)$ y calcula el texto cifrado
+\begin{equation}
+    c = \text{Enc}_{(n,e)}(m) = m^e \pmod{n}.
+\end{equation}
+El cifrado, así obtenido, puede transmitirse por un canal cualquiera. El dueño del par, en posesión de la clave privada $d$, recupera el mensaje original aplicando la exponenciación con su clave secreta:
+\begin{equation}
+    m = \text{Dec}_{(n,d)}(c) = c^d \pmod{n}.
+\end{equation}
+La corrección del esquema se obtiene a partir del teorema de Euler: dado que $e \cdot d \equiv 1 \pmod{\varphi(n)}$, se cumple $m^{ed} \equiv m \pmod{n}$ para todo $m$ coprimo con $n$, de modo que descifrar tras cifrar devuelve el mensaje original. La seguridad de RSA descansa en la dificultad de factorizar $n$ para recuperar $p$ y $q$: sin esa factorización el adversario no puede calcular $\varphi(n)$ ni, en consecuencia, $d$.
+
+\subsection{Firmas digitales}
+
+Una firma digital es una construcción asimétrica que permite a quien posee la clave privada generar, sobre un mensaje, un valor verificable por cualquier portador de la clave pública correspondiente. Una firma garantiza la autoría sobre un mensaje y su integridad \cite{KatzLindell}.
+
+El esquema RSA admite una construcción directa de firmas digitales que reutiliza la aritmética modular del cifrado, intercambiando los roles de la clave pública y la privada. Dado el par de claves $(n, e)$ y $d$ definido en la subsección anterior, el dueño firma un mensaje $m \in \mathbb{Z}_n$ calculando
+\begin{equation}
+    \sigma = m^d \pmod{n},
+\end{equation}
+y publica el par $(m, \sigma)$. Cualquiera que conozca la clave pública $(n, e)$ verifica la firma comprobando que
+\begin{equation}
+    \sigma^e \equiv m \pmod{n},
+\end{equation}
+lo cual se cumple por la misma identidad $m^{ed} \equiv m \pmod n$ que sostiene la corrección del cifrado RSA. Un adversario que no posea $d$ no puede producir un $\sigma$ válido sin resolver el problema de factorización subyacente.
+
+Las firmas digitales son la base de numerosas garantías en la informática actual: la verificación de actualizaciones de software, la autenticación de servidores en protocolos de red, la integridad de transacciones en sistemas financieros y la trazabilidad de documentos en contextos legales.
+
+\section{Criptoanálisis}
+
+El criptoanálisis es la disciplina que estudia métodos para atacar esquemas de cifrado, es decir, para recuperar el mensaje o la clave a partir del texto cifrado sin conocer previamente la clave \cite{Dooley24}.
+
+Hay dos formas fundamentales para atacar un sistema de cifrado. La primera es la búsqueda exhaustiva o ataque por fuerza bruta, consiste en probar todas las claves posibles del espacio $\mathcal{K}$ hasta dar con aquella que produzca un mensaje coherente. Su coste es directamente proporcional al tamaño del espacio de claves, para AES con clave de 128 bits hay $2^{128}$ candidatos, cantidad que excede la capacidad de cómputo realizable actualmente. El segundo tipo de ataque, es el análisis de frecuencias. Los cifrados modernos como AES anulan este tipo de análisis al destruir, mediante operaciones de sustitución, permutación y mezcla, cualquier estructura estadística del texto plano que pudiera filtrarse en el texto cifrado.
+
+Se dice que un esquema es seguro computacionalmente cuando el esquema resiste ataques realizables con recursos computacionales realistas; bajo esta noción operan todos los esquemas prácticos modernos y su seguridad se reduce a la dificultad presunta de problemas matemáticos como la factorización entera o el logaritmo discreto. Es también la perspectiva bajo la cual se construyen los esquemas de cifrado homomórfico que sostienen el resto de este trabajo.
+
+\section{Limitaciones de los esquemas de cifrado convencionales}
+
+Los esquemas presentados hasta aquí tratan al texto cifrado como un dato opaco. Un cifrado producido por cualquiera de estos esquemas es indistinguible de una secuencia aleatoria, y esta propiedad es precisamente la base de su seguridad \cite{KatzLindell}.
+
+Sin embargo cualquier modificacion o cómputo realizado sobre el texto cifrado destruye la posibilidad de descifrarlo correctamente. Si se desean aplicar operaciones aritméticas o lógicas sobre los datos, es necesario descifrarlos previamente, operar sobre ellos en texto plano y volver a cifrarlos. En consecuencia, quien procesa los datos los conoce en claro durante toda la operación, lo cual rompe la confidencialidad cuando el procesador no es el dueño de la clave. 
+
+Ningún esquema convencional resuelve este problema. 
+
