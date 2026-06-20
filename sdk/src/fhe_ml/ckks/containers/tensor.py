@@ -77,7 +77,9 @@ class PlaintextTensor:
 
     def bsgs_shifts(self) -> list[int]:
         n1, n2 = self._meta.n1, self._meta.n2
-        shifts = [n1 * j for j in range(1, n2)]
+        shifts: list[int] = []
+        if n2 > 1:
+            shifts.append(n1)
         if n1 > 1:
             shifts.append(1)
         return shifts

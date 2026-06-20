@@ -2,6 +2,7 @@
 #include <pybind11/stl.h>
 #include <heongpu/heongpu.hpp>
 #include <heongpu/util/memorypool.cuh>
+#include <heongpu/util/secstdparams.h>
 
 namespace py = pybind11;
 using namespace heongpu;
@@ -83,6 +84,25 @@ void register_context(py::module_& m)
           py::arg("security_level"),
           "Create a CKKS context with the given SecurityLevel.\n"
           "Security level is a constructor argument and cannot be changed after creation.");
+
+    m.def("security_bit_cap",
+          [](sec_level_type sec, size_t poly_modulus_degree) -> int {
+              switch (sec) {
+                  case sec_level_type::sec128:
+                      return heongpu_128bit_std_parms(poly_modulus_degree);
+                  case sec_level_type::sec192:
+                      return heongpu_192bit_std_parms(poly_modulus_degree);
+                  case sec_level_type::sec256:
+                      return heongpu_256bit_std_parms(poly_modulus_degree);
+                  default:
+                      return 0;
+              }
+          },
+          py::arg("security_level"), py::arg("poly_modulus_degree"),
+          "Max total Q+P coefficient-modulus bits allowed for "
+          "(security_level, N=poly_modulus_degree), per the HE security standard.\n"
+          "Returns 0 for NONE or a non-standard N. Source of truth for the bit cap "
+          "(HEonGPU secstdparams.h); avoids hardcoding the table in Python.");
 
     m.def("device_pool_used_bytes",
           []() -> size_t {

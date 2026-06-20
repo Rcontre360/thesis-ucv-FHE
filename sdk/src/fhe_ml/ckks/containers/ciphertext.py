@@ -63,13 +63,12 @@ class EncryptedVector:
         diagonals = matrix._encoded_diagonals
         target_depth = self._ct.depth
 
-        # Baby steps: rot(x, k) for k in [0, n1), built incrementally with step 1.
         baby: list[EncryptedVector] = [self.copy()]
         for _ in range(1, n1):
             baby.append(self.context.rotate(baby[-1], 1))
 
         result: EncryptedVector | None = None
-        for j in range(n2):
+        for j in range(n2 - 1, -1, -1):
             shift = n1 * j
             block: EncryptedVector | None = None
 
@@ -87,11 +86,10 @@ class EncryptedVector:
                 self.context.multiply_plain_rescale(term._ct, pt)
                 block = term if block is None else block + term
 
-            if block is None:
-                continue
-
-            rotated_block = block if j == 0 else self.context.rotate(block, shift)
-            result = rotated_block if result is None else result + rotated_block
+            if result is not None:
+                result = self.context.rotate(result, n1)
+            if block is not None:
+                result = block if result is None else result + block
 
         if result is None:
             raise ShapeError("All matrix diagonals are zero")
