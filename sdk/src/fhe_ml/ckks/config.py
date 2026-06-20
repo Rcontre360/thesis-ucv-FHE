@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 from fhe_ml.backend._backend import security_bit_cap
 from fhe_ml.utils.enums import SecurityLevel
+from fhe_ml.utils.errors import FHESDKError
 
 _VALID_LOG_N = {12, 13, 14, 15, 16}
 _PRIME_BITS_MIN = 30
@@ -13,8 +14,12 @@ _BOOTSTRAP_PIECE_MIN = 2
 _BOOTSTRAP_PIECE_MAX = 5
 _TAYLOR_MIN = 6
 _TAYLOR_MAX = 15
-_SLIM_BOOTSTRAP_OVERHEAD = 9
+_BOOT_FIXED_LEVELS = 7
 
+_AUTO_BASE_PRIME = 60
+_AUTO_P_PRIME = 60
+_AUTO_LOG_N = 16
+_AUTO_WORKING_ROOM = 3
 
 class _ValidatedDataclass:
     def __post_init__(self) -> None:
@@ -48,6 +53,9 @@ class BootstrapConfig(_ValidatedDataclass):
     ctos_piece: int = 3
     stoc_piece: int = 3
     taylor_number: int = 11
+
+    def consumed_levels(self) -> int:
+        return self.ctos_piece + self.taylor_number + _BOOT_FIXED_LEVELS
 
     def _validate(self) -> None:
         self._validate_piece("ctos_piece", self.ctos_piece)
@@ -223,14 +231,13 @@ class FHEConfig(_ValidatedDataclass):
             return
         q_size = len(self.coeff_modulus_bit_sizes) - 1
         b = self.bootstrap
-        min_q_size = (
-            b.ctos_piece + b.stoc_piece + b.taylor_number + _SLIM_BOOTSTRAP_OVERHEAD
-        )
+        min_q_size = b.consumed_levels() + 2
         if q_size < min_q_size:
             raise ValueError(
                 f"Q chain size ({q_size}) is too short for the bootstrap config "
                 f"(ctos={b.ctos_piece}, stoc={b.stoc_piece}, "
-                f"taylor={b.taylor_number}): need at least {min_q_size} Q primes. "
+                f"taylor={b.taylor_number}): it consumes {b.consumed_levels()} "
+                f"levels, so need at least {min_q_size} Q primes. "
                 f"Lengthen coeff_modulus_bit_sizes or use smaller bootstrap params."
             )
 
@@ -243,3 +250,39 @@ class FHEConfig(_ValidatedDataclass):
                     f"each relu_degrees entry must be an odd int >= 3 "
                     f"(Cheon-Kim-Kim-Lee f_n constraint), got {d}"
                 )
+
+
+def config_for_circuit(
+    scale: int,
+    circuit_depth: int,
+    relu_degrees: tuple[int, ...],
+    security_level: SecurityLevel = SecurityLevel.SEC128,
+) -> FHEConfig:
+    cap = security_bit_cap(security_level, 1 << _AUTO_LOG_N)
+
+    def fits(n_scaling: int) -> bool:
+        return _AUTO_BASE_PRIME + n_scaling * scale + 2 * _AUTO_P_PRIME <= cap
+
+    if fits(circuit_depth):
+        n_scaling = circuit_depth
+        bootstrap = None
+    else:
+        bootstrap = BootstrapConfig()
+        n_scaling = (cap - _AUTO_BASE_PRIME - 2 * _AUTO_P_PRIME) // scale
+        working_room = n_scaling - bootstrap.consumed_levels()
+        if working_room < _AUTO_WORKING_ROOM:
+            raise FHESDKError(
+                f"After bootstrapping ({bootstrap.consumed_levels()} levels) only "
+                f"{working_room} levels remain for computation at scale {scale}; "
+                f"need at least {_AUTO_WORKING_ROOM}. Lower the scale."
+            )
+
+    chain = [_AUTO_BASE_PRIME] + [scale] * n_scaling + [_AUTO_P_PRIME]
+    return FHEConfig(
+        log_n=_AUTO_LOG_N,
+        coeff_modulus_bit_sizes=chain,
+        log_scale=scale,
+        security_level=security_level,
+        bootstrap=bootstrap,
+        relu_degrees=relu_degrees,
+    )

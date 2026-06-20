@@ -3,6 +3,7 @@ from collections.abc import Iterator
 import numpy as np
 import torch.nn as nn
 
+from fhe_ml.ckks.config import FHEConfig, config_for_circuit
 from fhe_ml.ckks.containers.ciphertext import EncryptedVector
 from fhe_ml.ckks.containers.tensor import PlaintextTensor
 from fhe_ml.ckks.context import FHEContext
@@ -71,6 +72,15 @@ class Sequential:
     def input(self, client: Client, raw_data: object) -> Input:
         flat = self._layers[0].prepare_input(raw_data)
         return Input(client, flat)
+
+    def generate_config(
+        self, scale: int, relu_degrees: tuple[int, ...]
+    ) -> FHEConfig:
+        for layer in self._layers:
+            if isinstance(layer, ReLU):
+                layer.set_degrees(relu_degrees)
+        circuit_depth = sum(layer.mult_depth() for layer in self._layers)
+        return config_for_circuit(scale, circuit_depth, relu_degrees)
 
     def compile(self, context: FHEContext, calibration_data: object) -> "Sequential":
         if calibration_data is None:

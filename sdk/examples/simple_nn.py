@@ -9,7 +9,7 @@ the result. Weights/biases are plaintext.
 
 import numpy as np
 
-from fhe_ml import Client, FHEConfig, FHEContext, Sequential
+from fhe_ml import Client, FHEContext, Sequential
 from fhe_ml.layers import Linear, ReLU
 
 # ---------------------------------------------------------------------------
@@ -45,14 +45,6 @@ plaintext_input = [0.6, -0.4, 0.8, -0.2]
 # ---------------------------------------------------------------------------
 
 print("Building server context + compiling model...")
-config = FHEConfig(
-    log_n=14,
-    coeff_modulus_bit_sizes=[60] + [40] * 6 + [60],
-    log_scale=40,
-    relu_degrees=(3,),  # shallow ReLU so the circuit fits without bootstrapping
-)
-ctx = FHEContext(config)  # server: no secret key
-
 model = Sequential(
     [
         Linear(4, 8, W1, bias=b1),
@@ -60,6 +52,10 @@ model = Sequential(
         Linear(8, 2, W2, bias=b2),
     ]
 )
+# The SDK derives the entire CKKS config (prime chain, P primes, log_n,
+# bootstrapping) from just the scale and the ReLU polynomial degrees.
+config = model.generate_config(scale=40, relu_degrees=(3,))
+ctx = FHEContext(config)  # server: no secret key
 model.compile(ctx, np.array([plaintext_input], dtype=np.float32))
 
 # ---------------------------------------------------------------------------

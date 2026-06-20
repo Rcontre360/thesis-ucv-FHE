@@ -1,43 +1,25 @@
 """Encrypted inference deeper than the level budget — automatic bootstrapping.
 
 A stack of identity Linear layers performs more plaintext multiplications than
-the CKKS modulus chain has levels. `Sequential.compile()` detects this and sets
-up SLIM bootstrapping; the layers then refresh the ciphertext lazily during
-inference as levels run low. The output still equals the input because every
-layer is the identity — so any drift is purely CKKS/bootstrapping noise, which
-makes correctness easy to read.
+the CKKS modulus chain has levels. `generate_config` sizes the chain and enables
+SLIM bootstrapping when the circuit overflows the budget; `compile()` wires it
+up, and the layers refresh the ciphertext lazily during inference. The output
+still equals the input because every layer is the identity — so any drift is
+purely CKKS/bootstrapping noise, which makes correctness easy to read.
 
-INSECURE PARAMETERS: SecurityLevel.NONE lifts the modulus-bit cap so the long
-chain the bootstrap circuit needs fits at N=16384 on a 4 GB GPU. This is a
-correctness demo only — never use NONE for real data. A secure run needs
-N=65536 and a >=16 GB GPU.
+`generate_config` uses the secure default (SEC128, N=2^16), so bootstrapping
+here needs a GPU with enough memory for log_n=16 (a 4 GB card is not enough; use
+>= 16 GB).
 
 Run: from the sdk/ dir, `/usr/bin/python3.12 examples/bootstrapping.py`.
 """
 
 import numpy as np
 
-from fhe_ml import (
-    BootstrapConfig,
-    Client,
-    FHEConfig,
-    FHEContext,
-    SecurityLevel,
-    Sequential,
-)
+from fhe_ml import Client, FHEContext, Sequential
 from fhe_ml.layers import Linear
 
-DEPTH = 30
-
-config = FHEConfig(
-    log_n=14,
-    coeff_modulus_bit_sizes=[60] + [50] * 28 + [60],
-    log_scale=50,
-    security_level=SecurityLevel.NONE,
-    galois_keys_on_host=True,
-    bootstrap=BootstrapConfig(),
-)
-ctx = FHEContext(config)
+DEPTH = 40  # deeper than the auto-sized budget at N=2^16, so it must bootstrap
 
 identity = [
     [1.0, 0.0, 0.0, 0.0],
@@ -46,6 +28,11 @@ identity = [
     [0.0, 0.0, 0.0, 1.0],
 ]
 model = Sequential([Linear(4, 4, identity) for _ in range(DEPTH)])
+
+# Pure-linear network (no ReLU), so relu_degrees is an unused placeholder.
+config = model.generate_config(scale=50, relu_degrees=(7,))
+config.galois_keys_on_host = True  # keep the bootstrap galois keys off-device
+ctx = FHEContext(config)
 
 print(f"network depth : {DEPTH} levels")
 print(f"fresh budget  : {ctx._usable_levels()} levels  -> network overflows it")
