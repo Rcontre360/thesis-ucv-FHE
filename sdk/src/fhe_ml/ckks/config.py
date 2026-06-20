@@ -3,13 +3,9 @@ import math
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
+from fhe_ml.backend._backend import security_bit_cap
 from fhe_ml.utils.enums import SecurityLevel
 
-_SECURITY_CAPS = {
-    SecurityLevel.SEC128: {12: 109, 13: 218, 14: 438, 15: 881, 16: 1761},
-    SecurityLevel.SEC192: {12: 74, 13: 149, 14: 300, 15: 605, 16: 1212},
-    SecurityLevel.SEC256: {12: 57, 13: 115, 14: 232, 15: 465, 16: 930},
-}
 _VALID_LOG_N = {12, 13, 14, 15, 16}
 _PRIME_BITS_MIN = 30
 _PRIME_BITS_MAX = 60
@@ -100,7 +96,7 @@ class FHEConfig(_ValidatedDataclass):
         if self.security_level == SecurityLevel.NONE:
             num_p_max = q_size
         else:
-            cap = _SECURITY_CAPS[self.security_level][self.log_n]
+            cap = security_bit_cap(self.security_level, 1 << self.log_n)
             num_p_max = min(q_size, (cap - sum(q_bits)) // p_size)
         if num_p_max < 2:
             return 2
@@ -195,10 +191,7 @@ class FHEConfig(_ValidatedDataclass):
     def _validate_security_cap(self) -> None:
         if self.security_level == SecurityLevel.NONE:
             return
-        caps = _SECURITY_CAPS.get(self.security_level)
-        if caps is None:
-            raise ValueError(f"unknown security_level: {self.security_level}")
-        cap = caps[self.log_n]
+        cap = security_bit_cap(self.security_level, 1 << self.log_n)
         q_bits = self.coeff_modulus_bit_sizes[:-1]
         p_size = self.coeff_modulus_bit_sizes[-1]
         num_p = self.num_p()
