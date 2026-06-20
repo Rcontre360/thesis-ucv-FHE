@@ -34,8 +34,7 @@ class FHEContext:
 
         q_bits = config.coeff_modulus_bit_sizes[:-1]
         p_size = config.coeff_modulus_bit_sizes[-1]
-        num_p = max(2, round(sum(q_bits) / (8 * p_size)))
-        p_bits = [p_size] * num_p
+        p_bits = [p_size] * config.num_p()
 
         self._backend_ctx.set_coeff_modulus_bit_sizes(q_bits, p_bits)
         self._backend_ctx.generate()

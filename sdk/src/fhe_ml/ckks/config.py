@@ -1,4 +1,5 @@
 import json
+import math
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
@@ -91,6 +92,20 @@ class FHEConfig(_ValidatedDataclass):
         object.__setattr__(
             self, "galois_shifts", tuple(sorted({int(s) for s in shifts}))
         )
+
+    def num_p(self) -> int:
+        q_bits = self.coeff_modulus_bit_sizes[:-1]
+        p_size = self.coeff_modulus_bit_sizes[-1]
+        q_size = len(q_bits)
+        if self.security_level == SecurityLevel.NONE:
+            num_p_max = q_size
+        else:
+            cap = _SECURITY_CAPS[self.security_level][self.log_n]
+            num_p_max = min(q_size, (cap - sum(q_bits)) // p_size)
+        if num_p_max < 2:
+            return 2
+        dnum_min = math.ceil(q_size / num_p_max)
+        return max(2, math.ceil(q_size / dnum_min))
 
     def serialize(self) -> str:
         return json.dumps(
@@ -186,7 +201,7 @@ class FHEConfig(_ValidatedDataclass):
         cap = caps[self.log_n]
         q_bits = self.coeff_modulus_bit_sizes[:-1]
         p_size = self.coeff_modulus_bit_sizes[-1]
-        num_p = max(2, round(sum(q_bits) / (8 * p_size)))
+        num_p = self.num_p()
         total_bits = sum(q_bits) + num_p * p_size
         if total_bits > cap:
             raise ValueError(
@@ -199,7 +214,7 @@ class FHEConfig(_ValidatedDataclass):
     def _validate_coefficient_validator(self) -> None:
         q_bits = self.coeff_modulus_bit_sizes[:-1]
         p_size = self.coeff_modulus_bit_sizes[-1]
-        num_p = max(2, round(sum(q_bits) / (8 * p_size)))
+        num_p = self.num_p()
         total_p = num_p * p_size
         for i in range(0, len(q_bits), num_p):
             chunk = q_bits[i : i + num_p]
