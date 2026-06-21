@@ -31,10 +31,11 @@ def run(case_dir: str) -> None:
     model = load_weights(build_network(), case_dir).eval()
     enc_logits = np.empty((n, N_CLASSES), dtype=np.float64)
 
-    ctx = build_context()
+    sdk_model = to_sdk_model(model)
+    ctx = build_context(sdk_model)
 
     with Measure(alloc_probe=device_pool_used_bytes) as m_compile:
-        sdk_model = to_sdk_model(model).compile(ctx, x_calib)
+        sdk_model.compile(ctx, x_calib)
 
     # Keys now live on the client and depend on the shifts compile() recorded,
     # so client keygen runs after compile (the old build()-time keygen is gone).

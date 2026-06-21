@@ -1,20 +1,15 @@
 import torch
 
-from fhe_ml import BootstrapConfig, FHEConfig, FHEContext, SecurityLevel, Sequential
+from fhe_ml import FHEContext, Sequential
 from bench.mlp.model import N_FEATURES
 
-
-def build_context() -> FHEContext:
-    config = FHEConfig(
-        log_n=16,
-        coeff_modulus_bit_sizes=[60] + [52] * 28 + [60],
-        log_scale=52,
-        security_level=SecurityLevel.SEC128,
-        relu_degrees=(5,) * 12,
-        bootstrap=BootstrapConfig(),
-    )
-    return FHEContext(config)
+SCALE = 52
+RELU_DEGREES = (5,) * 12
 
 
 def to_sdk_model(model: torch.nn.Module) -> Sequential:
     return Sequential.from_torch(model, input_shape=(N_FEATURES,))
+
+
+def build_context(sdk_model: Sequential) -> FHEContext:
+    return FHEContext(sdk_model.generate_config(SCALE, RELU_DEGREES))

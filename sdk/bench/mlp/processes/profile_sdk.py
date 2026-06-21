@@ -22,8 +22,9 @@ def run(case_dir: str) -> None:
     x_calib = data["x_calib"].astype(np.float32)
 
     model = load_weights(build_network(), case_dir).eval()
-    ctx = build_context()
-    sdk_model = to_sdk_model(model).compile(ctx, x_calib)
+    sdk_model = to_sdk_model(model)
+    ctx = build_context(sdk_model)
+    sdk_model.compile(ctx, x_calib)
 
     client = Client(ctx)
     ctx.set_client_params(client.key_params())

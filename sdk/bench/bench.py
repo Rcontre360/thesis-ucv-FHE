@@ -61,7 +61,11 @@ def _run_backend(case: str, proc: str, env: dict[str, str]) -> dict | None:
         return row
 
 
-def orchestrate(case: str) -> None:
+LIBRARIES: list[str] = [proc[len("run_"):] for proc in BACKENDS]
+
+
+def orchestrate(case: str, backends: list[str] | None = None) -> None:
+    backends = backends or BACKENDS
     env: dict[str, str] = dict(os.environ, **{
         ENV_VRAM_BASELINE: str(_gpu_baseline_bytes()),
         ENV_BENCH_CASE: case,
@@ -71,7 +75,7 @@ def orchestrate(case: str) -> None:
         raise RuntimeError("train failed")
 
     rows: list[dict] = []
-    for proc in BACKENDS:
+    for proc in backends:
         row = _run_backend(case, proc, env)
         if row is not None:
             rows.append(row)
@@ -88,7 +92,8 @@ def orchestrate(case: str) -> None:
     print(df.to_string(index=False))
     print("saved", out)
 
-    _run(case, PROFILE, env)
+    if PROFILE.replace("profile_", "run_") in backends:
+        _run(case, PROFILE, env)
 
 
 def duration(case: str) -> None:
