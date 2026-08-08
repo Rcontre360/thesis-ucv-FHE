@@ -69,6 +69,7 @@
 		\input{portada}
 		%\input{agradecimientos}	%opcional
 		%\input{dedicatoria}		%opcional
+		\input{resumen}
 		\tableofcontents	%indice
 		\listoffigures	%opcional
 		\listoftables		%opcional
@@ -79,10 +80,14 @@
 		\input{chapter2}
 		\input{chapter3}
 	\backmatter
+		\input{conclusiones}
 		\bibliographystyle{IEEEtran}
 		%\bibliographystyle{plain}     %You may prefer \bibliographystyle{alpha}
 		%\bibliographystyle{alpha}
 		%\bibliographystyle{babalpha}
+		\clearpage
+		\phantomsection
+		\addcontentsline{toc}{chapter}{Referencias}
 		\bibliography{books}
 		\nocite{*}
 \end{document}

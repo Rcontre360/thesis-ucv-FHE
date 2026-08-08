@@ -1,0 +1,35 @@
+\chapter*{Conclusiones}
+\addcontentsline{toc}{chapter}{Conclusiones}
+\markboth{\MakeUppercase{Conclusiones}}{\MakeUppercase{Conclusiones}}
+
+El objetivo de este trabajo fue desarrollar una biblioteca en Python que permitiera ejecutar operaciones tensoriales e inferencia de redes neuronales sobre datos cifrados con el esquema de cifrado homomórfico CKKS, aprovechando la capacidad de procesamiento paralelo de la GPU. La biblioteca desarrollada cumple ese objetivo: permite describir una red neuronal de forma declarativa o convertir un modelo previamente entrenado en PyTorch, compilarla contra un contexto criptográfico y ejecutar su inferencia sobre datos cifrados, sin que el usuario manipule de forma directa las claves, los niveles de la cadena de módulos ni los objetos del \textit{backend}.
+
+Del diseño y la implementación descritos en el Capítulo 4 se desprenden varias conclusiones. La primera es que la abstracción del esquema criptográfico es viable sin sacrificar funcionalidad: la totalidad de la complejidad de CKKS, incluida la generación de claves, la relinealización, el reescalado y el \textit{bootstrapping}, pudo ocultarse detrás de una interfaz equivalente a la de las bibliotecas de aprendizaje profundo de uso común. La excepción son los parámetros del esquema, que permanecen expuestos al usuario porque su selección automática en función de la arquitectura de la red no resultó abordable dentro del alcance de este trabajo.
+
+La segunda conclusión es que expresar la convolución como una única multiplicación matriz-vector, en lugar de implementar un operador convolucional específico, permitió reutilizar una sola ruta de cómputo homomórfico para las capas lineal y convolucional. Esta decisión redujo la superficie de código que debe optimizarse y verificarse, y concentró el esfuerzo de optimización en una única operación crítica.
+
+La tercera conclusión es que la calibración de los rangos de las activaciones no es una optimización opcional sino un requisito de corrección. La aproximación polinómica de ReLU solo es precisa mientras su entrada permanece dentro de un intervalo acotado, y fuera de él el error crece con rapidez suficiente para invalidar el resultado de la inferencia. Plegar los rangos estimados en los pesos en texto plano durante la compilación resuelve este problema de forma exacta, aprovechando la homogeneidad positiva de ReLU, y sin introducir ninguna operación homomórfica adicional en tiempo de inferencia.
+
+La cuarta conclusión se refiere a la gestión del presupuesto de ruido. Determinar durante la compilación la profundidad multiplicativa total del modelo y contrastarla con los niveles disponibles en el contexto permite decidir automáticamente si la red requiere \textit{bootstrapping}, y evitar su costo cuando el circuito cabe en la cadena de módulos. Complementar esa decisión con un refresco disparado automáticamente en tiempo de inferencia, incluso en medio de la evaluación de una activación, libera al usuario de una de las tareas más delicadas del cómputo homomórfico.
+
+Finalmente, el conjunto de pruebas automatizadas construido junto con la biblioteca resultó ser el principal instrumento de verificación del trabajo, al constituir la garantía de que cada operación cifrada reproduce, dentro del margen de error propio de la aritmética aproximada de CKKS, el resultado del cómputo equivalente en texto plano.
+
+% NOTA (pendiente): esta sección debe completarse con las conclusiones cuantitativas
+% del capítulo de resultados (aceleración frente a Orion y Concrete ML, consumo de
+% memoria de video, R^2 de la red de regresión y exactitud/acuerdo de la red
+% convolucional), que todavía no forma parte del documento.
+
+\section*{Limitaciones}
+\addcontentsline{toc}{section}{Limitaciones}
+
+El trabajo presenta las siguientes limitaciones. La selección de los parámetros criptográficos permanece a cargo del usuario, quien debe conocer la profundidad multiplicativa de su red para elegir una cadena de módulos adecuada. El tamaño de los modelos que pueden evaluarse está acotado por dos factores: la profundidad multiplicativa del circuito homomórfico y el consumo de memoria de video, del que el conjunto de claves de Galois representa la mayor parte cuando se emplea un grado de polinomio elevado. El catálogo de capas soportadas se limita a las capas lineal y convolucional junto con la activación ReLU, sin incluir agrupamiento, normalización por lotes ni conexiones residuales. La biblioteca cubre únicamente la inferencia y no el entrenamiento sobre datos cifrados. Por último, la calidad de la aproximación de las activaciones depende de que el conjunto de datos empleado en la calibración sea representativo del rango de operación real de la red.
+
+\section*{Trabajo futuro}
+\addcontentsline{toc}{section}{Trabajo futuro}
+
+A partir de las limitaciones anteriores se identifican varias líneas de continuación. La más inmediata es la selección automática de los parámetros del esquema a partir de la profundidad multiplicativa y de los rangos estimados de la red, lo que eliminaría el último punto en que el usuario debe razonar en términos criptográficos. Una segunda línea consiste en ampliar el catálogo de capas soportadas para admitir arquitecturas más profundas y de uso más extendido. Una tercera línea es el empaquetado de los datos en múltiples textos cifrados, que permitiría evaluar redes cuyas capas exceden el número de ranuras disponibles en un único texto cifrado. Finalmente, el perfilado por capa incorporado al banco de pruebas ofrece la información necesaria para orientar la optimización de las operaciones que concentran el mayor costo del cómputo homomórfico.
+
+\section*{Aporte}
+\addcontentsline{toc}{section}{Aporte}
+
+El aporte principal de este trabajo es la biblioteca resultante, publicada como paquete instalable de código abierto y disponible para la comunidad. Al ofrecer inferencia privada acelerada por GPU detrás de una interfaz familiar para quienes trabajan con aprendizaje profundo, la biblioteca reduce la barrera de entrada al cómputo sobre datos cifrados para usuarios sin formación especializada en criptografía.
