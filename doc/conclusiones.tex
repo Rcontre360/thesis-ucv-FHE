@@ -24,8 +24,8 @@ Finalmente, el conjunto de pruebas automatizadas construido junto con la bibliot
 
 El trabajo presenta las siguientes limitaciones. La selección de los parámetros criptográficos permanece a cargo del usuario, quien debe conocer la profundidad multiplicativa de su red para elegir una cadena de módulos adecuada. El tamaño de los modelos que pueden evaluarse está acotado por dos factores: la profundidad multiplicativa del circuito homomórfico y el consumo de memoria de video, del que el conjunto de claves de Galois representa la mayor parte cuando se emplea un grado de polinomio elevado. El catálogo de capas soportadas se limita a las capas lineal y convolucional junto con la activación ReLU, sin incluir agrupamiento, normalización por lotes ni conexiones residuales. La biblioteca cubre únicamente la inferencia y no el entrenamiento sobre datos cifrados. Por último, la calidad de la aproximación de las activaciones depende de que el conjunto de datos empleado en la calibración sea representativo del rango de operación real de la red.
 
-\section*{Trabajo futuro}
-\addcontentsline{toc}{section}{Trabajo futuro}
+\section*{Recomendaciones}
+\addcontentsline{toc}{section}{Recomendaciones}
 
 A partir de las limitaciones anteriores se identifican varias líneas de continuación. La más inmediata es la selección automática de los parámetros del esquema a partir de la profundidad multiplicativa y de los rangos estimados de la red, lo que eliminaría el último punto en que el usuario debe razonar en términos criptográficos. Una segunda línea consiste en ampliar el catálogo de capas soportadas para admitir arquitecturas más profundas y de uso más extendido. Una tercera línea es el empaquetado de los datos en múltiples textos cifrados, que permitiría evaluar redes cuyas capas exceden el número de ranuras disponibles en un único texto cifrado. Finalmente, el perfilado por capa incorporado al banco de pruebas ofrece la información necesaria para orientar la optimización de las operaciones que concentran el mayor costo del cómputo homomórfico.
 
