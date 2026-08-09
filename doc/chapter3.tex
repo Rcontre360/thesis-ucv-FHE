@@ -176,7 +176,84 @@ La biblioteca oculta los \textit{bindings} al usuario. Esta decisión de diseño
 
 Los siguientes elementos se exponen al usuario: parametros de configuracion, las capas de red neuronal, el modelo secuencial y los vectores cifrados y en texto plano, junto con sus operaciones. No se exponen los elementos internos del esquema: las claves (secreta, pública, de relinealización y de Galois), los niveles de los textos cifrados ni los objetos crudos del \textit{backend}.
 
-En cuanto a los parámetros del esquema, los valores que el usuario indica son los tres siguientes. Los dos primeros se pasan al método \textit{generate\_config} del modelo secuencial, que deriva el resto de la configuración a partir de la red ya construida; el tercero se fija sobre el objeto de configuración resultante.
+\subsection{Detalles de implementación}\label{sec:metodo_implementacion}
+
+Esta sección describe cómo la biblioteca implementa internamente la red y su inferencia sobre datos cifrados. La inferencia se realiza capa por capa, traduciendo cada operación de la red a una secuencia de operaciones homomórficas del \textit{backend}.
+
+\subsubsection{Clases y dependencias}\label{sec:metodo_api}
+
+La biblioteca se distribuye como el paquete \nolinkurl{fhe_ml}. El código fuente y la documentación de uso están disponibles en el repositorio público del proyecto \cite{SDKRepo}.
+
+Las clases se organizaron en forma de capas, cada una depende únicamente de las que se encuentran en capas inferiores, nunca de las que la envuelven, de modo que la complejidad criptográfica queda confinada en el núcleo y disminuye de forma progresiva hacia el exterior. La capa más externa es la que el usuario emplea directamente, y en ella \textit{Sequential} es uno de los principales puntos de entrada, junto con \textit{Client}. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.70\textwidth]{images/modulos_dependencias.png}
+    \caption{Dependencias entre las clases públicas del paquete \nolinkurl{fhe_ml}.}
+    \label{fig:metodo_modulos}
+\end{figure}
+
+La \hyperref[fig:metodo_modulos]{Figura~\ref{fig:metodo_modulos}} muestra las dependencias entre las clases públicas, dispuestas de manera que las flechas siempre apuntan hacia adentro. Cada una cumple la siguiente función:
+
+\begin{itemize}
+    \item \textit{Sequential}: compone las capas en una red completa y orquesta su compilación y su inferencia. Es el punto de entrada del usuario y ninguna otra clase depende de ella.
+    \item \textit{Linear} y \textit{Conv2D}: capas afines, que expresan la multiplicación matriz-vector y la convolución sobre datos cifrados a partir de los pesos almacenados en texto plano.
+    \item \textit{ReLU}: capa de activación, que evalúa sobre el vector cifrado una aproximación polinómica de la función.
+    \item \textit{Square}: capa de activación que eleva el vector cifrado al cuadrado. Al tratarse ya de un polinomio, se evalúa de forma exacta con una única multiplicación.
+    \item \textit{Input}: representa la entrada cifrada de la red, que obtiene delegando el cifrado en el cliente. Su rol actual es conservar el texto cifrado y su tamaño. La decisión de usar una clase para envolver la entrada del modelo se debe a que en un futuro el modelo podría requerir una codificación distinta dependiendo de su implementación. Por lo tanto se puede usar esta clase para hacer esta codificación.
+    \item \textit{Client}: posee la clave secreta y es la única clase que genera las claves, cifra y descifra. Se apoya en el contexto para codificar los valores antes de cifrarlos.
+    \item \textit{FHEContext}: concentra la construcción del contexto criptográfico y las operaciones homomórficas del esquema. Opera del lado del evaluador y no tiene acceso a la clave secreta, sino únicamente a las claves de evaluación que le entrega el cliente. Es la frontera del núcleo: ninguna clase por encima de ella manipula objetos criptográficos.
+    \item \textit{EncryptedVector}: vector de números reales empaquetado en las ranuras de un texto cifrado, sobre el que se definen las operaciones homomórficas que emplean las capas.
+    \item \textit{PlaintextVector} y \textit{PlaintextTensor}: los operandos en claro, el segundo de ellos responsable además de precomputar la representación de la matriz de pesos que requiere la multiplicación matriz-vector.
+    \item \textit{FHEConfig} y \textit{BootstrapConfig}: describen los parámetros del esquema y los del \textit{bootstrapping}, y validan su consistencia antes de construir el contexto.
+    \item \nolinkurl{config_for_circuit}: función que deriva una configuración completa a partir del factor de escala, la profundidad multiplicativa del circuito y los grados de los polinomios de la activación, y que activa el \textit{bootstrapping} cuando la cadena de módulos no alcanza para el circuito.
+    \item \textit{KeyParams}: clase auxiliar que encapsula las claves de evaluación: la de relinealización y la de Galois, y que las serializa y deserializa. Estas claves son públicas y el servidor las necesita para evaluar la red, de modo que el cliente las genera una sola vez y se las transmite por medio de esta clase.
+\end{itemize}
+
+El \hyperref[lst:metodo_api]{Código~\ref{lst:metodo_api}} muestra el uso completo de la biblioteca sobre una red de dos capas, siguiendo los cuatro pasos descritos anteriormente e indicando qué parte del proceso corresponde al servidor y cuál al cliente.
+
+\begin{lstlisting}[language=Python,caption={Inferencia cifrada de una red de dos capas, con las operaciones que corresponden al servidor y al cliente.},label={lst:metodo_api}]
+import numpy as np
+from fhe_ml import Client, FHEContext, Sequential
+from fhe_ml.layers import Linear, ReLU
+
+# --- Servidor ---
+# 1. Construye la red con los pesos que ya entreno en texto plano.
+model = Sequential([
+    Linear(4, 8, W1, bias=b1),
+    ReLU(),
+    Linear(8, 2, W2, bias=b2),
+])
+
+# 2. Deriva los parametros del esquema a partir de la red y compila.
+config = model.generate_config(scale=40, relu_degrees=(3,))
+context = FHEContext(config)
+model.compile(context, datos_de_calibracion)
+
+# El servidor envia la configuracion al cliente: config.serialize().
+
+# --- Cliente ---
+# 3. Con esa configuracion genera sus claves y cifra la entrada.
+client = Client(context)
+claves = client.key_params()
+entrada_cifrada = client.encrypt(entrada)
+
+# El cliente envia al servidor las claves de evaluacion, mediante
+# claves.serialize(), junto con la entrada cifrada.
+
+# --- Servidor ---
+# Evalua la red sobre los datos cifrados y devuelve la salida, tambien cifrada
+context.set_client_params(claves)
+salida_cifrada = model(entrada_cifrada)
+
+# --- Cliente ---
+# 4. Descifra el resultado
+resultado = client.decrypt(salida_cifrada)
+\end{lstlisting}
+
+\subsubsection{Configuración}\label{sec:metodo_config}
+
+En cuanto a los parámetros del esquema, usando el método \textit{generate\_config} de la clase \textit{Sequential}, los valores que el usuario indica son los siguientes: 
 
 \begin{itemize}
     \item Factor de escala: el número de bits de la escala $\Delta$ con la que se codifican los valores. Determina la precisión de la aritmética aproximada y, a la vez, el tamaño de cada primo de la cadena de módulos.
@@ -186,7 +263,7 @@ En cuanto a los parámetros del esquema, los valores que el usuario indica son l
     \item Ubicación de las claves de Galois (\api{galois_keys_on_host}): indica dónde reside el conjunto de claves de Galois, si la variable de configuración es verdadera, residen en memoria principal, caso contrario en la memoria del GPU.
 \end{itemize}
 
-El objeto de configuración resultante es una estructura de Python cuyos campos permanecen accesibles, de modo que un usuario con conocimientos del esquema puede ajustarlos antes de construir el contexto. Los campos generados por la biblioteca son los siguientes:
+El objeto de configuración resultante (\textit{FHEConfig}) es una estructura de Python cuyos campos permanecen accesibles, de modo que un usuario con conocimientos del esquema puede ajustarlos antes de construir el contexto. Los campos generados por la biblioteca son los siguientes:
 
 \begin{itemize}
     \item Grado del polinomio: Constante cuyo valor es $2^{16}$. 
@@ -200,11 +277,7 @@ El objeto de configuración resultante es una estructura de Python cuyos campos 
     \item Desplazamientos de las claves de Galois: se generan durante la compilación del modelo por HEonGPU. 
 \end{itemize}
 
-Cada asignación hecha por el usuario dispara la validaciones descritas más adelante, por lo que una configuración inconsistente se rechaza en el momento de escribirla y no al invocar al \textit{backend}.
-
-\subsubsection{Validaciones de configuración}
-
-Antes de construir el contexto criptográfico e invocar al \textit{backend}, la biblioteca valida la configuración de los parámetros del esquema. Esta validación se realiza en la capa de Python y valida lo siguiente:
+Cada asignación hecha por el usuario dispara las validaciones descritas a continuación, por lo que una configuración inconsistente se rechaza en el momento de escribirla y no al invocar al \textit{backend}.
 
 \begin{itemize}
     \item que el grado del polinomio se encuentre entre los valores admitidos. Esto debido a que el usuario puede modificar el valor constante ya dado. 
@@ -214,86 +287,7 @@ Antes de construir el contexto criptográfico e invocar al \textit{backend}, la 
     \item que los grados de los polinomios de activación sean impares y mayores o iguales que tres, como requiere la aproximación empleada.
 \end{itemize}
 
-Estas comprobaciones se ejecutan cada vez que se modifica un parámetro. La validación se sitúa en Python, antes de llegar al \textit{backend}, con mensajes de error claros, ademas varias de las validaciones no son evaluadas por el \textit{backend}. 
-
-\subsection{Detalles de implementación}\label{sec:metodo_implementacion}
-
-Esta sección describe cómo la biblioteca implementa internamente la red y su inferencia sobre datos cifrados. La inferencia se realiza capa por capa, traduciendo cada operación de la red a una secuencia de operaciones homomórficas del \textit{backend}.
-
-\subsubsection{Módulos e interfaz pública}\label{sec:metodo_api}
-
-La biblioteca se distribuye como el paquete \nolinkurl{fhe_ml}, organizado en los módulos que se resumen en la \hyperref[tab:metodo_modulos]{Tabla~\ref{tab:metodo_modulos}}. El código fuente y la documentación de uso están disponibles en el repositorio público del proyecto \cite{SDKRepo}.
-
-\begin{table}[h]
-    \centering
-    \caption{Módulos del paquete \nolinkurl{fhe_ml}.}\label{tab:metodo_modulos}
-    \vspace{0.5em}
-    \begin{tabular}{| l | p{8.2cm} |}
-        \hline
-        Módulo & Contenido \\
-        \hline
-        \repofile{src/fhe_ml/backend} & Enlaces con HEonGPU construidos con pybind11. \\
-        \hline
-        \repofile{src/fhe_ml/ckks} & Contexto criptográfico, configuración del esquema, validaciones y los contenedores de datos cifrados y en texto plano. \\
-        \hline
-        \repofile{src/fhe_ml/layers} & Capas de red neuronal: \textit{Linear}, \textit{Conv2D}, \textit{ReLU}, \textit{Square} y la entrada del modelo. \\
-        \hline
-        \repofile{src/fhe_ml/sequential.py} & Clase \textit{Sequential}, que compone las capas y orquesta la compilación y la inferencia. \\
-        \hline
-        \repofile{src/fhe_ml/client.py} & Clase \textit{Client}, que posee la clave secreta y realiza el cifrado y el descifrado. \\
-        \hline
-        \repofile{src/fhe_ml/utils} & Conversión de datos, validación de formas y errores propios de la biblioteca. \\
-        \hline
-    \end{tabular}
-\end{table}
-
-Las dependencias entre estos módulos se muestran en la \hyperref[fig:metodo_modulos]{Figura~\ref{fig:metodo_modulos}}. Las flechas indican qué módulo utiliza a cuál: el flujo va del modelo secuencial hacia las capas y el cliente, de estos hacia el contexto y los contenedores de datos, y de todos ellos hacia el \textit{backend}, que es el único punto por el que la biblioteca alcanza a HEonGPU.
-
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=\textwidth]{images/modulos_dependencias.png}
-    \caption{Dependencias entre los módulos del paquete \nolinkurl{fhe_ml}.}
-    \label{fig:metodo_modulos}
-\end{figure}
-
-La interfaz pública que el usuario importa se reduce a un conjunto reducido de nombres: el contexto y su configuración (\textit{FHEContext}, \textit{FHEConfig} y \textit{BootstrapConfig}), el modelo y sus capas (\textit{Sequential}, \textit{Linear}, \textit{Conv2D}, \textit{ReLU} y \textit{Square}), el cliente (\textit{Client}), los contenedores de datos (\textit{EncryptedVector}, \textit{PlaintextVector} y \textit{PlaintextTensor}) y los errores que la biblioteca puede arrojar. Ninguna clave, ni el nivel de los textos cifrados, ni los objetos del \textit{backend} forman parte de esta interfaz.
-
-El \hyperref[lst:metodo_api]{Código~\ref{lst:metodo_api}} muestra el uso completo de la biblioteca sobre una red de dos capas, siguiendo los cuatro pasos descritos anteriormente.
-
-\begin{lstlisting}[language=Python,caption={Inferencia cifrada de una red de dos capas.},label={lst:metodo_api}]
-import numpy as np
-from fhe_ml import Client, FHEContext, Sequential
-from fhe_ml.layers import Linear, ReLU
-
-# 1. Construccion del modelo con los pesos ya entrenados.
-model = Sequential([
-    Linear(4, 8, W1, bias=b1),
-    ReLU(),
-    Linear(8, 2, W2, bias=b2),
-])
-
-# 2. Configuracion del esquema y compilacion contra el contexto.
-#    La calibracion de los rangos ocurre dentro de compile().
-config = model.generate_config(scale=40, relu_degrees=(3,))
-context = FHEContext(config)
-model.compile(context, datos_de_calibracion)
-
-# 3. El cliente genera las claves, cifra la entrada y la red se evalua.
-client = Client(context)
-context.set_client_params(client.key_params())
-salida_cifrada = model(client.encrypt(entrada))
-
-# 4. Descifrado del resultado.
-resultado = client.decrypt(salida_cifrada)
-\end{lstlisting}
-
-La configuración del esquema no se escribe a mano: el método \textit{generate\_config} la deriva del propio modelo, a partir del factor de escala y de los grados de los polinomios de la activación, calculando la cadena de módulos necesaria y activando el \textit{bootstrapping} si la profundidad multiplicativa lo exige. Como alternativa a enumerar las capas, el método \textit{Sequential.from\_torch} construye el modelo equivalente a partir de una red ya entrenada en PyTorch y la forma de una muestra de entrada.
-
-\subsubsection{Clase \textit{Sequential}}
-
-La clase \textit{Sequential} es el componente logico principal para la inferencia y compilacion. Para ejecutar la inferencia, recibe la entrada cifrada y aplica cada capa en orden, propagando un vector cifrado de una capa a la siguiente hasta obtener la salida cifrada de la red.
-
-Antes de poder inferir, el modelo debe llamar la funcion \textit{compile} contra un contexto criptográfico; este paso, que entre otras tareas calibra la red, se describe más adelante en \hyperref[sec:metodo_calibracion]{Calibración de la red}. La clase admite además construir la red enumerando las capas manualmente o, alternativamente, a partir de un modelo entrenado en PyTorch, traduciendo automáticamente las capas soportadas.
+Estas comprobaciones se ejecutan cada vez que se modifica un parámetro. La validación se sitúa en Python, antes de llegar al \textit{backend}, con mensajes de error claros, ademas varias de las validaciones no son evaluadas por el \textit{backend}.
 
 \subsubsection{Multiplicación matriz-vector}
 
@@ -568,7 +562,7 @@ A los datos de entrada de ambos modelos se les aplicó una normalización estad�
 \]
 donde $\mu$ y $\sigma$ son la media y la desviación estándar de la característica, estimadas a partir del conjunto de entrenamiento. La estandarización es especialmente relevante en el contexto del cifrado homomórfico, ya que mantener las entradas en un rango acotado y centrado facilita el ajuste de las aproximaciones polinómicas de las funciones de activación, las cuales solo son precisas dentro de un intervalo limitado.
 
-\section{Metodología de evaluación}\label{sec:metodo_evaluacion}
+\section{Evaluación comparativa}\label{sec:metodo_evaluacion}
 
 La evaluación comparativa consistió en medir, sobre los dos casos de uso descritos, el rendimiento de cada implementación y la fidelidad de sus resultados respecto a la ejecución en texto plano. A continuación se describen la orquestación de los experimentos, las fases medidas y las métricas registradas.
 
