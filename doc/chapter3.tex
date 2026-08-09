@@ -88,6 +88,15 @@ La biblioteca se organiza en estructuras de datos y objetos que abstraen la conf
     \item Utilidades: funciones auxiliares de conversión de datos, validación de esquemas y definición de errores propios de la biblioteca.
 \end{itemize}
 
+La \hyperref[fig:metodo_capas]{Figura~\ref{fig:metodo_capas}} muestra cómo se apilan estas capas y por dónde discurre una operación desde el código del usuario hasta la GPU.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.82\textwidth]{images/arquitectura_capas.png}
+    \caption{Arquitectura en capas de la biblioteca. El usuario solo interactúa con la interfaz pública; cada capa traduce las operaciones a las de la capa inferior hasta llegar a HEonGPU y a los núcleos CUDA.}
+    \label{fig:metodo_capas}
+\end{figure}
+
 El proyecto se empaqueta con \textit{scikit-build-core} y CMake, que compilan la extensión del \textit{backend} y la integran como un módulo importable junto al código Python. Esta separación en capas permite que el usuario interactúe únicamente con las capas superiores (modelo secuencial y capas de red), sin necesidad de conocer los detalles criptográficos ni de la GPU.
 
 \subsubsection{Estructuras de datos}
@@ -128,22 +137,77 @@ Las bibliotecas más difundidas que implementan CKKS, como SEAL \cite{SEAL} y PA
 
 El \textit{backend} criptográfico es HEonGPU \cite{HEonGPU}, una biblioteca escrita en C++ y CUDA que implementa el esquema CKKS sobre la GPU. Proporciona las primitivas de bajo nivel del esquema: la creación del contexto, la codificación y decodificación, el cifrado y descifrado, las operaciones homomórficas (suma, multiplicación, reescalado, relinealización y rotación) y el \textit{bootstrapping}. Se eligió entre las alternativas aceleradas por GPU porque ofrece una implementación de CKKS con soporte de \textit{bootstrapping}, necesario para evaluar redes cuya profundidad multiplicativa excede los niveles disponibles en la cadena de módulos.
 
-Se construyó una capa de enlaces (\textit{bindings}) con pybind11, que expone los objetos de C++ como objetos nativos de Python y gestiona la traducción de tipos y la transferencia de datos entre ambos lenguajes. Estos enlaces se organizan por responsabilidad, agrupando por separado la creación del contexto, los componentes criptográficos (codificador, cifrador, descifrador y generador de claves), los tipos de claves, los objetos de datos (textos cifrados y en claro), el operador de operaciones homomórficas y las enumeraciones expuestas a Python. Sobre esta capa de enlaces se construye la envoltura en Python que el resto de la biblioteca utiliza.
+Se construyó una capa de enlaces con pybind11, que expone los objetos de C++ como objetos nativos de Python y gestiona la traducción de tipos y la transferencia de datos entre ambos lenguajes. Estos enlaces se organizan por responsabilidad, agrupando por separado la creación del contexto, los componentes criptográficos, los tipos de claves, los objetos de datos, el operador de operaciones homomórficas y las enumeraciones expuestas a Python. Sobre esta capa de enlaces se construye la envoltura en Python que el resto de la biblioteca utiliza.
+
+La \hyperref[fig:metodo_bindings]{Figura~\ref{fig:metodo_bindings}} enumera cada módulo de enlace, las clases que expone a Python y la clase de HEonGPU a la que corresponde. Los elementos de HEonGPU que estos enlaces ponen a disposición de Python son los siguientes:
+
+\begin{itemize}
+    \item Contexto y parámetros (\texttt{CKKSContext}): construye el contexto del esquema y fija el grado del polinomio, la cadena de módulos y el nivel de seguridad. Informa además los niveles disponibles y la memoria de video libre.
+
+    \item Codificación (\texttt{CKKSEncoder}): transforma un vector de números reales en un texto en claro y viceversa, e informa cuántas ranuras admite el texto cifrado.
+
+    \item Cifrado y descifrado (\texttt{CKKSEncryptor} y \texttt{CKKSDecryptor}): cifran un texto en claro y recuperan su contenido con la clave secreta.
+
+    \item Generación de claves (\texttt{CKKSKeyGenerator}): produce la clave secreta, la clave pública, la clave de relinealización y las claves de Galois.
+
+    \item Par de claves (\texttt{CKKSSecretkey} y \texttt{CKKSPublickey}): la clave secreta, que solo posee el cliente, y la clave pública con la que se cifra.
+
+    \item Claves de evaluación (\texttt{CKKSRelinkey} y \texttt{CKKSGaloiskey}): habilitan la relinealización y las rotaciones. Ambas admiten serialización, lo que permite transferirlas entre procesos.
+
+    \item Datos (\texttt{CKKSCiphertext} y \texttt{CKKSPlaintext}): contienen el texto cifrado y el texto en claro, junto con su nivel dentro de la cadena de módulos.
+
+    \item Operaciones homomórficas (\texttt{CKKSOperator}): suma, resta, negación y multiplicación, tanto entre textos cifrados como contra un texto en claro o un escalar; rotación de las ranuras; relinealización, reescalado y descenso de nivel; y el \textit{bootstrapping} en sus variantes regular y SLIM.
+
+    \item Configuración del \textit{bootstrapping} (\texttt{BootstrappingConfig}): agrupa los parámetros del circuito de refresco.
+
+    \item Enumeraciones (\texttt{SecurityLevel} y \texttt{BootstrappingType}): el nivel de seguridad del esquema y la variante de \textit{bootstrapping} empleada.
+\end{itemize}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{images/bindings_map.png}
+    \caption{Enlaces construidos con pybind11 y su contraparte en HEonGPU.}
+    \label{fig:metodo_bindings}
+\end{figure}
 
 \subsubsection{Abstracción del \textit{backend}}
 
-La biblioteca oculta deliberadamente el \textit{backend} al usuario y solo expone una interfaz de alto nivel. Esta decisión de diseño responde a tres motivos: la complejidad criptográfica del esquema CKKS, que exige conocimientos especializados para usarse correctamente; y la seguridad, ya que una manipulación incorrecta de los objetos criptográficos podría comprometer las garantías del esquema o directamente arrojar errores.
+La biblioteca oculta los \textit{bindings} al usuario. Esta decisión de diseño responde a tres motivos: la complejidad de HEonGPU exige conocimientos especializados para usarse correctamente; y la seguridad, ya que una manipulación incorrecta de los objetos criptográficos podría comprometer las garantías del esquema o directamente arrojar errores.
 
-En consecuencia, lo que se expone al usuario son las abstracciones de alto nivel: el contexto criptográfico, las capas de red neuronal, el modelo secuencial y los vectores cifrados y en texto plano, junto con sus operaciones. Por el contrario, no se exponen los elementos internos del esquema: las claves (secreta, pública, de relinealización y de Galois), los niveles de los textos cifrados ni los objetos crudos del \textit{backend}. El usuario nunca manipula estos elementos de forma directa; la biblioteca los gestiona internamente durante la compilación y la inferencia.
+Los siguientes elementos se exponen al usuario: parametros de configuracion, las capas de red neuronal, el modelo secuencial y los vectores cifrados y en texto plano, junto con sus operaciones. No se exponen los elementos internos del esquema: las claves (secreta, pública, de relinealización y de Galois), los niveles de los textos cifrados ni los objetos crudos del \textit{backend}.
 
-Ademas se exponen varios parametros de configuración de la libreria, esto debido a la dificultad de crear una selección automática de parámetros en función de la red neuronal desarrollada. 
+En cuanto a los parámetros del esquema, los valores que el usuario indica son los tres siguientes. Los dos primeros se pasan al método \textit{generate\_config} del modelo secuencial, que deriva el resto de la configuración a partir de la red ya construida; el tercero se fija sobre el objeto de configuración resultante.
+
+\begin{itemize}
+    \item Factor de escala: el número de bits de la escala $\Delta$ con la que se codifican los valores. Determina la precisión de la aritmética aproximada y, a la vez, el tamaño de cada primo de la cadena de módulos.
+
+    \item Grados de la aproximación de ReLU: la secuencia de grados de los polinomios que se componen para aproximar la función signo. Fija la precisión de la activación y la profundidad multiplicativa que esta consume.
+
+    \item Ubicación de las claves de Galois (\api{galois_keys_on_host}): indica dónde reside el conjunto de claves de Galois, si la variable de configuración es verdadera, residen en memoria principal, caso contrario en la memoria del GPU.
+\end{itemize}
+
+El objeto de configuración resultante es una estructura de Python cuyos campos permanecen accesibles, de modo que un usuario con conocimientos del esquema puede ajustarlos antes de construir el contexto. Los campos generados por la biblioteca son los siguientes:
+
+\begin{itemize}
+    \item Grado del polinomio: Constante cuyo valor es $2^{16}$. 
+
+    \item Nivel de seguridad: Constante, 128 bits. El menor nivel de seguridad para reducir el consumo de memoria.
+
+    \item Cadena de módulos: un primo base de 60 bits, seguido de tantos primos del tamaño del factor de escala como niveles requiera la red, y cerrada por un primo auxiliar de 60 bits. 
+
+    \item Parámetros del \textit{bootstrapping}: Se generan los valores que puedan permitir la mayor cantidad de operaciones entre cada \textit{bootstrapping}. Son 3 valores de configuracion cuyas formulas se derivan de tablas predeterminadas dadas por HEonGPU.
+
+    \item Desplazamientos de las claves de Galois: se generan durante la compilación del modelo por HEonGPU. 
+\end{itemize}
+
+Cada asignación hecha por el usuario dispara la validaciones descritas más adelante, por lo que una configuración inconsistente se rechaza en el momento de escribirla y no al invocar al \textit{backend}.
 
 \subsubsection{Validaciones de configuración}
 
 Antes de construir el contexto criptográfico e invocar al \textit{backend}, la biblioteca valida la configuración de los parámetros del esquema. Esta validación se realiza en la capa de Python y valida lo siguiente:
 
 \begin{itemize}
-    \item que el grado del polinomio se encuentre entre los valores admitidos;
+    \item que el grado del polinomio se encuentre entre los valores admitidos. Esto debido a que el usuario puede modificar el valor constante ya dado. 
     \item que los tamaños de los primos de la cadena de módulos estén dentro de un rango válido y que la cadena tenga la forma esperada (primos para la cadena $Q$ más el tamaño del primo auxiliar $P$);
     \item que el tamaño total del módulo no exceda el tope que impone el nivel de seguridad elegido para ese grado de polinomio;
     \item que, cuando se activa el \textit{bootstrapping}, la cadena de módulos sea suficientemente larga para alojar su circuito;
@@ -155,6 +219,75 @@ Estas comprobaciones se ejecutan cada vez que se modifica un parámetro. La vali
 \subsection{Detalles de implementación}\label{sec:metodo_implementacion}
 
 Esta sección describe cómo la biblioteca implementa internamente la red y su inferencia sobre datos cifrados. La inferencia se realiza capa por capa, traduciendo cada operación de la red a una secuencia de operaciones homomórficas del \textit{backend}.
+
+\subsubsection{Módulos e interfaz pública}\label{sec:metodo_api}
+
+La biblioteca se distribuye como el paquete \nolinkurl{fhe_ml}, organizado en los módulos que se resumen en la \hyperref[tab:metodo_modulos]{Tabla~\ref{tab:metodo_modulos}}. El código fuente y la documentación de uso están disponibles en el repositorio público del proyecto \cite{SDKRepo}.
+
+\begin{table}[h]
+    \centering
+    \caption{Módulos del paquete \nolinkurl{fhe_ml}.}\label{tab:metodo_modulos}
+    \vspace{0.5em}
+    \begin{tabular}{| l | p{8.2cm} |}
+        \hline
+        Módulo & Contenido \\
+        \hline
+        \repofile{src/fhe_ml/backend} & Enlaces con HEonGPU construidos con pybind11. \\
+        \hline
+        \repofile{src/fhe_ml/ckks} & Contexto criptográfico, configuración del esquema, validaciones y los contenedores de datos cifrados y en texto plano. \\
+        \hline
+        \repofile{src/fhe_ml/layers} & Capas de red neuronal: \textit{Linear}, \textit{Conv2D}, \textit{ReLU}, \textit{Square} y la entrada del modelo. \\
+        \hline
+        \repofile{src/fhe_ml/sequential.py} & Clase \textit{Sequential}, que compone las capas y orquesta la compilación y la inferencia. \\
+        \hline
+        \repofile{src/fhe_ml/client.py} & Clase \textit{Client}, que posee la clave secreta y realiza el cifrado y el descifrado. \\
+        \hline
+        \repofile{src/fhe_ml/utils} & Conversión de datos, validación de formas y errores propios de la biblioteca. \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Las dependencias entre estos módulos se muestran en la \hyperref[fig:metodo_modulos]{Figura~\ref{fig:metodo_modulos}}. Las flechas indican qué módulo utiliza a cuál: el flujo va del modelo secuencial hacia las capas y el cliente, de estos hacia el contexto y los contenedores de datos, y de todos ellos hacia el \textit{backend}, que es el único punto por el que la biblioteca alcanza a HEonGPU.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{images/modulos_dependencias.png}
+    \caption{Dependencias entre los módulos del paquete \nolinkurl{fhe_ml}.}
+    \label{fig:metodo_modulos}
+\end{figure}
+
+La interfaz pública que el usuario importa se reduce a un conjunto reducido de nombres: el contexto y su configuración (\textit{FHEContext}, \textit{FHEConfig} y \textit{BootstrapConfig}), el modelo y sus capas (\textit{Sequential}, \textit{Linear}, \textit{Conv2D}, \textit{ReLU} y \textit{Square}), el cliente (\textit{Client}), los contenedores de datos (\textit{EncryptedVector}, \textit{PlaintextVector} y \textit{PlaintextTensor}) y los errores que la biblioteca puede arrojar. Ninguna clave, ni el nivel de los textos cifrados, ni los objetos del \textit{backend} forman parte de esta interfaz.
+
+El \hyperref[lst:metodo_api]{Código~\ref{lst:metodo_api}} muestra el uso completo de la biblioteca sobre una red de dos capas, siguiendo los cuatro pasos descritos anteriormente.
+
+\begin{lstlisting}[language=Python,caption={Inferencia cifrada de una red de dos capas.},label={lst:metodo_api}]
+import numpy as np
+from fhe_ml import Client, FHEContext, Sequential
+from fhe_ml.layers import Linear, ReLU
+
+# 1. Construccion del modelo con los pesos ya entrenados.
+model = Sequential([
+    Linear(4, 8, W1, bias=b1),
+    ReLU(),
+    Linear(8, 2, W2, bias=b2),
+])
+
+# 2. Configuracion del esquema y compilacion contra el contexto.
+#    La calibracion de los rangos ocurre dentro de compile().
+config = model.generate_config(scale=40, relu_degrees=(3,))
+context = FHEContext(config)
+model.compile(context, datos_de_calibracion)
+
+# 3. El cliente genera las claves, cifra la entrada y la red se evalua.
+client = Client(context)
+context.set_client_params(client.key_params())
+salida_cifrada = model(client.encrypt(entrada))
+
+# 4. Descifrado del resultado.
+resultado = client.decrypt(salida_cifrada)
+\end{lstlisting}
+
+La configuración del esquema no se escribe a mano: el método \textit{generate\_config} la deriva del propio modelo, a partir del factor de escala y de los grados de los polinomios de la activación, calculando la cadena de módulos necesaria y activando el \textit{bootstrapping} si la profundidad multiplicativa lo exige. Como alternativa a enumerar las capas, el método \textit{Sequential.from\_torch} construye el modelo equivalente a partir de una red ya entrenada en PyTorch y la forma de una muestra de entrada.
 
 \subsubsection{Clase \textit{Sequential}}
 

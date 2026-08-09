@@ -16,9 +16,23 @@
 \usepackage{algpseudocode}
 \usepackage[footnotesize]{subfigure}
 \usepackage{makeidx}
-\usepackage[hidelinks]{hyperref} 
+\usepackage[hidelinks]{hyperref}
 \usepackage[all]{hypcap}
 \usepackage{color}
+\usepackage{listings}
+\input{listing}
+
+% Repositorio de la biblioteca. La referencia bibliográfica es una sola
+% (\cite{SDKRepo}); \repofile enlaza a un archivo concreto dentro de ella.
+% La base apunta a una etiqueta fija, no a la rama principal, para que los
+% enlaces sigan siendo válidos aunque el repositorio cambie.
+\newcommand{\repobase}{https://github.com/Rcontre360/thesis-ucv-FHE/blob/v0.3.5}
+\newcommand{\repofile}[1]{\href{\repobase/#1}{\nolinkurl{#1}}}
+
+% Nombre de una operación de la API, en monoespaciada y partible por el guion
+% bajo; \texttt no admite cortes y desborda el margen con nombres largos.
+\newcommand{\api}[1]{\nolinkurl{#1}}
+
 \makeindex
 %\renewcommand{\baselinestretch}{1}
 %\renewcommand{\contentsname}{Índice General}%{Tabla de Contenidos}
