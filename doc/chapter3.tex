@@ -386,7 +386,7 @@ La \hyperref[tab:metodo_libs]{Tabla~\ref{tab:metodo_libs}} resume las diferencia
     \end{tabular}
 \end{table}
 
-\section{Conjuntos de datos y modelos de prueba}\label{sec:metodo_modelos}
+\section{Conjuntos de datos y escenarios de prueba}\label{sec:metodo_modelos}
 
 Para evaluar la biblioteca se definieron dos casos de uso correspondientes a dos arquitecturas de red representativas: una red totalmente conectada aplicada a un problema de regresión, y una red convolucional aplicada a un problema de clasificación. En ambos casos, los modelos se mantienen deliberadamente compactos, ya que la profundidad multiplicativa del circuito homomórfico y el consumo de memoria de la GPU crecen rápidamente con el tamaño de la red. Para cada red se describe, además de su conjunto de datos, su arquitectura y su entrenamiento, los parámetros de configuración con los que cada implementación la ejecutó, pues dichos parámetros dependen de la red.
 
@@ -581,15 +581,17 @@ Antes de ejecutar las implementaciones, el coordinador mide una sola vez el cons
 
 De cada implementación cifrada se miden dos fases. La primera es la generación de claves (\textit{keygen}), en la que se construye el contexto criptográfico y se genera el conjunto de claves del esquema. La segunda es la inferencia (\textit{infer}), en la que se cifra la entrada, se evalúa la red sobre los datos cifrados y se descifra la salida. La ejecución de referencia en PyTorch, al operar en texto plano, solo atraviesa la fase de inferencia. Para cada fase se registran de forma independiente las métricas de tiempo y memoria descritas más adelante, lo que permite atribuir a cada etapa su consumo de recursos.
 
-\subsection{Conteo de muestras}
+\subsection{Conteo de muestras}\label{sec:metodo_muestras}
 
 La forma de obtener las métricas de calidad y de latencia depende de cada implementación, según si su ejecución en claro es equivalente a la cifrada.
 
 En la biblioteca propuesta y en Orion, ambas basadas en CKKS, la ejecución en claro no es equivalente a la cifrada: la aritmética aproximada y el ruido del cifrado hacen que el resultado cifrado difiera del que produciría la red sin cifrar. Por ello, las métricas de calidad deben medirse sobre la salida cifrada real. En estos casos se ejecuta un único bucle de inferencias cifradas sobre un conjunto de muestras de prueba, del que se obtienen tanto las métricas de calidad como la latencia por muestra.
 
-En Concrete~ML, en cambio, sí se separan dos conjuntos de muestras: las métricas de calidad se obtienen sobre un conjunto mayor (varias decenas de muestras) evaluado en su modo en claro (sin cifrar), mientras que la latencia se mide sobre un conjunto reducido (una o dos muestras) en modo cifrado real.
+En Concrete~ML, en cambio, sí se separan dos conjuntos de muestras: las métricas de calidad se obtienen sobre un conjunto mayor evaluado en su modo en claro (sin cifrar), mientras que la latencia se mide sobre un conjunto reducido en modo cifrado real.
 
 La ejecución de referencia en PyTorch, al operar siempre en texto plano, evalúa todas sus muestras de la misma forma.
+
+El tamaño de estos conjuntos lo dicta el costo por inferencia cifrada, prohibitivo en las implementaciones más lentas. En la biblioteca propuesta y en Orion el bucle cifrado recorre cinco muestras, mientras la evaluación en claro del modelo aproximado recorre cincuenta. En Concrete~ML el bucle cifrado se reduce a una sola muestra y su evaluación en claro a veinte. La ejecución de referencia en PyTorch emplea doscientas. Las métricas obtenidas bajo cifrado real quedan así referidas a conjuntos muy pequeños, algo que debe tenerse presente al interpretar los resultados.
 
 \subsection{Métricas de rendimiento y fidelidad}\label{sec:metodo_metricas}
 
@@ -629,3 +631,229 @@ Para la biblioteca propuesta, las métricas de fidelidad se registran en dos var
 \subsection{Perfilado por capa}
 
 Además de las métricas agregadas por fase, se realizó un perfilado detallado de la inferencia de la biblioteca propuesta, midiendo el tiempo de ejecución y el consumo de memoria de video tras la evaluación de cada capa individual de la red. Este perfilado permite identificar qué operaciones constituyen los principales cuellos de botella del cómputo homomórfico (por ejemplo, las funciones de activación frente a las capas lineales, o la capa convolucional frente a las capas densas), información que resulta valiosa para orientar futuras optimizaciones de la biblioteca.
+
+\section{Análisis de resultados}\label{sec:metodo_resultados}
+
+Esta sección muestra y analiza los resultados obtenidos de la evaluación comparativa expuesta anteriormente. El análisis se presenta por separado para cada caso de uso, comenzando por la red de regresión.
+
+\subsection{Regresión: red totalmente conectada}\label{sec:res_mlp}
+
+La red alcanza en texto plano un $R^2$ de 0.793 sobre el conjunto de prueba completo, y de 0.804 sobre el subconjunto que evalúa la ejecución de referencia. Este es el valor que la inferencia cifrada debería reproducir. La \hyperref[tab:res_calidad_mlp]{Tabla~\ref{tab:res_calidad_mlp}} recoge la calidad y la fidelidad obtenidas, separando el modelo aproximado sin cifrar del mismo modelo bajo cifrado real, para distinguir el costo de la aproximación del costo del cifrado.
+
+\begin{table}[h]
+    \centering
+    \small
+    \caption{Calidad y fidelidad de la inferencia en el caso de regresión. La columna aproximado corresponde al modelo transformado para el esquema y evaluado sin cifrar; la columna cifrado, al mismo modelo bajo cifrado real.}\label{tab:res_calidad_mlp}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r | r |}
+        \hline
+        & \multicolumn{2}{c |}{$R^2$} & \\
+        \cline{2-3}
+        Implementación & Aproximado & Cifrado & MAE \\
+        \hline
+        PyTorch (texto plano) & 0.804 & --- & --- \\
+        \hline
+        Biblioteca propuesta & 0.716 & 0.478 & $6.2 \times 10^{-4}$ \\
+        \hline
+        Orion & 0.716 & 0.475 & $1.9 \times 10^{-3}$ \\
+        \hline
+        Concrete~ML & 0.165 & --- & $5.1 \times 10^{-1}$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+El costo de la aproximación se lee comparando la columna del modelo aproximado con la ejecución en texto plano. Sustituir ReLU por una composición de polinomios lleva el $R^2$ de 0.804 a 0.716. La cuantización de Concrete~ML provoca un deterioro mayor, con un $R^2$ de 0.165.
+
+El costo del cifrado se aprecia mejor en las métricas de fidelidad. La biblioteca propuesta reproduce la salida en texto plano con un error absoluto medio de $6.2 \times 10^{-4}$, el menor de las tres implementaciones.
+
+La caída del $R^2$ de 0.716 a 0.478 es atribuible al cifrado. En CKKS cada operación homomórfica, y en particular cada multiplicación, añade ruido al texto cifrado. La aproximación polinómica de ReLU es intensiva en multiplicaciones, pues cada una de las composiciones que la forman exige varias. La biblioteca propuesta y Orion obtienen valores prácticamente iguales, 0.478 y 0.475. Ambas emplean el mismo esquema de cifrado y una profundidad multiplicativa comparable. 
+
+Concrete~ML no muestra una caída equivalente porque su esquema pierde precisión en la cuantización y aproximación de las funciones, no en operaciones en el espacio cifrado.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{images/res_calidad_mlp.png}
+    \caption{Calidad y fidelidad en el caso de regresión. Concrete~ML no aporta una cifra bajo cifrado, dado que sus resultados no cambian al ejecutarse cifrada.}
+    \label{fig:res_calidad_mlp}
+\end{figure}
+
+La \hyperref[tab:res_rend_mlp]{Tabla~\ref{tab:res_rend_mlp}} recoge el rendimiento. La generación de claves se lo realiza cada cliente una sola vez. La inferencia es el tiempo por muestra, incluyendo el cifrado de la entrada y el descifrado de la salida. 
+
+\begin{table}[h]
+    \centering
+    \small
+    \caption{Rendimiento en el caso de regresión. El tiempo de inferencia es por muestra.}\label{tab:res_rend_mlp}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r | r | r |}
+        \hline
+        & \multicolumn{2}{c |}{Tiempo (s)} & \multicolumn{2}{c |}{Memoria (MB)} \\
+        \cline{2-5}
+        Implementación & Claves & Infer. & VRAM & RAM \\
+        \hline
+        PyTorch (texto plano) & --- & 0.0006 & 9 & 621 \\
+        \hline
+        Biblioteca propuesta & 0.47 & 6.68 & 17\,996 & 744 \\
+        \hline
+        Orion & 5.30 & 78.24 & 526 & 48\,579 \\
+        \hline
+        Concrete~ML & 2.99 & 790.03 & 526 & 3\,465 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+La biblioteca propuesta resuelve una inferencia en 6.68 segundos, frente a los 78.24 de Orion y los 790.03 de Concrete~ML, lo que supone una aceleración de 11.7 veces sobre la primera y de 118 veces sobre la segunda. Respecto de la ejecución en texto plano, la inferencia cifrada resulta unas $1.0 \times 10^{4}$ veces más lenta. La generación de claves es también la más rápida de las tres, con 0.47 segundos frente a los 5.30 de Orion y los 2.99 de Concrete~ML.
+
+En cuanto a la memoria, el conjunto de trabajo de la biblioteca alcanza 17.6~GB durante la compilación, con apenas 744~MB de memoria principal. Las dos implementaciones sobre CPU invierten esa relación, y Orion resulta la más costosa de todas con 48.6~GB de memoria principal. Las claves de Galois son guardadas en VRAM para el caso de regresión.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{images/res_rendimiento_mlp.png}
+    \caption{Rendimiento en el caso de regresión, en escala logarítmica. La memoria de video de la biblioteca propuesta y de PyTorch corresponde a su conjunto de trabajo.}
+    \label{fig:res_rend_mlp}
+\end{figure}
+
+El perfilado capa por capa, en la \hyperref[tab:res_perfil_mlp]{Tabla~\ref{tab:res_perfil_mlp}}, identifica dónde se concentra el costo. La suma de los tiempos por capa coincide con la latencia medida de extremo a extremo, lo que indica que el cifrado de la entrada y el descifrado de la salida son despreciables frente a la evaluación de la red.
+
+\begin{table}[h]
+    \centering
+    \caption{Tiempo por capa de la biblioteca propuesta en el caso de regresión, sobre una única muestra.}\label{tab:res_perfil_mlp}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r |}
+        \hline
+        Capa & Tiempo (s) & Porcentaje \\
+        \hline
+        Lineal & 0.04 & 0.5 \\
+        \hline
+        ReLU & 2.20 & 33.3 \\
+        \hline
+        Lineal & 0.26 & 4.0 \\
+        \hline
+        ReLU & 4.02 & 60.7 \\
+        \hline
+        Lineal & 0.10 & 1.5 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Las dos activaciones consumen el 94\% del tiempo, mientras las tres capas lineales apenas suman el 6\%. La aproximación de ReLU es la operación más costosa del circuito. La explicación de que la segunda activación tarde casi el doble que la primera, pese a operar sobre un vector menor, es el número de operaciones de \textit{bootstrapping} que cada una desencadena.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.72\textwidth]{images/res_perfil_mlp.png}
+    \caption{Tiempo por capa en el caso de regresión, sobre una única muestra.}
+    \label{fig:res_perfil_mlp}
+\end{figure}
+
+\subsection{Clasificación: red convolucional}\label{sec:res_cnn}
+
+La red en PyTorch alcanza en texto plano una exactitud de 0.939 sobre el conjunto de prueba completo, y de 0.925 sobre el subconjunto que evalúa la ejecución de referencia. La \hyperref[tab:res_calidad_cnn]{Tabla~\ref{tab:res_calidad_cnn}} recoge la calidad y la fidelidad obtenidas, con la misma separación entre el modelo aproximado sin cifrar y el mismo modelo bajo cifrado real.
+
+\begin{table}[h]
+    \centering
+    \small
+    \caption{Calidad y fidelidad de la inferencia en el caso de clasificación. El acuerdo es la proporción de muestras en que la clase predicha bajo cifrado coincide con la del modelo en claro.}\label{tab:res_calidad_cnn}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r | r | r |}
+        \hline
+        & \multicolumn{2}{c |}{Exactitud} & & \\
+        \cline{2-3}
+        Implementación & Aproximado & Cifrado & Acuerdo & MAE \\
+        \hline
+        PyTorch (texto plano) & 0.925 & --- & --- & --- \\
+        \hline
+        Biblioteca propuesta & 0.86 & 0.40 & 0.60 & $9.1 \times 10^{1}$ \\
+        \hline
+        Orion & 0.88 & 0.80 & 1.00 & $3.2 \times 10^{-3}$ \\
+        \hline
+        Concrete~ML & 0.85 & --- & 1.00 & $3.3 \times 10^{-1}$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Aquí el costo de la aproximación es equivalente en las tres implementaciones, entre 0.85 y 0.88 frente a 0.925, porque la decisión del clasificador solo depende de cuál puntuación es la mayor y no de su valor exacto.
+
+El costo del cifrado, en cambio, separa a las implementaciones. Orion preserva íntegramente la decisión del clasificador, con un acuerdo de 1.00 y un error de $3.2 \times 10^{-3}$ sobre las puntuaciones. Concrete~ML también la preserva pese a un error de 0.33.
+
+La biblioteca propuesta no supera esta prueba. Su error absoluto medio sobre las puntuaciones es de 91.2, cuatro órdenes de magnitud por encima del de Orion, y su acuerdo de 0.60 indica que en el 40\% de las muestras la clase predicha bajo cifrado difiere de la que produce el modelo en claro. Como el mismo modelo, ejecutado sin cifrar pero con sus aproximaciones polinómicas y su calibración, alcanza una exactitud de 0.86, la degradación no proviene de la aproximación de las activaciones.
+
+La degradación se atribuye a la implementación de la capa convolucional y a la configuración del esquema con la que se ejecutó. Tal como se describió anteriormente, la biblioteca reduce la convolución a una única multiplicación matriz-vector, la misma rutina que emplean las capas lineales, construyendo en texto plano la matriz que representa el filtro. Esta decisión, tomada al inicio del desarrollo, privilegia la flexibilidad: admite cualquier combinación de tamaño del núcleo, paso, relleno y número de canales sin necesidad de un tratamiento específico para cada caso. Orion, en cambio, implementa un esquema propio de la convolución que reordena las operaciones para obtener el mismo resultado con un número menor de ellas, a cambio de admitir un conjunto más restringido de configuraciones.
+
+Cada multiplicación y cada rotación homomórfica añade ruido al texto cifrado y consume niveles de la cadena de módulos, de manera que el error se acumula a lo largo del circuito. Una ruta de cómputo con más operaciones llega al final con un error mayor. La ejecución del mismo modelo aproximado sin cifrar no manifiesta el problema porque en aritmética de punto flotante las operaciones adicionales no acumulan error de forma apreciable, y por eso su exactitud se mantiene en 0.86. A ello se suma la configuración del esquema, cuyo factor de escala y cadena de módulos se fijaron para acomodar la profundidad multiplicativa del circuito y dejan un margen ajustado para el error que este acumula. La red de regresión no presenta esta dificultad porque sus capas lineales emplean la misma multiplicación matriz-vector eficiente que las bibliotecas de referencia, sin la expansión de operaciones que introduce la convolución.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{images/res_calidad_cnn.png}
+    \caption{Calidad y fidelidad en el caso de clasificación. Nótese la escala logarítmica del panel derecho: el error de la biblioteca propuesta supera en cuatro órdenes de magnitud al de las dos referencias.}
+    \label{fig:res_calidad_cnn}
+\end{figure}
+
+\begin{table}[h]
+    \centering
+    \small
+    \caption{Rendimiento en el caso de clasificación. El tiempo de generación de claves se paga una vez por modelo; el de inferencia es por muestra.}\label{tab:res_rend_cnn}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r | r | r |}
+        \hline
+        & \multicolumn{2}{c |}{Tiempo (s)} & \multicolumn{2}{c |}{Memoria (MB)} \\
+        \cline{2-5}
+        Implementación & Claves & Infer. & VRAM & RAM \\
+        \hline
+        PyTorch (texto plano) & --- & 0.0015 & 0.4 & 805 \\
+        \hline
+        Biblioteca propuesta & 39.93 & 28.31 & 3\,120 & 44\,600 \\
+        \hline
+        Orion & 5.27 & 46.49 & 526 & 35\,257 \\
+        \hline
+        Concrete~ML & 3.03 & 448.88 & 528 & 4\,372 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+La biblioteca propuesta sigue siendo la más rápida, con 28.31 segundos por inferencia frente a los 46.49 de Orion y los 448.88 de Concrete~ML, esto es 1.6 y 15.9 veces respectivamente. La distancia con la ejecución en texto plano sube a $1.9 \times 10^{4}$ veces. La generación de claves, en cambio, pasa a costar 39.93 segundos, dos órdenes de magnitud más que en la red de regresión, debido al número de claves de Galois que exige el empaquetado de la convolución.
+
+Ese mismo conjunto de claves obligó a activar la opción de mantenerlas en la memoria del anfitrión, descrita en la \hyperref[sec:metodo_config]{sección de configuración}. El conjunto de trabajo en la GPU baja así a 3.0~GB, a cambio de 43.6~GB de memoria principal. Este intercambio es lo que permite evaluar la red en una tarjeta de 24~GB, y confirma que el conjunto de claves de Galois constituye la mayor parte del consumo de memoria del esquema.
+
+Conviene distinguir esas cifras del pico a nivel de dispositivo, que en la biblioteca propuesta asciende a 21.4~GB tanto aquí como en la red de regresión, prácticamente la totalidad de la tarjeta. Ese valor mide la memoria que el gestor de la GPU reserva por adelantado para su reservorio, y por eso permanece constante aunque el conjunto de trabajo varíe entre 17.6 y 3.0~GB. Esto es debido a que HEonGPU ocupa la tarjeta completa con independencia de la configuración.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{images/res_rendimiento_cnn.png}
+    \caption{Rendimiento en el caso de clasificación, en escala logarítmica.}
+    \label{fig:res_rend_cnn}
+\end{figure}
+
+ La \hyperref[tab:res_perfil_cnn]{Tabla~\ref{tab:res_perfil_cnn}} muestra el tiempo de inferencia por capa de la biblioteca propuesta.
+
+\begin{table}[h]
+    \centering
+    \caption{Tiempo por capa en el caso de clasificación.}\label{tab:res_perfil_cnn}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r |}
+        \hline
+        Capa & Tiempo (s) & Porcentaje \\
+        \hline
+        Convolucional & 14.76 & 51.9 \\
+        \hline
+        ReLU & 12.17 & 42.8 \\
+        \hline
+        Lineal & 1.52 & 5.4 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+La capa convolucional consume el 51.9\% del tiempo y la activación el 42.8\%. Esto identifica las dos operaciones sobre las que conviene concentrar cualquier esfuerzo de optimización futuro: la evaluación de los polinomios de activación y la implementación de la convolución.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.72\textwidth]{images/res_perfil_cnn.png}
+    \caption{Tiempo por capa en el caso de clasificación, sobre una única muestra.}
+    \label{fig:res_perfil_cnn}
+\end{figure}
+
+\subsection{Síntesis}
+
+De la evaluación se puede concluir que la aceleración por GPU logra una inferencia más rápida en ambos casos de uso, con ventajas de 11.7 y 1.6 veces sobre Orion, que emplea el mismo esquema sobre CPU, y de dos órdenes de magnitud sobre Concrete~ML. La generación de claves es también más rápida.
+
+Los resultados tambien muestran que nuestra biblioteca consume mas memoria, ademas que es menos eficiente al momento de reducir la cantidad o tamaño de las claves Galois. El conjunto de claves de Galois domina el consumo de memoria.
+
+La fidelidad depende de red neuronal a evaluar y la implementación de sus capas y la aproximación de las funciones de activación. La red de regresión se reproduce cifrada con un error de $6.2 \times 10^{-4}$ respecto a la salida en claro, el menor de las tres implementaciones. La red convolucional, en cambio, pierde la decisión del clasificador, que las dos bibliotecas de referencia preservan íntegramente. La causa es una decisión de diseño, expresar la convolución como una multiplicación matriz-vector de propósito general. Esto otorga flexibilidad sobre los parámetros de la convolución a costa de un número de operaciones mayor. Esto produce mas operaciones a diferencia de las otras librerias, y a su vez produce mas ruido. 
