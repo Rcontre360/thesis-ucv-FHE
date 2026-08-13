@@ -1,28 +1,34 @@
 \chapter{Marco Metodológico}
 
-El presente trabajo tiene por objetivo desarrollar una biblioteca que permita ejecutar la inferencia de redes neuronales sobre datos cifrados con el esquema CKKS, aprovechando la capacidad de procesamiento paralelo de la GPU. Para constatar que la biblioteca cumple dicho objetivo, su evaluación se aborda desde dos perspectivas complementarias: la aproximación de los resultados cifrados respecto a los resultados obtenidos en texto plano; y la medición de su rendimiento.
+En este capítulo se documentan las actividades realizadas para construir la biblioteca propuesta. Describe su desarrollo, desde la capa que comunica a Python con el \textit{backend} criptográfico hasta las capas de red neuronal que operan sobre datos cifrados. El trabajo de implementación se organiza en las siguientes actividades:
 
-Para ello se construyó un conjunto de pruebas que ejecuta dos arquitecturas representativas de redes neuronales (una red totalmente conectada y una red convolucional) usando cuatro implementaciones distintas: la biblioteca propuesta, una ejecución de referencia en texto plano y dos bibliotecas de cifrado homomórfico del estado del arte. El flujo de trabajo experimental consta de las siguientes fases:
+\begin{enumerate}
+    \item Preparación de la infraestructura: se seleccionó y configuró el entorno de hardware y de software sobre el que se desarrolló la biblioteca y se ejecutaron las mediciones.
+
+    \item Construcción de la capa de acceso al esquema: se eligió un \textit{backend} que implementa CKKS sobre la GPU y se construyeron los enlaces que exponen sus operaciones básicas al lenguaje Python.
+
+    \item Diseño e implementación de la biblioteca: sobre esa capa se definieron las estructuras de datos que representan los tensores cifrados y en texto plano, y se implementaron las capas de red neuronal junto con la gestión automática de los niveles y la calibración del modelo, de modo que el usuario no manipule directamente los objetos criptográficos.
+
+    \item Validación de las operaciones: el desarrollo se guio por un conjunto de pruebas automatizadas que comprueba que cada operación cifrada reproduce su equivalente en texto plano.
+
+    \item Construcción de los casos de uso: se entrenaron dos arquitecturas representativas de redes neuronales, una totalmente conectada para un problema de regresión y una convolucional para uno de clasificación, y se ejecutó su inferencia con la biblioteca.
+
+    \item Evaluación comparativa: se implementaron esos mismos casos de uso sobre otras bibliotecas de cifrado homomórfico y se midieron el rendimiento y la fidelidad de todas las implementaciones.
+\end{enumerate}
+
+La evaluación comparativa se apoya en un banco de pruebas que ejecuta dos redes neuronales sobre cuatro implementaciones distintas: la biblioteca propuesta, una ejecución de referencia en texto plano y dos bibliotecas de cifrado homomórfico del estado del arte. En este capítulo se justifica el criterio con que se escogió cada una de estas referencias y qué aporta al contraste, la configuración de parámetros bajo la que se ejecutó, y las métricas con las que se midieron su rendimiento y la fidelidad de sus resultados. Para cada combinación de red neuronal e implementación, el banco recorre las siguientes fases:
 
 \begin{enumerate}
     \item Entrenamiento: se entrena una única vez cada arquitectura en texto plano sobre su conjunto de datos, y se almacenan los pesos resultantes. Todas las implementaciones cifradas parten de estos mismos pesos, de modo que las diferencias observadas se atribuyen exclusivamente al esquema de cifrado y no al proceso de entrenamiento.
     \item Configuración de parámetros: para cada biblioteca se selecciona el conjunto de parámetros criptográficos con el que se ejecutará la red. En las bibliotecas basadas en CKKS, estos parámetros dependen de la red a evaluar.
     \item Generación de claves: a partir de los parámetros anteriores, cada biblioteca de cifrado construye su contexto criptográfico y genera el conjunto de claves necesario (clave pública, clave de relinealización y claves de rotación o de Galois).
-    \item Compilación: el modelo entrenado se traduce a la representación interna de cada biblioteca, lo que incluye la calibración de los rangos de entrada y el ajuste de las aproximaciones polinómicas de las funciones de activación.
     \item Inferencia: se cifra la entrada, se ejecuta la pasada hacia adelante sobre los datos cifrados y se descifra la salida.
     \item Medición y consolidación: durante cada fase se registran las métricas de tiempo, memoria y fidelidad y los resultados de todas las implementaciones se consolidan para su análisis.
 \end{enumerate}
 
-%\begin{figure}[h!]
-%    \centering
-%    \includegraphics[width=0.9\textwidth]{images/bench_workflow.png}
-%    \caption{Flujo de trabajo del banco de pruebas.}
-%    \label{fig:bench_workflow}
-%\end{figure}
+\section{Infraestructura de la solución}\label{sec:metodo_infraestructura}
 
-\section{Infraestructura de la solución}
-
-El desarrollo y la ejecución de los experimentos se llevaron a cabo utilizando los siguientes recursos de hardware y software.
+A continuación se describen los recursos de hardware y software utilizados para el desarrollo y ejecución de los experimentos.
 
 \subsection{Hardware}
 
@@ -32,7 +38,7 @@ Los experimentos se ejecutaron sobre una instancia virtual de cómputo en la nub
     \item GPU: una unidad NVIDIA GeForce RTX 3090, de arquitectura Ampere, con 24~GB de memoria de video (VRAM) y soporte para CUDA 12.4. La instancia disponía de acceso exclusivo a esta tarjeta. 
     \item CPU: 32 núcleos virtuales (vCPU) asignados a la instancia, correspondientes a un procesador físico AMD EPYC 7H12.
     \item Memoria RAM: 128~GB asignados a la instancia.
-    \item Sistema operativo: GNU/Linux con núcleo 6.8.
+    \item Sistema operativo: Ubuntu 26.04 LTS. Con núcleo 6.8. 
 \end{itemize}
 
 Se eligió una instancia en la nube debido a que el esquema CKKS acelerado por GPU requiere una tarjeta gráfica con una cantidad considerable de memoria de video, y a la conveniencia de disponer de un entorno reproducible y aislado para las mediciones de rendimiento.
@@ -61,11 +67,15 @@ Las principales bibliotecas de software empleadas, con sus respectivas versiones
     \item pynvml: enlace de Python a la biblioteca NVML de NVIDIA, utilizada para medir el consumo de memoria de video.
 \end{itemize}
 
-\section{Diseño de la biblioteca}\label{sec:metodo_diseno}
+\section{Desarrollo de la biblioteca}\label{sec:metodo_desarrollo}
 
-La biblioteca desarrollada expone una interfaz de alto nivel en Python para construir redes neuronales y ejecutar su inferencia sobre datos cifrados, ocultando al usuario la complejidad del esquema CKKS y la gestión de la memoria de la GPU. Su diseño se inspira en la forma de trabajar de las bibliotecas de aprendizaje profundo de uso común: el usuario describe la red como una secuencia de capas y la biblioteca se encarga de traducir esa descripción a operaciones homomórficas. En esta sección se describe la organización del código, las estructuras de datos sobre las que opera y la interfaz que se ofrece al usuario.
+Esta sección documenta la construcción de la biblioteca: el diseño de su interfaz y de sus estructuras de datos, la capa que da acceso al esquema CKKS acelerado por GPU, la implementación de las operaciones y de las capas de red neuronal, la estrategia de pruebas con la que se validó, y las bibliotecas de referencia frente a las que se contrasta más adelante.
 
-\subsection{Estructura del código}
+\subsection{Diseño de la biblioteca}\label{sec:metodo_diseno}
+
+La biblioteca desarrollada expone una interfaz de alto nivel en Python para construir redes neuronales y ejecutar su inferencia sobre datos cifrados, ocultando al usuario la complejidad del esquema CKKS y la gestión de la memoria de la GPU. Su diseño se inspira en la forma de trabajar de las bibliotecas de aprendizaje profundo de uso común: el usuario describe la red como una secuencia de capas y la biblioteca se encarga de traducir esa descripción a operaciones homomórficas. A continuación se describe la organización del código, las estructuras de datos sobre las que opera y la interfaz que se ofrece al usuario.
+
+\subsubsection{Estructura del código}
 
 La biblioteca se organiza en estructuras de datos y objetos que abstraen la configuración y complejidad del esquema de cifrado lo mas posible del usuario.
 
@@ -74,12 +84,19 @@ La biblioteca se organiza en estructuras de datos y objetos que abstraen la conf
     \item Esquema CKKS: una envoltura en Python sobre el \textit{backend} que encapsula el contexto criptográfico, la configuración del esquema, la generación de claves y las operaciones homomórficas básicas.
     \item Capas: las capas de red neuronal (lineal, convolucional y las activaciones), que expresan las operaciones de la red en términos de las operaciones homomórficas de la capa anterior.
     \item Modelo secuencial: el componente que compone las capas en una red completa y orquesta su compilación y su inferencia.
-    \item Utilidades: funciones auxiliares de conversión de datos, validación de formas y definición de errores propios de la biblioteca.
+    \item Utilidades: funciones auxiliares de conversión de datos, validación de esquemas y definición de errores propios de la biblioteca.
 \end{itemize}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.82\textwidth]{images/arquitectura_capas.png}
+    \caption{Arquitectura en capas de la biblioteca. El usuario solo interactúa con la interfaz pública; cada capa traduce las operaciones a las de la capa inferior hasta llegar a HEonGPU y a los núcleos CUDA.}
+    \label{fig:metodo_capas}
+\end{figure}
 
 El proyecto se empaqueta con \textit{scikit-build-core} y CMake, que compilan la extensión del \textit{backend} y la integran como un módulo importable junto al código Python. Esta separación en capas permite que el usuario interactúe únicamente con las capas superiores (modelo secuencial y capas de red), sin necesidad de conocer los detalles criptográficos ni de la GPU.
 
-\subsection{Estructuras de datos}
+\subsubsection{Estructuras de datos}
 
 La biblioteca distingue explícitamente entre los datos cifrados y los datos en texto plano mediante estructuras separadas:
 
@@ -87,14 +104,48 @@ La biblioteca distingue explícitamente entre los datos cifrados y los datos en 
     \item Vector cifrado: representa un vector de números reales empaquetado en las ranuras de un texto cifrado de CKKS. Es la estructura sobre la que operan las capas de la red y mantiene la información de su nivel dentro de la cadena de módulos. Sobre ella se definen las operaciones homomórficas (suma, resta, multiplicación, rotación, producto punto y multiplicación matriz-vector).
     \item Vector en texto plano: representa un vector codificado pero sin cifrar, utilizado como operando en claro de algunas operaciones.
     \item Tensor en texto plano: almacena los pesos de las capas (matrices en dos o tres dimensiones) en texto plano. Es responsable, además, de precomputar la representación de la matriz de pesos que requiere la multiplicación matriz-vector.
-    \item Entrada del modelo: estructura que cifra el vector de entrada de la red a partir de los datos en claro proporcionados por el usuario.
 \end{itemize}
 
 Esta separación entre estructuras en claro y cifradas refleja el modelo de uso del cifrado homomórfico en la inferencia: los pesos del modelo permanecen en texto plano, mientras que la entrada del usuario y todos los resultados intermedios viajan cifrados.
 
-\subsection{Interfaz de usuario y conversión desde PyTorch}
+\subsubsection{Interfaz y conversión desde PyTorch}
 
-La interfaz de la biblioteca es declarativa: el usuario construye un modelo secuencial enumerando sus capas, de forma análoga a otras bibliotecas de aprendizaje profundo. Además, la biblioteca ofrece una función de conversión que toma un modelo ya entrenado en PyTorch y construye automáticamente el modelo equivalente con cifrado homomórfico. Esto permite utilizar modelos entrenados con herramientas estándar.
+Para usar la libreria usuario construye un modelo secuencial enumerando sus capas, de forma análoga a otras bibliotecas de aprendizaje profundo. Además, la biblioteca ofrece una función de conversión que toma un modelo ya entrenado en PyTorch y construye automáticamente el modelo equivalente con cifrado homomórfico. Esto permite utilizar modelos entrenados con herramientas estándar.
+
+Las capas que el usuario puede componer son las siguientes:
+
+\begin{itemize}
+    \item \textit{Linear}: capa densa o totalmente conectada. Recibe el número de entradas y de salidas, la matriz de pesos ya entrenada y, opcionalmente, el vector de sesgos.
+    \item \textit{Conv2D}: capa convolucional en dos dimensiones. Recibe el número de canales de entrada y de salida, el tamaño del núcleo, la forma de la imagen de entrada, los pesos, el sesgo opcional y el paso. Internamente construye la matriz que representa el filtro y reutiliza la ruta de cómputo de la capa densa.
+    \item \textit{ReLU}: activación aproximada por una composición de polinomios. No recibe parámetros al construirse, pues los grados de la aproximación se fijan durante la compilación a partir de la configuración del esquema.
+\end{itemize}
+
+El \hyperref[lst:metodo_capas]{Código~\ref{lst:metodo_capas}} muestra cómo se componen estas capas para describir una red convolucional.
+
+\begin{lstlisting}[language=Python,caption={Composición de capas con la clase Sequential.},label={lst:metodo_capas}]
+from fhe_ml import Sequential
+from fhe_ml.layers import Conv2D, Linear, ReLU
+
+# Los pesos provienen de un entrenamiento previo en texto plano.
+model = Sequential([
+    Conv2D(
+        in_channels=1,
+        out_channels=4,
+        kernel_size=7,
+        input_shape=(28, 28),
+        weight=W_conv,
+        bias=b_conv,
+        stride=5,
+    ),
+    ReLU(),
+    Linear(4 * 5 * 5, 10, W_fc, bias=b_fc),
+])
+
+# Alternativa: convertir una red ya entrenada en PyTorch.
+model = Sequential.from_torch(torch_model, input_shape=(1, 28, 28))
+\end{lstlisting}
+
+La conversión desde PyTorch admite las capas \textit{Linear}, \textit{Conv2d} y \textit{ReLU}, y resuelve los cambios de forma que introduce \textit{Flatten} sin generar una capa equivalente, pues el modelo opera siempre sobre un vector.
 
 El flujo de uso consta de cuatro pasos:
 
@@ -105,59 +156,180 @@ El flujo de uso consta de cuatro pasos:
     \item Descifrado de la salida.
 \end{enumerate}
 
-\section{Backend CUDA}\label{sec:metodo_backend}
+\subsection{Backend CUDA}\label{sec:metodo_backend}
 
 La biblioteca no implementa desde cero las primitivas del esquema CKKS, sino que delega el cómputo criptográfico a un \textit{backend} especializado y acelerado por GPU.
 
-\subsection{HEonGPU}
+\subsubsection{Selección del \textit{backend}}
 
-El \textit{backend} criptográfico es HEonGPU \cite{HEonGPU}, una biblioteca escrita en C++ y CUDA que implementa el esquema CKKS sobre la GPU. Proporciona las primitivas de bajo nivel del esquema: la creación del contexto, la codificación y decodificación, el cifrado y descifrado, las operaciones homomórficas (suma, multiplicación, reescalado, relinealización y rotación) y el \textit{bootstrapping}. Se eligió este \textit{backend} porque ejecuta dichas operaciones sobre la GPU, y porque ofrece una implementación de CKKS con soporte de \textit{bootstrapping}.
+Las bibliotecas más difundidas que implementan CKKS, como SEAL \cite{SEAL} y PALISADE \cite{PALISADE}, ejecutan sus operaciones exclusivamente sobre la CPU, y solo recientemente han aparecido implementaciones que trasladan las primitivas del esquema a la GPU \cite{Turkoglu22, FIDESlib, HEonGPU}. Todas ellas, sin embargo, exponen únicamente esas primitivas, de modo que emplearlas directamente obliga al programador a gestionar de forma explícita el crecimiento del ruido, los niveles de la cadena de módulos y el conjunto de claves de evaluación. Esa es precisamente la complejidad que la biblioteca desarrollada se encarga de ocultar, y la razón por la que el \textit{backend} se elige entre las implementaciones aceleradas por GPU en lugar de entre las de CPU.
 
-Se construyó una capa de enlaces (\textit{bindings}) con pybind11, que expone los objetos de C++ como objetos nativos de Python y gestiona la traducción de tipos y la transferencia de datos entre ambos lenguajes. Estos enlaces se organizan por responsabilidad, agrupando por separado la creación del contexto, los componentes criptográficos (codificador, cifrador, descifrador y generador de claves), los tipos de claves, los objetos de datos (textos cifrados y en claro), el operador de operaciones homomórficas y las enumeraciones expuestas a Python. Sobre esta capa de enlaces se construye la envoltura en Python que el resto de la biblioteca utiliza.
+\subsubsection{HEonGPU}
 
-\subsection{Abstracción del \textit{backend}}
+El \textit{backend} criptográfico es HEonGPU \cite{HEonGPU}, una biblioteca escrita en C++ y CUDA que implementa el esquema CKKS sobre la GPU. Proporciona las primitivas de bajo nivel del esquema: la creación del contexto, la codificación y decodificación, el cifrado y descifrado, las operaciones homomórficas (suma, multiplicación, reescalado, relinealización y rotación) y el \textit{bootstrapping}. Se eligió entre las alternativas aceleradas por GPU porque ofrece una implementación de CKKS con soporte de \textit{bootstrapping}, necesario para evaluar redes cuya profundidad multiplicativa excede los niveles disponibles en la cadena de módulos.
 
-La biblioteca oculta deliberadamente el \textit{backend} al usuario y solo expone una interfaz de alto nivel. Esta decisión de diseño responde a tres motivos: la complejidad criptográfica del esquema CKKS, que exige conocimientos especializados para usarse correctamente; y la seguridad, ya que una manipulación incorrecta de los objetos criptográficos podría comprometer las garantías del esquema o directamente arrojar errores.
+Se construyó una capa de enlaces con pybind11, que expone los objetos de C++ como objetos nativos de Python y gestiona la traducción de tipos y la transferencia de datos entre ambos lenguajes. Estos enlaces se organizan por responsabilidad, agrupando por separado la creación del contexto, los componentes criptográficos, los tipos de claves, los objetos de datos, el operador de operaciones homomórficas y las enumeraciones expuestas a Python. Sobre esta capa de enlaces se construye la envoltura en Python que el resto de la biblioteca utiliza.
 
-En consecuencia, lo que se expone al usuario son las abstracciones de alto nivel: el contexto criptográfico, las capas de red neuronal, el modelo secuencial y los vectores cifrados y en texto plano, junto con sus operaciones. Por el contrario, no se exponen los elementos internos del esquema: las claves (secreta, pública, de relinealización y de Galois), los niveles de los textos cifrados ni los objetos crudos del \textit{backend}. El usuario nunca manipula estos elementos de forma directa; la biblioteca los gestiona internamente durante la compilación y la inferencia.
-
-Ademas se exponen varios parametros de configuración de la libreria, esto debido a la dificultad de crear una selección automática de parámetros en función de la red neuronal desarrollada. 
-
-\subsection{Validaciones de configuración}
-
-Antes de construir el contexto criptográfico e invocar al \textit{backend}, la biblioteca valida la configuración de los parámetros del esquema. Esta validación se realiza en la capa de Python y valida lo siguiente:
+La \hyperref[fig:metodo_bindings]{Figura~\ref{fig:metodo_bindings}} enumera cada módulo de enlace, las clases que expone a Python y la clase de HEonGPU a la que corresponde. Los elementos de HEonGPU que estos enlaces ponen a disposición de Python son los siguientes:
 
 \begin{itemize}
-    \item que el grado del polinomio se encuentre entre los valores admitidos;
+    \item Contexto y parámetros (\texttt{CKKSContext}): construye el contexto del esquema y fija el grado del polinomio, la cadena de módulos y el nivel de seguridad. Informa además los niveles disponibles y la memoria de video libre.
+
+    \item Codificación (\texttt{CKKSEncoder}): transforma un vector de números reales en un texto en claro y viceversa, e informa cuántas ranuras admite el texto cifrado.
+
+    \item Cifrado y descifrado (\texttt{CKKSEncryptor} y \texttt{CKKSDecryptor}): cifran un texto en claro y recuperan su contenido con la clave secreta.
+
+    \item Generación de claves (\texttt{CKKSKeyGenerator}): produce la clave secreta, la clave pública, la clave de relinealización y las claves de Galois.
+
+    \item Par de claves (\texttt{CKKSSecretkey} y \texttt{CKKSPublickey}): la clave secreta, que solo posee el cliente, y la clave pública con la que se cifra.
+
+    \item Claves de evaluación (\texttt{CKKSRelinkey} y \texttt{CKKSGaloiskey}): habilitan la relinealización y las rotaciones.
+
+    \item Datos (\texttt{CKKSCiphertext} y \texttt{CKKSPlaintext}): contienen el texto cifrado y el texto en claro, junto con su nivel dentro de la cadena de módulos.
+
+    \item Operaciones homomórficas (\texttt{CKKSOperator}): suma, resta, negación y multiplicación, tanto entre textos cifrados como contra un texto en claro o un escalar; rotación de las ranuras; relinealización, reescalado y descenso de nivel; y el \textit{bootstrapping} en sus variantes regular y SLIM.
+
+    \item Configuración del \textit{bootstrapping} (\texttt{BootstrappingConfig}): agrupa los parámetros del circuito de refresco.
+
+    \item Enumeraciones (\texttt{SecurityLevel} y \texttt{BootstrappingType}): el nivel de seguridad del esquema y la variante de \textit{bootstrapping} empleada.
+\end{itemize}
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\textwidth]{images/bindings_map.png}
+    \caption{Enlaces construidos con pybind11 y su contraparte en HEonGPU.}
+    \label{fig:metodo_bindings}
+\end{figure}
+
+\subsubsection{Abstracción del \textit{backend}}
+
+La biblioteca oculta los \textit{bindings} al usuario. Esta decisión de diseño responde a tres motivos: la complejidad de HEonGPU exige conocimientos especializados para usarse correctamente; y la seguridad, ya que una manipulación incorrecta de los objetos criptográficos podría comprometer las garantías del esquema o directamente arrojar errores.
+
+Los siguientes elementos se exponen al usuario: parametros de configuracion, las capas de red neuronal, el modelo secuencial y los vectores cifrados y en texto plano, junto con sus operaciones. No se exponen los elementos internos del esquema: las claves (secreta, pública, de relinealización y de Galois), los niveles de los textos cifrados ni los objetos crudos del \textit{backend}.
+
+\subsection{Detalles de implementación}\label{sec:metodo_implementacion}
+
+Esta sección describe cómo la biblioteca implementa internamente la red y su inferencia sobre datos cifrados. La inferencia se realiza capa por capa, traduciendo cada operación de la red a una secuencia de operaciones homomórficas del \textit{backend}.
+
+\subsubsection{Clases y dependencias}\label{sec:metodo_api}
+
+La biblioteca se distribuye como el paquete \nolinkurl{fhe_ml}. El código fuente y la documentación de uso están disponibles en el repositorio público del proyecto \cite{SDKRepo}.
+
+Las clases se organizaron en forma de capas, cada una depende únicamente de las que se encuentran en capas inferiores, nunca de las que la envuelven, de modo que la complejidad criptográfica queda confinada en el núcleo y disminuye de forma progresiva hacia el exterior. La capa más externa es la que el usuario emplea directamente, y en ella \textit{Sequential} es uno de los principales puntos de entrada, junto con \textit{Client}. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.70\textwidth]{images/modulos_dependencias.png}
+    \caption{Dependencias entre las clases públicas del paquete \nolinkurl{fhe_ml}.}
+    \label{fig:metodo_modulos}
+\end{figure}
+
+La \hyperref[fig:metodo_modulos]{Figura~\ref{fig:metodo_modulos}} muestra las dependencias entre las clases públicas, dispuestas de manera que las flechas siempre apuntan hacia adentro. Cada una cumple la siguiente función:
+
+\begin{itemize}
+    \item \textit{Sequential}: compone las capas en una red completa y orquesta su compilación y su inferencia. Es el punto de entrada del usuario y ninguna otra clase depende de ella.
+    \item \textit{Linear} y \textit{Conv2D}: capas afines, que expresan la multiplicación matriz-vector y la convolución sobre datos cifrados a partir de los pesos almacenados en texto plano.
+    \item \textit{ReLU}: capa de activación, que evalúa sobre el vector cifrado una aproximación polinómica de la función.
+    \item \textit{Input}: representa la entrada cifrada de la red, que obtiene delegando el cifrado en el cliente. Su rol actual es conservar el texto cifrado y su tamaño. La decisión de usar una clase para envolver la entrada del modelo se debe a que en un futuro el modelo podría requerir una codificación distinta dependiendo de su implementación. Por lo tanto se puede usar esta clase para hacer esta codificación.
+    \item \textit{Client}: posee la clave secreta y es la única clase que genera las claves, cifra y descifra. Se apoya en el contexto para codificar los valores antes de cifrarlos.
+    \item \textit{FHEContext}: concentra la construcción del contexto criptográfico y las operaciones homomórficas del esquema. Opera del lado del evaluador y no tiene acceso a la clave secreta, sino únicamente a las claves de evaluación que le entrega el cliente. Es la frontera del núcleo: ninguna clase por encima de ella manipula objetos criptográficos.
+    \item \textit{EncryptedVector}: vector de números reales empaquetado en las ranuras de un texto cifrado, sobre el que se definen las operaciones homomórficas que emplean las capas.
+    \item \textit{PlaintextVector} y \textit{PlaintextTensor}: los operandos en claro, el segundo de ellos responsable además de precomputar la representación de la matriz de pesos que requiere la multiplicación matriz-vector.
+    \item \textit{FHEConfig} y \textit{BootstrapConfig}: describen los parámetros del esquema y los del \textit{bootstrapping}, y validan su consistencia antes de construir el contexto.
+    \item \nolinkurl{config_for_circuit}: función que deriva una configuración completa a partir del factor de escala, la profundidad multiplicativa del circuito y los grados de los polinomios de la activación, y que activa el \textit{bootstrapping} cuando la cadena de módulos no alcanza para el circuito.
+    \item \textit{KeyParams}: clase auxiliar que encapsula las claves de evaluación: la de relinealización y la de Galois, y que las serializa y deserializa. Estas claves son públicas y el servidor las necesita para evaluar la red, de modo que el cliente las genera una sola vez y se las transmite por medio de esta clase.
+\end{itemize}
+
+El \hyperref[lst:metodo_api]{Código~\ref{lst:metodo_api}} muestra el uso completo de la biblioteca sobre una red de dos capas, siguiendo los cuatro pasos descritos anteriormente e indicando qué parte del proceso corresponde al servidor y cuál al cliente.
+
+\begin{lstlisting}[language=Python,caption={Inferencia cifrada de una red de dos capas, con las operaciones que corresponden al servidor y al cliente.},label={lst:metodo_api}]
+import numpy as np
+from fhe_ml import Client, FHEContext, Sequential
+from fhe_ml.layers import Linear, ReLU
+
+# --- Servidor ---
+# 1. Construye la red con los pesos que ya entreno en texto plano.
+model = Sequential([
+    Linear(4, 8, W1, bias=b1),
+    ReLU(),
+    Linear(8, 2, W2, bias=b2),
+])
+
+# 2. Deriva los parametros del esquema a partir de la red y compila.
+config = model.generate_config(scale=40, relu_degrees=(3,))
+context = FHEContext(config)
+model.compile(context, datos_de_calibracion)
+
+# El servidor envia la configuracion al cliente: config.serialize().
+
+# --- Cliente ---
+# 3. Con esa configuracion genera sus claves y cifra la entrada.
+client = Client(context)
+claves = client.key_params()
+entrada_cifrada = client.encrypt(entrada)
+
+# El cliente envia al servidor las claves de evaluacion, mediante
+# claves.serialize(), junto con la entrada cifrada.
+
+# --- Servidor ---
+# Evalua la red sobre los datos cifrados y devuelve la salida, tambien cifrada
+context.set_client_params(claves)
+salida_cifrada = model(entrada_cifrada)
+
+# --- Cliente ---
+# 4. Descifra el resultado
+resultado = client.decrypt(salida_cifrada)
+\end{lstlisting}
+
+\subsubsection{Configuración}\label{sec:metodo_config}
+
+En cuanto a los parámetros del esquema, usando el método \textit{generate\_config} de la clase \textit{Sequential}, los valores que el usuario indica son los siguientes: 
+
+\begin{itemize}
+    \item Factor de escala: el número de bits de la escala $\Delta$ con la que se codifican los valores. Determina la precisión de la aritmética aproximada y, a la vez, el tamaño de cada primo de la cadena de módulos.
+
+    \item Grados de la aproximación de ReLU: la secuencia de grados de los polinomios que se componen para aproximar la función signo. Fija la precisión de la activación y la profundidad multiplicativa que esta consume.
+
+    \item Ubicación de las claves de Galois (\api{galois_keys_on_host}): indica dónde reside el conjunto de claves de Galois, si la variable de configuración es verdadera, residen en memoria principal, caso contrario en la memoria del GPU.
+\end{itemize}
+
+El objeto de configuración resultante (\textit{FHEConfig}) es una estructura de Python cuyos campos permanecen accesibles, de modo que un usuario con conocimientos del esquema puede ajustarlos antes de construir el contexto. Los campos generados por la biblioteca son los siguientes:
+
+\begin{itemize}
+    \item Grado del polinomio: Constante cuyo valor es $2^{16}$. 
+
+    \item Nivel de seguridad: Constante, 128 bits. El menor nivel de seguridad para reducir el consumo de memoria.
+
+    \item Cadena de módulos: un primo base de 60 bits, seguido de tantos primos del tamaño del factor de escala como niveles requiera la red, y cerrada por un primo auxiliar de 60 bits. 
+
+    \item Parámetros del \textit{bootstrapping}: Se generan los valores que puedan permitir la mayor cantidad de operaciones entre cada \textit{bootstrapping}. Son 3 valores de configuracion cuyas formulas se derivan de tablas predeterminadas dadas por HEonGPU.
+
+    \item Desplazamientos de las claves de Galois: se generan durante la compilación del modelo por HEonGPU. 
+\end{itemize}
+
+Cada asignación hecha por el usuario dispara las validaciones descritas a continuación, por lo que una configuración inconsistente se rechaza en el momento de escribirla y no al invocar al \textit{backend}.
+
+\begin{itemize}
+    \item que el grado del polinomio se encuentre entre los valores admitidos. Esto debido a que el usuario puede modificar el valor constante ya dado. 
     \item que los tamaños de los primos de la cadena de módulos estén dentro de un rango válido y que la cadena tenga la forma esperada (primos para la cadena $Q$ más el tamaño del primo auxiliar $P$);
     \item que el tamaño total del módulo no exceda el tope que impone el nivel de seguridad elegido para ese grado de polinomio;
     \item que, cuando se activa el \textit{bootstrapping}, la cadena de módulos sea suficientemente larga para alojar su circuito;
     \item que los grados de los polinomios de activación sean impares y mayores o iguales que tres, como requiere la aproximación empleada.
 \end{itemize}
 
-Estas comprobaciones se ejecutan cada vez que se modifica un parámetro. La validación se sitúa en Python, antes de llegar al \textit{backend}, con mensajes de error claros, ademas varias de las validaciones no son evaluadas por el \textit{backend}. 
+Estas comprobaciones se ejecutan cada vez que se modifica un parámetro. La validación se sitúa en Python, antes de llegar al \textit{backend}.
 
-\section{Detalles de implementación}\label{sec:metodo_implementacion}
-
-Esta sección describe cómo la biblioteca implementa internamente la red y su inferencia sobre datos cifrados. La inferencia se realiza capa por capa, traduciendo cada operación de la red a una secuencia de operaciones homomórficas del \textit{backend}.
-
-\subsection{Clase \textit{Sequential}}
-
-La clase \textit{Sequential} es el componente logico principal para la inferencia y compilacion. Para ejecutar la inferencia, recibe la entrada cifrada y aplica cada capa en orden, propagando un vector cifrado de una capa a la siguiente hasta obtener la salida cifrada de la red.
-
-Antes de poder inferir, el modelo debe llamar la funcion \textit{compile} contra un contexto criptográfico; este paso, que entre otras tareas calibra la red, se describe en la Sección~\ref{sec:metodo_calibracion}. La clase admite además construir la red enumerando las capas manualmente o, alternativamente, a partir de un modelo entrenado en PyTorch, traduciendo automáticamente las capas soportadas.
-
-\subsection{Multiplicación matriz-vector}
+\subsubsection{Multiplicación matriz-vector}
 
 La multiplicación matriz-vector es la operación central de las capas con pesos. La biblioteca la implementa mediante el método de diagonales de Halevi-Shoup, en su variante rectangular con envoltura cíclica, que permite multiplicar un vector cifrado por una matriz de pesos en texto plano de dimensiones arbitrarias. Para ello, tanto el vector de entrada como el de salida se manejan replicados sobre las ranuras del texto cifrado, lo que simplifica el direccionamiento de las diagonales cuando las dimensiones de la matriz no coinciden con el número de ranuras.
 
 Como decisión de implementación orientada al rendimiento, las diagonales de cada matriz de pesos se codifican una sola vez durante la compilación del modelo, y no en cada inferencia. De este modo, el costo de preparar los pesos se paga una única vez y se reutiliza en todas las inferencias posteriores.
 
-\subsection{Convolución}
+\subsubsection{Convolución}
 
 En lugar de implementar un operador de convolución específico, la biblioteca expresa cada capa convolucional como una única multiplicación matriz-vector. Para ello, a partir de los pesos del filtro se construye una matriz dispersa cuyas filas corresponden a las posiciones de salida y cuyas columnas corresponden a las posiciones de la entrada aplanada; cada fila contiene los pesos del filtro en las posiciones que cubre su ventana. Esta matriz se trata después igual que la de una capa lineal, reutilizando la multiplicación matriz-vector. Aprovechando la equivalencia entre la convolución y esta forma matricial (\textit{im2col}), la decisión de diseño relevante aquí es reutilizar una sola ruta de cómputo para ambas capas, en lugar de mantener dos implementaciones separadas.
 
-\subsection{Activación ReLU}
+\subsubsection{Activación ReLU}
 
 Como el esquema CKKS solo admite sumas y multiplicaciones, la función de activación ReLU debe aproximarse por un polinomio. La biblioteca parte de la identidad
 \begin{equation}
@@ -177,7 +349,7 @@ f_n(x) = \sum_{i=0}^{n} \frac{1}{4^{i}} \binom{2i}{i}\, x\,(1 - x^2)^{i},
 \end{equation}
 que cumple $f_n(\pm 1) = \pm 1$ y tiene sus primeras $n$ derivadas nulas en $\pm 1$. Estas mesetas en $\pm 1$ hacen que $f_n$ aplique $[-1,1]$ sobre sí mismo empujando todo punto interior hacia $-1$ o $+1$ según su signo; al componer $f_n$ consigo mismo $k$ veces, la imagen se acerca progresivamente a $\pm 1$ y, por tanto, a la función signo. 
 
-A diferencia de un único polinomio de grado alto, esta construcción permanece acotada en $[-1,1]$ y, por tanto, es numéricamente estable. La precisión de la aproximación depende del grado $2n+1$ de cada componente y, sobre todo, del número de composiciones $k$: más composiciones aproximan mejor el signo, a costa de una mayor profundidad multiplicativa. La aproximación solo es válida si la entrada de la activación reside en $[-1, 1]$; mantenerla en ese intervalo es responsabilidad de la calibración descrita en la Sección~\ref{sec:metodo_calibracion}.
+A diferencia de un único polinomio de grado alto, esta construcción permanece acotada en $[-1,1]$ y, por tanto, es numéricamente estable. La precisión de la aproximación depende del grado $2n+1$ de cada componente y, sobre todo, del número de composiciones $k$: más composiciones aproximan mejor el signo, a costa de una mayor profundidad multiplicativa. La aproximación solo es válida si la entrada de la activación reside en $[-1, 1]$; mantenerla en ese intervalo es responsabilidad de la \hyperref[sec:metodo_calibracion]{calibración de la red}.
 
 A nivel de implementación, la imparidad de cada polinomio componente se aprovecha para reducir la profundidad multiplicativa que consume la activación. Como cada polinomio componente $p$ es impar de grado $2n+1$, todos sus coeficientes pares son nulos y se puede factorizar
 \[
@@ -185,7 +357,7 @@ A nivel de implementación, la imparidad de cada polinomio componente se aprovec
 \]
 donde $q(u) = \sum_{k=0}^{n} c_{2k+1}\, u^{k}$ tiene grado $n$ en la variable $u = x^2$. La evaluación se realiza en tres etapas: una multiplicación entre textos cifrados para obtener $u = x^2$, una evaluación de $q(u)$ mediante el esquema de Horner que consume $n$ niveles, y una multiplicación final $x \cdot q(x^2)$. La profundidad total resulta en $n+2$ niveles por polinomio componente, frente a $2n+1$ si se aplicara Horner directamente sobre $x$, esencialmente la mitad.
 
-\subsection{Gestión de niveles y ruido}
+\subsubsection{Gestión de niveles y ruido}
 
 Cada multiplicación homomórfica va seguida de una relinealización y un reescalado, que controlan el tamaño del texto cifrado y su factor de escala. La biblioteca debe asegurar que los operandos de cada operación se encuentren en el mismo nivel de la cadena de módulos. Para ello dispone de una operación que reduce el nivel de un texto cifrado hasta alinearlo con otro, descartando los primos sobrantes antes de operar.
 
@@ -195,7 +367,7 @@ Durante la compilación del modelo, la biblioteca suma las profundidades multipl
 
 En tiempo de inferencia, antes de cada operación que requiere un cierto número de niveles, la biblioteca consulta el nivel actual del texto cifrado: si no alcanza para la operación pendiente, dispara automáticamente un refresco mediante \textit{bootstrapping}, incluso en medio de la evaluación de una capa de activación. Este mecanismo libera al usuario de gestionar manualmente cuándo refrescar los textos cifrados.
 
-\subsection{Calibración de la red}\label{sec:metodo_calibracion}
+\subsubsection{Calibración de la red}\label{sec:metodo_calibracion}
 
 La aproximación polinómica de ReLU solo es precisa cuando su entrada reside en el intervalo $[-1, 1]$; fuera de él, el error crece rápidamente. Sin embargo, las entradas que llegan a cada activación dependen de los datos y de los pesos, y no están acotadas de antemano. La calibración resuelve este problema durante la compilación del modelo, en dos pasos.
 
@@ -205,13 +377,13 @@ El segundo paso es el plegado de esos rangos en los pesos de las capas vecinas. 
 
 Además de calibrar la red, la compilación determina, a partir de la profundidad multiplicativa total del modelo y de los niveles disponibles en el contexto, si la red requiere \textit{bootstrapping}, y en tal caso lo configura para esa ejecución.
 
-\section{Desarrollo guiado por pruebas}\label{sec:metodo_tdd}
+\subsection{Desarrollo guiado por pruebas}\label{sec:metodo_tdd}
 
 El desarrollo de la biblioteca siguió una estrategia guiada por pruebas (\textit{test-driven development}), aplicada de forma pragmática y no como un método estricto. El orden de trabajo fue el siguiente: primero se diseñó la interfaz pública, es decir, las clases y operaciones con las que interactúa el usuario; a continuación se escribieron pruebas para las operaciones más importantes y de mayor complejidad antes de implementarlas; después se realizó la implementación, iterando sobre ella hasta que las pruebas pasaran; y, finalmente, se hizo un último ajuste de la interfaz a la luz de lo aprendido durante la implementación.
 
 Las pruebas automatizadas cubren los componentes de la biblioteca por separado: la creación del contexto y las operaciones de codificación, cifrado y descifrado; la aritmética sobre vectores cifrados y la multiplicación matriz-vector; los tensores de pesos en texto plano; las capas lineal y convolucional; la aproximación polinómica de la activación; el modelo secuencial completo; y el manejo de errores ante configuraciones o entradas inválidas. Este conjunto de pruebas constituye la principal garantía de que las operaciones cifradas reproducen, dentro del margen de error de CKKS, el cómputo en texto plano.
 
-\section{Bibliotecas de referencia}\label{sec:metodo_bibliotecas}
+\subsection{Bibliotecas de referencia}\label{sec:metodo_bibliotecas}
 
 Para evaluar el rendimiento de la biblioteca propuesta se la comparó frente a tres implementaciones de referencia. Estas implementaciones no comparten necesariamente el mismo esquema de cifrado. Las referencias seleccionadas fueron:
 
@@ -244,7 +416,7 @@ La \hyperref[tab:metodo_libs]{Tabla~\ref{tab:metodo_libs}} resume las diferencia
     \end{tabular}
 \end{table}
 
-\section{Conjuntos de datos y modelos de prueba}\label{sec:metodo_modelos}
+\section{Conjuntos de datos y escenarios de prueba}\label{sec:metodo_modelos}
 
 Para evaluar la biblioteca se definieron dos casos de uso correspondientes a dos arquitecturas de red representativas: una red totalmente conectada aplicada a un problema de regresión, y una red convolucional aplicada a un problema de clasificación. En ambos casos, los modelos se mantienen deliberadamente compactos, ya que la profundidad multiplicativa del circuito homomórfico y el consumo de memoria de la GPU crecen rápidamente con el tamaño de la red. Para cada red se describe, además de su conjunto de datos, su arquitectura y su entrenamiento, los parámetros de configuración con los que cada implementación la ejecutó, pues dichos parámetros dependen de la red.
 
@@ -420,7 +592,7 @@ A los datos de entrada de ambos modelos se les aplicó una normalización estad�
 \]
 donde $\mu$ y $\sigma$ son la media y la desviación estándar de la característica, estimadas a partir del conjunto de entrenamiento. La estandarización es especialmente relevante en el contexto del cifrado homomórfico, ya que mantener las entradas en un rango acotado y centrado facilita el ajuste de las aproximaciones polinómicas de las funciones de activación, las cuales solo son precisas dentro de un intervalo limitado.
 
-\section{Metodología de evaluación}\label{sec:metodo_evaluacion}
+\section{Evaluación comparativa}\label{sec:metodo_evaluacion}
 
 La evaluación comparativa consistió en medir, sobre los dos casos de uso descritos, el rendimiento de cada implementación y la fidelidad de sus resultados respecto a la ejecución en texto plano. A continuación se describen la orquestación de los experimentos, las fases medidas y las métricas registradas.
 
@@ -439,15 +611,17 @@ Antes de ejecutar las implementaciones, el coordinador mide una sola vez el cons
 
 De cada implementación cifrada se miden dos fases. La primera es la generación de claves (\textit{keygen}), en la que se construye el contexto criptográfico y se genera el conjunto de claves del esquema. La segunda es la inferencia (\textit{infer}), en la que se cifra la entrada, se evalúa la red sobre los datos cifrados y se descifra la salida. La ejecución de referencia en PyTorch, al operar en texto plano, solo atraviesa la fase de inferencia. Para cada fase se registran de forma independiente las métricas de tiempo y memoria descritas más adelante, lo que permite atribuir a cada etapa su consumo de recursos.
 
-\subsection{Conteo de muestras}
+\subsection{Conteo de muestras}\label{sec:metodo_muestras}
 
 La forma de obtener las métricas de calidad y de latencia depende de cada implementación, según si su ejecución en claro es equivalente a la cifrada.
 
 En la biblioteca propuesta y en Orion, ambas basadas en CKKS, la ejecución en claro no es equivalente a la cifrada: la aritmética aproximada y el ruido del cifrado hacen que el resultado cifrado difiera del que produciría la red sin cifrar. Por ello, las métricas de calidad deben medirse sobre la salida cifrada real. En estos casos se ejecuta un único bucle de inferencias cifradas sobre un conjunto de muestras de prueba, del que se obtienen tanto las métricas de calidad como la latencia por muestra.
 
-En Concrete~ML, en cambio, sí se separan dos conjuntos de muestras: las métricas de calidad se obtienen sobre un conjunto mayor (varias decenas de muestras) evaluado en su modo en claro (sin cifrar), mientras que la latencia se mide sobre un conjunto reducido (una o dos muestras) en modo cifrado real.
+En Concrete~ML, en cambio, sí se separan dos conjuntos de muestras: las métricas de calidad se obtienen sobre un conjunto mayor evaluado en su modo en claro (sin cifrar), mientras que la latencia se mide sobre un conjunto reducido en modo cifrado real.
 
 La ejecución de referencia en PyTorch, al operar siempre en texto plano, evalúa todas sus muestras de la misma forma.
+
+El tamaño de estos conjuntos lo dicta el costo por inferencia cifrada, prohibitivo en las implementaciones más lentas. En la biblioteca propuesta y en Orion el bucle cifrado recorre cinco muestras, mientras la evaluación en claro del modelo aproximado recorre cincuenta. En Concrete~ML el bucle cifrado se reduce a una sola muestra y su evaluación en claro a veinte. La ejecución de referencia en PyTorch emplea doscientas. Las métricas obtenidas bajo cifrado real quedan así referidas a conjuntos muy pequeños, algo que debe tenerse presente al interpretar los resultados.
 
 \subsection{Métricas de rendimiento y fidelidad}\label{sec:metodo_metricas}
 
@@ -487,3 +661,229 @@ Para la biblioteca propuesta, las métricas de fidelidad se registran en dos var
 \subsection{Perfilado por capa}
 
 Además de las métricas agregadas por fase, se realizó un perfilado detallado de la inferencia de la biblioteca propuesta, midiendo el tiempo de ejecución y el consumo de memoria de video tras la evaluación de cada capa individual de la red. Este perfilado permite identificar qué operaciones constituyen los principales cuellos de botella del cómputo homomórfico (por ejemplo, las funciones de activación frente a las capas lineales, o la capa convolucional frente a las capas densas), información que resulta valiosa para orientar futuras optimizaciones de la biblioteca.
+
+\section{Análisis de resultados}\label{sec:metodo_resultados}
+
+Esta sección muestra y analiza los resultados obtenidos de la evaluación comparativa expuesta anteriormente. El análisis se presenta por separado para cada caso de uso, comenzando por la red de regresión.
+
+\subsection{Regresión: red totalmente conectada}\label{sec:res_mlp}
+
+La red alcanza en texto plano un $R^2$ de 0.793 sobre el conjunto de prueba completo, y de 0.804 sobre el subconjunto que evalúa la ejecución de referencia. Este es el valor que la inferencia cifrada debería reproducir. La \hyperref[tab:res_calidad_mlp]{Tabla~\ref{tab:res_calidad_mlp}} recoge la calidad y la fidelidad obtenidas, separando el modelo aproximado sin cifrar del mismo modelo bajo cifrado real, para distinguir el costo de la aproximación del costo del cifrado.
+
+\begin{table}[h]
+    \centering
+    \small
+    \caption{Calidad y fidelidad de la inferencia en el caso de regresión. La columna aproximado corresponde al modelo transformado para el esquema y evaluado sin cifrar; la columna cifrado, al mismo modelo bajo cifrado real.}\label{tab:res_calidad_mlp}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r | r |}
+        \hline
+        & \multicolumn{2}{c |}{$R^2$} & \\
+        \cline{2-3}
+        Implementación & Aproximado & Cifrado & MAE \\
+        \hline
+        PyTorch (texto plano) & 0.804 & --- & --- \\
+        \hline
+        Biblioteca propuesta & 0.716 & 0.478 & $6.2 \times 10^{-4}$ \\
+        \hline
+        Orion & 0.716 & 0.475 & $1.9 \times 10^{-3}$ \\
+        \hline
+        Concrete~ML & 0.165 & --- & $5.1 \times 10^{-1}$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+El costo de la aproximación se lee comparando la columna del modelo aproximado con la ejecución en texto plano. Sustituir ReLU por una composición de polinomios lleva el $R^2$ de 0.804 a 0.716. La cuantización de Concrete~ML provoca un deterioro mayor, con un $R^2$ de 0.165.
+
+El costo del cifrado se aprecia mejor en las métricas de fidelidad. La biblioteca propuesta reproduce la salida en texto plano con un error absoluto medio de $6.2 \times 10^{-4}$, el menor de las tres implementaciones.
+
+La caída del $R^2$ de 0.716 a 0.478 es atribuible al cifrado. En CKKS cada operación homomórfica, y en particular cada multiplicación, añade ruido al texto cifrado. La aproximación polinómica de ReLU es intensiva en multiplicaciones, pues cada una de las composiciones que la forman exige varias. La biblioteca propuesta y Orion obtienen valores prácticamente iguales, 0.478 y 0.475. Ambas emplean el mismo esquema de cifrado y una profundidad multiplicativa comparable. 
+
+Concrete~ML no muestra una caída equivalente porque su esquema pierde precisión en la cuantización y aproximación de las funciones, no en operaciones en el espacio cifrado.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{images/res_calidad_mlp.png}
+    \caption{Calidad y fidelidad en el caso de regresión. Concrete~ML no aporta una cifra bajo cifrado, dado que sus resultados no cambian al ejecutarse cifrada.}
+    \label{fig:res_calidad_mlp}
+\end{figure}
+
+La \hyperref[tab:res_rend_mlp]{Tabla~\ref{tab:res_rend_mlp}} recoge el rendimiento. La generación de claves se lo realiza cada cliente una sola vez. La inferencia es el tiempo por muestra, incluyendo el cifrado de la entrada y el descifrado de la salida. 
+
+\begin{table}[h]
+    \centering
+    \small
+    \caption{Rendimiento en el caso de regresión. El tiempo de inferencia es por muestra.}\label{tab:res_rend_mlp}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r | r | r |}
+        \hline
+        & \multicolumn{2}{c |}{Tiempo (s)} & \multicolumn{2}{c |}{Memoria (MB)} \\
+        \cline{2-5}
+        Implementación & Claves & Infer. & VRAM & RAM \\
+        \hline
+        PyTorch (texto plano) & --- & 0.0006 & 9 & 621 \\
+        \hline
+        Biblioteca propuesta & 0.47 & 6.68 & 17\,996 & 744 \\
+        \hline
+        Orion & 5.30 & 78.24 & 526 & 48\,579 \\
+        \hline
+        Concrete~ML & 2.99 & 790.03 & 526 & 3\,465 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+La biblioteca propuesta resuelve una inferencia en 6.68 segundos, frente a los 78.24 de Orion y los 790.03 de Concrete~ML, lo que supone una aceleración de 11.7 veces sobre la primera y de 118 veces sobre la segunda. Respecto de la ejecución en texto plano, la inferencia cifrada resulta unas $1.0 \times 10^{4}$ veces más lenta. La generación de claves es también la más rápida de las tres, con 0.47 segundos frente a los 5.30 de Orion y los 2.99 de Concrete~ML.
+
+En cuanto a la memoria, el conjunto de trabajo de la biblioteca alcanza 17.6~GB durante la compilación, con apenas 744~MB de memoria principal. Las dos implementaciones sobre CPU invierten esa relación, y Orion resulta la más costosa de todas con 48.6~GB de memoria principal. Las claves de Galois son guardadas en VRAM para el caso de regresión.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{images/res_rendimiento_mlp.png}
+    \caption{Rendimiento en el caso de regresión, en escala logarítmica. La memoria de video de la biblioteca propuesta y de PyTorch corresponde a su conjunto de trabajo.}
+    \label{fig:res_rend_mlp}
+\end{figure}
+
+El perfilado capa por capa, en la \hyperref[tab:res_perfil_mlp]{Tabla~\ref{tab:res_perfil_mlp}}, identifica dónde se concentra el costo. La suma de los tiempos por capa coincide con la latencia medida de extremo a extremo, lo que indica que el cifrado de la entrada y el descifrado de la salida son despreciables frente a la evaluación de la red.
+
+\begin{table}[h]
+    \centering
+    \caption{Tiempo por capa de la biblioteca propuesta en el caso de regresión, sobre una única muestra.}\label{tab:res_perfil_mlp}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r |}
+        \hline
+        Capa & Tiempo (s) & Porcentaje \\
+        \hline
+        Lineal & 0.04 & 0.5 \\
+        \hline
+        ReLU & 2.20 & 33.3 \\
+        \hline
+        Lineal & 0.26 & 4.0 \\
+        \hline
+        ReLU & 4.02 & 60.7 \\
+        \hline
+        Lineal & 0.10 & 1.5 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Las dos activaciones consumen el 94\% del tiempo, mientras las tres capas lineales apenas suman el 6\%. La aproximación de ReLU es la operación más costosa del circuito. La explicación de que la segunda activación tarde casi el doble que la primera, pese a operar sobre un vector menor, es el número de operaciones de \textit{bootstrapping} que cada una desencadena.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.72\textwidth]{images/res_perfil_mlp.png}
+    \caption{Tiempo por capa en el caso de regresión, sobre una única muestra.}
+    \label{fig:res_perfil_mlp}
+\end{figure}
+
+\subsection{Clasificación: red convolucional}\label{sec:res_cnn}
+
+La red en PyTorch alcanza en texto plano una exactitud de 0.939 sobre el conjunto de prueba completo, y de 0.925 sobre el subconjunto que evalúa la ejecución de referencia. La \hyperref[tab:res_calidad_cnn]{Tabla~\ref{tab:res_calidad_cnn}} recoge la calidad y la fidelidad obtenidas, con la misma separación entre el modelo aproximado sin cifrar y el mismo modelo bajo cifrado real.
+
+\begin{table}[h]
+    \centering
+    \small
+    \caption{Calidad y fidelidad de la inferencia en el caso de clasificación. El acuerdo es la proporción de muestras en que la clase predicha bajo cifrado coincide con la del modelo en claro.}\label{tab:res_calidad_cnn}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r | r | r |}
+        \hline
+        & \multicolumn{2}{c |}{Exactitud} & & \\
+        \cline{2-3}
+        Implementación & Aproximado & Cifrado & Acuerdo & MAE \\
+        \hline
+        PyTorch (texto plano) & 0.925 & --- & --- & --- \\
+        \hline
+        Biblioteca propuesta & 0.86 & 0.40 & 0.60 & $9.1 \times 10^{1}$ \\
+        \hline
+        Orion & 0.88 & 0.80 & 1.00 & $3.2 \times 10^{-3}$ \\
+        \hline
+        Concrete~ML & 0.85 & --- & 1.00 & $3.3 \times 10^{-1}$ \\
+        \hline
+    \end{tabular}
+\end{table}
+
+Aquí el costo de la aproximación es equivalente en las tres implementaciones, entre 0.85 y 0.88 frente a 0.925, porque la decisión del clasificador solo depende de cuál puntuación es la mayor y no de su valor exacto.
+
+El costo del cifrado, en cambio, separa a las implementaciones. Orion preserva íntegramente la decisión del clasificador, con un acuerdo de 1.00 y un error de $3.2 \times 10^{-3}$ sobre las puntuaciones. Concrete~ML también la preserva pese a un error de 0.33.
+
+La biblioteca propuesta no supera esta prueba. Su error absoluto medio sobre las puntuaciones es de 91.2, cuatro órdenes de magnitud por encima del de Orion, y su acuerdo de 0.60 indica que en el 40\% de las muestras la clase predicha bajo cifrado difiere de la que produce el modelo en claro. Como el mismo modelo, ejecutado sin cifrar pero con sus aproximaciones polinómicas y su calibración, alcanza una exactitud de 0.86, la degradación no proviene de la aproximación de las activaciones.
+
+La degradación se atribuye a la implementación de la capa convolucional y a la configuración del esquema con la que se ejecutó. Tal como se describió anteriormente, la biblioteca reduce la convolución a una única multiplicación matriz-vector, la misma rutina que emplean las capas lineales, construyendo en texto plano la matriz que representa el filtro. Esta decisión, tomada al inicio del desarrollo, privilegia la flexibilidad: admite cualquier combinación de tamaño del núcleo, paso, relleno y número de canales sin necesidad de un tratamiento específico para cada caso. Orion, en cambio, implementa un esquema propio de la convolución que reordena las operaciones para obtener el mismo resultado con un número menor de ellas, a cambio de admitir un conjunto más restringido de configuraciones.
+
+Cada multiplicación y cada rotación homomórfica añade ruido al texto cifrado y consume niveles de la cadena de módulos, de manera que el error se acumula a lo largo del circuito. Una ruta de cómputo con más operaciones llega al final con un error mayor. La ejecución del mismo modelo aproximado sin cifrar no manifiesta el problema porque en aritmética de punto flotante las operaciones adicionales no acumulan error de forma apreciable, y por eso su exactitud se mantiene en 0.86. A ello se suma la configuración del esquema, cuyo factor de escala y cadena de módulos se fijaron para acomodar la profundidad multiplicativa del circuito y dejan un margen ajustado para el error que este acumula. La red de regresión no presenta esta dificultad porque sus capas lineales emplean la misma multiplicación matriz-vector eficiente que las bibliotecas de referencia, sin la expansión de operaciones que introduce la convolución.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{images/res_calidad_cnn.png}
+    \caption{Calidad y fidelidad en el caso de clasificación. Nótese la escala logarítmica del panel derecho: el error de la biblioteca propuesta supera en cuatro órdenes de magnitud al de las dos referencias.}
+    \label{fig:res_calidad_cnn}
+\end{figure}
+
+\begin{table}[h]
+    \centering
+    \small
+    \caption{Rendimiento en el caso de clasificación. El tiempo de generación de claves se paga una vez por modelo; el de inferencia es por muestra.}\label{tab:res_rend_cnn}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r | r | r |}
+        \hline
+        & \multicolumn{2}{c |}{Tiempo (s)} & \multicolumn{2}{c |}{Memoria (MB)} \\
+        \cline{2-5}
+        Implementación & Claves & Infer. & VRAM & RAM \\
+        \hline
+        PyTorch (texto plano) & --- & 0.0015 & 0.4 & 805 \\
+        \hline
+        Biblioteca propuesta & 39.93 & 28.31 & 3\,120 & 44\,600 \\
+        \hline
+        Orion & 5.27 & 46.49 & 526 & 35\,257 \\
+        \hline
+        Concrete~ML & 3.03 & 448.88 & 528 & 4\,372 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+La biblioteca propuesta sigue siendo la más rápida, con 28.31 segundos por inferencia frente a los 46.49 de Orion y los 448.88 de Concrete~ML, esto es 1.6 y 15.9 veces respectivamente. La distancia con la ejecución en texto plano sube a $1.9 \times 10^{4}$ veces. La generación de claves, en cambio, pasa a costar 39.93 segundos, dos órdenes de magnitud más que en la red de regresión, debido al número de claves de Galois que exige el empaquetado de la convolución.
+
+Ese mismo conjunto de claves obligó a activar la opción de mantenerlas en la memoria del anfitrión, descrita en la \hyperref[sec:metodo_config]{sección de configuración}. El conjunto de trabajo en la GPU baja así a 3.0~GB, a cambio de 43.6~GB de memoria principal. Este intercambio es lo que permite evaluar la red en una tarjeta de 24~GB, y confirma que el conjunto de claves de Galois constituye la mayor parte del consumo de memoria del esquema.
+
+Conviene distinguir esas cifras del pico a nivel de dispositivo, que en la biblioteca propuesta asciende a 21.4~GB tanto aquí como en la red de regresión, prácticamente la totalidad de la tarjeta. Ese valor mide la memoria que el gestor de la GPU reserva por adelantado para su reservorio, y por eso permanece constante aunque el conjunto de trabajo varíe entre 17.6 y 3.0~GB. Esto es debido a que HEonGPU ocupa la tarjeta completa con independencia de la configuración.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{images/res_rendimiento_cnn.png}
+    \caption{Rendimiento en el caso de clasificación, en escala logarítmica.}
+    \label{fig:res_rend_cnn}
+\end{figure}
+
+ La \hyperref[tab:res_perfil_cnn]{Tabla~\ref{tab:res_perfil_cnn}} muestra el tiempo de inferencia por capa de la biblioteca propuesta.
+
+\begin{table}[h]
+    \centering
+    \caption{Tiempo por capa en el caso de clasificación.}\label{tab:res_perfil_cnn}
+    \vspace{0.5em}
+    \begin{tabular}{| l | r | r |}
+        \hline
+        Capa & Tiempo (s) & Porcentaje \\
+        \hline
+        Convolucional & 14.76 & 51.9 \\
+        \hline
+        ReLU & 12.17 & 42.8 \\
+        \hline
+        Lineal & 1.52 & 5.4 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+La capa convolucional consume el 51.9\% del tiempo y la activación el 42.8\%. Esto identifica las dos operaciones sobre las que conviene concentrar cualquier esfuerzo de optimización futuro: la evaluación de los polinomios de activación y la implementación de la convolución.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.72\textwidth]{images/res_perfil_cnn.png}
+    \caption{Tiempo por capa en el caso de clasificación, sobre una única muestra.}
+    \label{fig:res_perfil_cnn}
+\end{figure}
+
+\subsection{Síntesis}
+
+De la evaluación se puede concluir que la aceleración por GPU logra una inferencia más rápida en ambos casos de uso, con ventajas de 11.7 y 1.6 veces sobre Orion, que emplea el mismo esquema sobre CPU, y de dos órdenes de magnitud sobre Concrete~ML. La generación de claves es también más rápida.
+
+Los resultados tambien muestran que nuestra biblioteca consume mas memoria, ademas que es menos eficiente al momento de reducir la cantidad o tamaño de las claves Galois. El conjunto de claves de Galois domina el consumo de memoria.
+
+La fidelidad depende de red neuronal a evaluar y la implementación de sus capas y la aproximación de las funciones de activación. La red de regresión se reproduce cifrada con un error de $6.2 \times 10^{-4}$ respecto a la salida en claro, el menor de las tres implementaciones. La red convolucional, en cambio, pierde la decisión del clasificador, que las dos bibliotecas de referencia preservan íntegramente. La causa es una decisión de diseño, expresar la convolución como una multiplicación matriz-vector de propósito general. Esto otorga flexibilidad sobre los parámetros de la convolución a costa de un número de operaciones mayor. Esto produce mas operaciones a diferencia de las otras librerias, y a su vez produce mas ruido. 
