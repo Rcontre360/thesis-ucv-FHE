@@ -22,7 +22,6 @@ La evaluación comparativa se apoya en un banco de pruebas que ejecuta dos redes
     \item Entrenamiento: se entrena una única vez cada arquitectura en texto plano sobre su conjunto de datos, y se almacenan los pesos resultantes. Todas las implementaciones cifradas parten de estos mismos pesos, de modo que las diferencias observadas se atribuyen exclusivamente al esquema de cifrado y no al proceso de entrenamiento.
     \item Configuración de parámetros: para cada biblioteca se selecciona el conjunto de parámetros criptográficos con el que se ejecutará la red. En las bibliotecas basadas en CKKS, estos parámetros dependen de la red a evaluar.
     \item Generación de claves: a partir de los parámetros anteriores, cada biblioteca de cifrado construye su contexto criptográfico y genera el conjunto de claves necesario (clave pública, clave de relinealización y claves de rotación o de Galois).
-    \item Compilación: el modelo entrenado se traduce a la representación interna de cada biblioteca, lo que incluye la calibración de los rangos de entrada y el ajuste de las aproximaciones polinómicas de las funciones de activación.
     \item Inferencia: se cifra la entrada, se ejecuta la pasada hacia adelante sobre los datos cifrados y se descifra la salida.
     \item Medición y consolidación: durante cada fase se registran las métricas de tiempo, memoria y fidelidad y los resultados de todas las implementaciones se consolidan para su análisis.
 \end{enumerate}
@@ -88,8 +87,6 @@ La biblioteca se organiza en estructuras de datos y objetos que abstraen la conf
     \item Utilidades: funciones auxiliares de conversión de datos, validación de esquemas y definición de errores propios de la biblioteca.
 \end{itemize}
 
-La \hyperref[fig:metodo_capas]{Figura~\ref{fig:metodo_capas}} muestra cómo se apilan estas capas y por dónde discurre una operación desde el código del usuario hasta la GPU.
-
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.82\textwidth]{images/arquitectura_capas.png}
@@ -107,7 +104,6 @@ La biblioteca distingue explícitamente entre los datos cifrados y los datos en 
     \item Vector cifrado: representa un vector de números reales empaquetado en las ranuras de un texto cifrado de CKKS. Es la estructura sobre la que operan las capas de la red y mantiene la información de su nivel dentro de la cadena de módulos. Sobre ella se definen las operaciones homomórficas (suma, resta, multiplicación, rotación, producto punto y multiplicación matriz-vector).
     \item Vector en texto plano: representa un vector codificado pero sin cifrar, utilizado como operando en claro de algunas operaciones.
     \item Tensor en texto plano: almacena los pesos de las capas (matrices en dos o tres dimensiones) en texto plano. Es responsable, además, de precomputar la representación de la matriz de pesos que requiere la multiplicación matriz-vector.
-    \item Entrada del modelo: estructura que cifra el vector de entrada de la red a partir de los datos en claro proporcionados por el usuario.
 \end{itemize}
 
 Esta separación entre estructuras en claro y cifradas refleja el modelo de uso del cifrado homomórfico en la inferencia: los pesos del modelo permanecen en texto plano, mientras que la entrada del usuario y todos los resultados intermedios viajan cifrados.
@@ -115,6 +111,41 @@ Esta separación entre estructuras en claro y cifradas refleja el modelo de uso 
 \subsubsection{Interfaz y conversión desde PyTorch}
 
 Para usar la libreria usuario construye un modelo secuencial enumerando sus capas, de forma análoga a otras bibliotecas de aprendizaje profundo. Además, la biblioteca ofrece una función de conversión que toma un modelo ya entrenado en PyTorch y construye automáticamente el modelo equivalente con cifrado homomórfico. Esto permite utilizar modelos entrenados con herramientas estándar.
+
+Las capas que el usuario puede componer son las siguientes:
+
+\begin{itemize}
+    \item \textit{Linear}: capa densa o totalmente conectada. Recibe el número de entradas y de salidas, la matriz de pesos ya entrenada y, opcionalmente, el vector de sesgos.
+    \item \textit{Conv2D}: capa convolucional en dos dimensiones. Recibe el número de canales de entrada y de salida, el tamaño del núcleo, la forma de la imagen de entrada, los pesos, el sesgo opcional y el paso. Internamente construye la matriz que representa el filtro y reutiliza la ruta de cómputo de la capa densa.
+    \item \textit{ReLU}: activación aproximada por una composición de polinomios. No recibe parámetros al construirse, pues los grados de la aproximación se fijan durante la compilación a partir de la configuración del esquema.
+\end{itemize}
+
+El \hyperref[lst:metodo_capas]{Código~\ref{lst:metodo_capas}} muestra cómo se componen estas capas para describir una red convolucional.
+
+\begin{lstlisting}[language=Python,caption={Composición de capas con la clase Sequential.},label={lst:metodo_capas}]
+from fhe_ml import Sequential
+from fhe_ml.layers import Conv2D, Linear, ReLU
+
+# Los pesos provienen de un entrenamiento previo en texto plano.
+model = Sequential([
+    Conv2D(
+        in_channels=1,
+        out_channels=4,
+        kernel_size=7,
+        input_shape=(28, 28),
+        weight=W_conv,
+        bias=b_conv,
+        stride=5,
+    ),
+    ReLU(),
+    Linear(4 * 5 * 5, 10, W_fc, bias=b_fc),
+])
+
+# Alternativa: convertir una red ya entrenada en PyTorch.
+model = Sequential.from_torch(torch_model, input_shape=(1, 28, 28))
+\end{lstlisting}
+
+La conversión desde PyTorch admite las capas \textit{Linear}, \textit{Conv2d} y \textit{ReLU}, y resuelve los cambios de forma que introduce \textit{Flatten} sin generar una capa equivalente, pues el modelo opera siempre sobre un vector.
 
 El flujo de uso consta de cuatro pasos:
 
@@ -152,7 +183,7 @@ La \hyperref[fig:metodo_bindings]{Figura~\ref{fig:metodo_bindings}} enumera cada
 
     \item Par de claves (\texttt{CKKSSecretkey} y \texttt{CKKSPublickey}): la clave secreta, que solo posee el cliente, y la clave pública con la que se cifra.
 
-    \item Claves de evaluación (\texttt{CKKSRelinkey} y \texttt{CKKSGaloiskey}): habilitan la relinealización y las rotaciones. Ambas admiten serialización, lo que permite transferirlas entre procesos.
+    \item Claves de evaluación (\texttt{CKKSRelinkey} y \texttt{CKKSGaloiskey}): habilitan la relinealización y las rotaciones.
 
     \item Datos (\texttt{CKKSCiphertext} y \texttt{CKKSPlaintext}): contienen el texto cifrado y el texto en claro, junto con su nivel dentro de la cadena de módulos.
 
@@ -199,7 +230,6 @@ La \hyperref[fig:metodo_modulos]{Figura~\ref{fig:metodo_modulos}} muestra las de
     \item \textit{Sequential}: compone las capas en una red completa y orquesta su compilación y su inferencia. Es el punto de entrada del usuario y ninguna otra clase depende de ella.
     \item \textit{Linear} y \textit{Conv2D}: capas afines, que expresan la multiplicación matriz-vector y la convolución sobre datos cifrados a partir de los pesos almacenados en texto plano.
     \item \textit{ReLU}: capa de activación, que evalúa sobre el vector cifrado una aproximación polinómica de la función.
-    \item \textit{Square}: capa de activación que eleva el vector cifrado al cuadrado. Al tratarse ya de un polinomio, se evalúa de forma exacta con una única multiplicación.
     \item \textit{Input}: representa la entrada cifrada de la red, que obtiene delegando el cifrado en el cliente. Su rol actual es conservar el texto cifrado y su tamaño. La decisión de usar una clase para envolver la entrada del modelo se debe a que en un futuro el modelo podría requerir una codificación distinta dependiendo de su implementación. Por lo tanto se puede usar esta clase para hacer esta codificación.
     \item \textit{Client}: posee la clave secreta y es la única clase que genera las claves, cifra y descifra. Se apoya en el contexto para codificar los valores antes de cifrarlos.
     \item \textit{FHEContext}: concentra la construcción del contexto criptográfico y las operaciones homomórficas del esquema. Opera del lado del evaluador y no tiene acceso a la clave secreta, sino únicamente a las claves de evaluación que le entrega el cliente. Es la frontera del núcleo: ninguna clase por encima de ella manipula objetos criptográficos.
@@ -287,7 +317,7 @@ Cada asignación hecha por el usuario dispara las validaciones descritas a conti
     \item que los grados de los polinomios de activación sean impares y mayores o iguales que tres, como requiere la aproximación empleada.
 \end{itemize}
 
-Estas comprobaciones se ejecutan cada vez que se modifica un parámetro. La validación se sitúa en Python, antes de llegar al \textit{backend}, con mensajes de error claros, ademas varias de las validaciones no son evaluadas por el \textit{backend}.
+Estas comprobaciones se ejecutan cada vez que se modifica un parámetro. La validación se sitúa en Python, antes de llegar al \textit{backend}.
 
 \subsubsection{Multiplicación matriz-vector}
 
