@@ -9,7 +9,7 @@ En este capítulo se documentan las actividades realizadas para construir la bib
 
     \item Diseño e implementación de la biblioteca: sobre esa capa se definieron las estructuras de datos que representan los tensores cifrados y en texto plano, y se implementaron las capas de red neuronal junto con la gestión automática de los niveles y la calibración del modelo, de modo que el usuario no manipule directamente los objetos criptográficos.
 
-    \item Validación de las operaciones: el desarrollo se guio por un conjunto de pruebas automatizadas que comprueba que cada operación cifrada reproduce su equivalente en texto plano.
+    \item Validación de las operaciones: el desarrollo se guió por un conjunto de pruebas automatizadas que comprueba que cada operación cifrada reproduce su equivalente en texto plano.
 
     \item Construcción de los casos de uso: se entrenaron dos arquitecturas representativas de redes neuronales, una totalmente conectada para un problema de regresión y una convolucional para uno de clasificación, y se ejecutó su inferencia con la biblioteca.
 
@@ -94,7 +94,7 @@ La biblioteca se organiza en estructuras de datos y objetos que abstraen la conf
     \label{fig:metodo_capas}
 \end{figure}
 
-El proyecto se empaqueta con \textit{scikit-build-core} y CMake, que compilan la extensión del \textit{backend} y la integran como un módulo importable junto al código Python. Esta separación en capas permite que el usuario interactúe únicamente con las capas superiores (modelo secuencial y capas de red), sin necesidad de conocer los detalles criptográficos ni de la GPU.
+El proyecto se empaqueta con \textit{scikit-build-core} y CMake, que compilan la extensión del \textit{backend} y la integran como un módulo importable junto al código Python. Esta separación en capas permite que el usuario interactúe únicamente con las capas superiores (modelo secuencial y capas de red), sin necesidad de conocer los detalles criptográficos ni de la GPU. Esta separación se puede apreciar en la \hyperref[fig:metodo_capas]{Figura~\ref{fig:metodo_capas}}.
 
 \subsubsection{Estructuras de datos}
 
@@ -668,7 +668,7 @@ Esta sección muestra y analiza los resultados obtenidos de la evaluación compa
 
 \subsection{Regresión: red totalmente conectada}\label{sec:res_mlp}
 
-La red alcanza en texto plano un $R^2$ de 0.793 sobre el conjunto de prueba completo, y de 0.804 sobre el subconjunto que evalúa la ejecución de referencia. Este es el valor que la inferencia cifrada debería reproducir. La \hyperref[tab:res_calidad_mlp]{Tabla~\ref{tab:res_calidad_mlp}} recoge la calidad y la fidelidad obtenidas, separando el modelo aproximado sin cifrar del mismo modelo bajo cifrado real, para distinguir el costo de la aproximación del costo del cifrado.
+La red alcanza en texto plano un $R^2$ de 0.793 sobre el conjunto de prueba completo, y de 0.804 sobre el subconjunto que evalúa la ejecución de referencia. Este es el valor que la inferencia cifrada debería reproducir. La \hyperref[tab:res_calidad_mlp]{Tabla~\ref{tab:res_calidad_mlp}} recoge la calidad y la fidelidad obtenidas, separando el modelo aproximado sin cifrar del mismo modelo bajo cifrado real, para distinguir el costo de la aproximación del costo del cifrado. La \hyperref[fig:res_calidad_mlp]{Figura~\ref{fig:res_calidad_mlp}} muestra de forma gráfica los resultados obtenidos, además del valor de referencia en texto plano.
 
 \begin{table}[h]
     \centering
@@ -707,7 +707,7 @@ Concrete~ML no muestra una caída equivalente porque su esquema pierde precisió
     \label{fig:res_calidad_mlp}
 \end{figure}
 
-La \hyperref[tab:res_rend_mlp]{Tabla~\ref{tab:res_rend_mlp}} recoge el rendimiento. La generación de claves se lo realiza cada cliente una sola vez. La inferencia es el tiempo por muestra, incluyendo el cifrado de la entrada y el descifrado de la salida. 
+La \hyperref[tab:res_rend_mlp]{Tabla~\ref{tab:res_rend_mlp}} recoge el rendimiento. La generación de claves la realiza cada cliente una sola vez. La inferencia es el tiempo por muestra, incluyendo el cifrado de la entrada y el descifrado de la salida. Las gráficas de la \hyperref[fig:res_rend_mlp]{Figura~\ref{fig:res_rend_mlp}} muestran esas mismas variables de forma más visual.
 
 \begin{table}[h]
     \centering
@@ -742,7 +742,7 @@ En cuanto a la memoria, el conjunto de trabajo de la biblioteca alcanza 17.6~GB 
     \label{fig:res_rend_mlp}
 \end{figure}
 
-El perfilado capa por capa, en la \hyperref[tab:res_perfil_mlp]{Tabla~\ref{tab:res_perfil_mlp}}, identifica dónde se concentra el costo. La suma de los tiempos por capa coincide con la latencia medida de extremo a extremo, lo que indica que el cifrado de la entrada y el descifrado de la salida son despreciables frente a la evaluación de la red.
+El perfilado capa por capa, en la \hyperref[tab:res_perfil_mlp]{Tabla~\ref{tab:res_perfil_mlp}} y la \hyperref[fig:res_perfil_mlp]{Figura~\ref{fig:res_perfil_mlp}}, identifica dónde se concentra el costo. La suma de los tiempos por capa coincide con la latencia medida de extremo a extremo, lo que indica que el cifrado de la entrada y el descifrado de la salida son despreciables frente a la evaluación de la red.
 
 \begin{table}[h]
     \centering
