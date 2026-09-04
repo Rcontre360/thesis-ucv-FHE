@@ -213,7 +213,7 @@ Esta sección describe cómo la biblioteca implementa internamente la red y su i
 
 \subsubsection{Clases y dependencias}\label{sec:metodo_api}
 
-La biblioteca se distribuye como el paquete \nolinkurl{fhe_ml}. El código fuente y la documentación de uso están disponibles en el repositorio público del proyecto \cite{SDKRepo}.
+La biblioteca se distribuye como el paquete \nolinkurl{fhe_ml}. El código fuente y la documentación de uso están disponibles en el repositorio público del proyecto \cite{SDKRepo}\footnote{En el repositorio, la biblioteca se encuentra en el directorio \nolinkurl{sdk/src/fhe_ml}, y el banco de pruebas empleado en la evaluación, en \nolinkurl{sdk/bench}.}.
 
 Las clases se organizaron en forma de capas, cada una depende únicamente de las que se encuentran en capas inferiores, nunca de las que la envuelven, de modo que la complejidad criptográfica queda confinada en el núcleo y disminuye de forma progresiva hacia el exterior. La capa más externa es la que el usuario emplea directamente, y en ella \textit{Sequential} es uno de los principales puntos de entrada, junto con \textit{Client}. 
 
@@ -224,7 +224,7 @@ Las clases se organizaron en forma de capas, cada una depende únicamente de las
     \label{fig:metodo_modulos}
 \end{figure}
 
-La \hyperref[fig:metodo_modulos]{Figura~\ref{fig:metodo_modulos}} muestra las dependencias entre las clases públicas, dispuestas de manera que las flechas siempre apuntan hacia adentro. Cada una cumple la siguiente función:
+La \hyperref[fig:metodo_modulos]{Figura~\ref{fig:metodo_modulos}} muestra las dependencias entre las clases públicas, dispuestas de manera que las flechas siempre apuntan hacia las capas inferiores. Cada clase cumple la siguiente función:
 
 \begin{itemize}
     \item \textit{Sequential}: compone las capas en una red completa y orquesta su compilación y su inferencia. Es el punto de entrada del usuario y ninguna otra clase depende de ella.
@@ -776,7 +776,7 @@ Las dos activaciones consumen el 94\% del tiempo, mientras las tres capas lineal
 
 \subsection{Clasificación: red convolucional}\label{sec:res_cnn}
 
-La red en PyTorch alcanza en texto plano una exactitud de 0.939 sobre el conjunto de prueba completo, y de 0.925 sobre el subconjunto que evalúa la ejecución de referencia. La \hyperref[tab:res_calidad_cnn]{Tabla~\ref{tab:res_calidad_cnn}} recoge la calidad y la fidelidad obtenidas, con la misma separación entre el modelo aproximado sin cifrar y el mismo modelo bajo cifrado real.
+La red en PyTorch alcanza en texto plano una exactitud de 0.939 sobre el conjunto de prueba completo, y de 0.925 sobre el subconjunto que evalúa la ejecución de referencia. La \hyperref[tab:res_calidad_cnn]{Tabla~\ref{tab:res_calidad_cnn}} recoge la calidad y la fidelidad obtenidas, con la misma separación entre el modelo aproximado sin cifrar y el mismo modelo bajo cifrado real. La \hyperref[fig:res_calidad_cnn]{Figura~\ref{fig:res_calidad_cnn}} muestra de forma gráfica los resultados obtenidos, además del valor de referencia en texto plano.
 
 \begin{table}[h]
     \centering
@@ -839,11 +839,11 @@ Cada multiplicación y cada rotación homomórfica añade ruido al texto cifrado
     \end{tabular}
 \end{table}
 
-La biblioteca propuesta sigue siendo la más rápida, con 28.31 segundos por inferencia frente a los 46.49 de Orion y los 448.88 de Concrete~ML, esto es 1.6 y 15.9 veces respectivamente. La distancia con la ejecución en texto plano sube a $1.9 \times 10^{4}$ veces. La generación de claves, en cambio, pasa a costar 39.93 segundos, dos órdenes de magnitud más que en la red de regresión, debido al número de claves de Galois que exige el empaquetado de la convolución.
+La \hyperref[tab:res_rend_cnn]{Tabla~\ref{tab:res_rend_cnn}} muestra el rendimiento en este caso. La biblioteca propuesta sigue siendo la más rápida, con 28.31 segundos por inferencia frente a los 46.49 de Orion y los 448.88 de Concrete~ML, esto es 1.6 y 15.9 veces respectivamente. La distancia con la ejecución en texto plano sube a $1.9 \times 10^{4}$ veces. La generación de claves, en cambio, pasa a costar 39.93 segundos, dos órdenes de magnitud más que en la red de regresión, debido al número de claves de Galois que exige el empaquetado de la convolución.
 
 Ese mismo conjunto de claves obligó a activar la opción de mantenerlas en la memoria del anfitrión, descrita en la \hyperref[sec:metodo_config]{sección de configuración}. El conjunto de trabajo en la GPU baja así a 3.0~GB, a cambio de 43.6~GB de memoria principal. Este intercambio es lo que permite evaluar la red en una tarjeta de 24~GB, y confirma que el conjunto de claves de Galois constituye la mayor parte del consumo de memoria del esquema.
 
-Conviene distinguir esas cifras del pico a nivel de dispositivo, que en la biblioteca propuesta asciende a 21.4~GB tanto aquí como en la red de regresión, prácticamente la totalidad de la tarjeta. Ese valor mide la memoria que el gestor de la GPU reserva por adelantado para su reservorio, y por eso permanece constante aunque el conjunto de trabajo varíe entre 17.6 y 3.0~GB. Esto es debido a que HEonGPU ocupa la tarjeta completa con independencia de la configuración.
+Conviene distinguir esas cifras del pico a nivel de dispositivo, que en la biblioteca propuesta asciende a 21.4~GB tanto aquí como en la red de regresión, prácticamente la totalidad de la tarjeta. Ese valor mide la memoria que el gestor de la GPU reserva por adelantado para su reservorio, y por eso permanece constante aunque el conjunto de trabajo varíe entre 17.6 y 3.0~GB. Esto es debido a que HEonGPU ocupa la tarjeta completa con independencia de la configuración. Las gráficas de la \hyperref[fig:res_rend_cnn]{Figura~\ref{fig:res_rend_cnn}} muestran esas mismas variables de forma más visual.
 
 \begin{figure}[H]
     \centering
@@ -852,7 +852,7 @@ Conviene distinguir esas cifras del pico a nivel de dispositivo, que en la bibli
     \label{fig:res_rend_cnn}
 \end{figure}
 
- La \hyperref[tab:res_perfil_cnn]{Tabla~\ref{tab:res_perfil_cnn}} muestra el tiempo de inferencia por capa de la biblioteca propuesta.
+ La \hyperref[tab:res_perfil_cnn]{Tabla~\ref{tab:res_perfil_cnn}} y la \hyperref[fig:res_perfil_cnn]{Figura~\ref{fig:res_perfil_cnn}} muestran el tiempo de inferencia por capa de la biblioteca propuesta.
 
 \begin{table}[h]
     \centering
