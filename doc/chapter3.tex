@@ -236,9 +236,10 @@ La \hyperref[fig:metodo_modulos]{Figura~\ref{fig:metodo_modulos}} muestra las de
     \item \textit{EncryptedVector}: vector de números reales empaquetado en las ranuras de un texto cifrado, sobre el que se definen las operaciones homomórficas que emplean las capas.
     \item \textit{PlaintextVector} y \textit{PlaintextTensor}: los operandos en claro, el segundo de ellos responsable además de precomputar la representación de la matriz de pesos que requiere la multiplicación matriz-vector.
     \item \textit{FHEConfig} y \textit{BootstrapConfig}: describen los parámetros del esquema y los del \textit{bootstrapping}, y validan su consistencia antes de construir el contexto.
-    \item \nolinkurl{config_for_circuit}: función que deriva una configuración completa a partir del factor de escala, la profundidad multiplicativa del circuito y los grados de los polinomios de la activación, y que activa el \textit{bootstrapping} cuando la cadena de módulos no alcanza para el circuito.
     \item \textit{KeyParams}: clase auxiliar que encapsula las claves de evaluación: la de relinealización y la de Galois, y que las serializa y deserializa. Estas claves son públicas y el servidor las necesita para evaluar la red, de modo que el cliente las genera una sola vez y se las transmite por medio de esta clase.
 \end{itemize}
+
+La biblioteca expone además \nolinkurl{config_for_circuit}. Esta funcion deriva una configuración completa a partir del factor de escala, la profundidad multiplicativa del circuito y los grados de los polinomios de la activación, y que activa el bootstrapping cuando la cadena de módulos no alcanza para el circuito
 
 El \hyperref[lst:metodo_api]{Código~\ref{lst:metodo_api}} muestra el uso completo de la biblioteca sobre una red de dos capas, siguiendo los cuatro pasos descritos anteriormente e indicando qué parte del proceso corresponde al servidor y cuál al cliente.
 
@@ -246,6 +247,10 @@ El \hyperref[lst:metodo_api]{Código~\ref{lst:metodo_api}} muestra el uso comple
 import numpy as np
 from fhe_ml import Client, FHEContext, Sequential
 from fhe_ml.layers import Linear, ReLU
+
+# datos_de_calibracion es un subset representativo de los datos
+# de entrenamiento para la calibracion de la red
+from datos import datos_de_calibracion
 
 # --- Servidor ---
 # 1. Construye la red con los pesos que ya entreno en texto plano.
@@ -884,6 +889,6 @@ La capa convolucional consume el 51.9\% del tiempo y la activación el 42.8\%. E
 
 De la evaluación se puede concluir que la aceleración por GPU logra una inferencia más rápida en ambos casos de uso, con ventajas de 11.7 y 1.6 veces sobre Orion, que emplea el mismo esquema sobre CPU, y de dos órdenes de magnitud sobre Concrete~ML. La generación de claves es también más rápida.
 
-Los resultados tambien muestran que nuestra biblioteca consume mas memoria, ademas que es menos eficiente al momento de reducir la cantidad o tamaño de las claves Galois. El conjunto de claves de Galois domina el consumo de memoria.
+Los resultados tambien muestran que la biblioteca propuesta consume más memoria, además que es menos eficiente al momento de reducir la cantidad o tamaño de las claves Galois. El conjunto de claves de Galois domina el consumo de memoria.
 
-La fidelidad depende de red neuronal a evaluar y la implementación de sus capas y la aproximación de las funciones de activación. La red de regresión se reproduce cifrada con un error de $6.2 \times 10^{-4}$ respecto a la salida en claro, el menor de las tres implementaciones. La red convolucional, en cambio, pierde la decisión del clasificador, que las dos bibliotecas de referencia preservan íntegramente. La causa es una decisión de diseño, expresar la convolución como una multiplicación matriz-vector de propósito general. Esto otorga flexibilidad sobre los parámetros de la convolución a costa de un número de operaciones mayor. Esto produce mas operaciones a diferencia de las otras librerias, y a su vez produce mas ruido. 
+La fidelidad depende de red neuronal a evaluar y la implementación de sus capas y la aproximación de las funciones de activación. La red de regresión se reproduce cifrada con un error de $6.2 \times 10^{-4}$ respecto a la salida en claro, el menor de las tres implementaciones. La red convolucional, en cambio, pierde la decisión del clasificador, que las dos bibliotecas de referencia preservan íntegramente. La causa es una decisión de diseño, expresar la convolución como una multiplicación matriz-vector de propósito general. Esto otorga flexibilidad sobre los parámetros de la convolución a costa de un número de operaciones mayor. Esto produce más operaciones a diferencia de las otras librerias, y a su vez produce más ruido. 
