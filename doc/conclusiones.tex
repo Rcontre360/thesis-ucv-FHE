@@ -19,7 +19,7 @@ En cuanto a la utilidad de la biblioteca, en su estado actual su uso práctico e
 \section*{Limitaciones}
 \addcontentsline{toc}{section}{Limitaciones}
 
-La limitación más relevante es la implementación actual de la convolución que realiza una cantidad mayor de operaciones comparada con otras librerías de cifrado homomórfico. En consecuencia la biblioteca gana más ruido para arquitecturas convolucionales.
+La limitación más relevante es la implementación actual de la convolución que realiza una cantidad mayor de operaciones comparada con otras bibliotecas de cifrado homomórfico. En consecuencia la biblioteca gana más ruido para arquitecturas convolucionales.
 
 La selección de los parámetros criptográficos permanece, parcialmente, a cargo del usuario. Este debe escoger el nivel de precisión adecuado, que depende tanto de la profundidad de la red como del hardware disponible (a mayor precisión, más memoria es necesaria). El tamaño de los modelos que pueden evaluarse está acotado por la cantidad de memoria disponible. A ello se añade que el gestor de memoria del \textit{backend} reserva por adelantado la totalidad de la tarjeta, con independencia del tamaño de la red, lo que impide compartir el dispositivo con otro proceso.
 
@@ -36,7 +36,7 @@ En la misma dirección, se necesita ampliar el catálogo de funciones de activac
 
 Otra modificación necesaria es mejorar la selección automática de los parámetros del esquema a partir de la profundidad multiplicativa y de los rangos estimados de la red. La selección automática actual no es la más optimizada para reducir el tiempo de ejecución o uso de memoria.
 
-La librería se puede hacer más interoperable si se adopta el estándar ONNX para importar modelos permitiría alimentar la biblioteca con redes entrenadas en cualquier entorno, y no solo en PyTorch, ampliando el conjunto de modelos que pueden evaluarse sin reescribirlos.
+La biblioteca se puede hacer más interoperable si se adopta el estándar ONNX para importar modelos permitiría alimentar la biblioteca con redes entrenadas en cualquier entorno, y no solo en PyTorch, ampliando el conjunto de modelos que pueden evaluarse sin reescribirlos.
 
 Otras de las limitaciones observadas no pertenecen a la biblioteca sino a HEonGPU. La reserva anticipada de la totalidad de la memoria de video y la ausencia de tablas de búsqueda. 
 

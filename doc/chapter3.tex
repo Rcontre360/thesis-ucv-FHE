@@ -110,7 +110,7 @@ Esta separación entre estructuras en claro y cifradas refleja el modelo de uso 
 
 \subsubsection{Interfaz y conversión desde PyTorch}
 
-Para usar la libreria usuario construye un modelo secuencial enumerando sus capas, de forma análoga a otras bibliotecas de aprendizaje profundo. Además, la biblioteca ofrece una función de conversión que toma un modelo ya entrenado en PyTorch y construye automáticamente el modelo equivalente con cifrado homomórfico. Esto permite utilizar modelos entrenados con herramientas estándar.
+Para usar la biblioteca usuario construye un modelo secuencial enumerando sus capas, de forma análoga a otras bibliotecas de aprendizaje profundo. Además, la biblioteca ofrece una función de conversión que toma un modelo ya entrenado en PyTorch y construye automáticamente el modelo equivalente con cifrado homomórfico. Esto permite utilizar modelos entrenados con herramientas estándar.
 
 Las capas que el usuario puede componer son las siguientes:
 
@@ -599,7 +599,7 @@ donde $\mu$ y $\sigma$ son la media y la desviación estándar de la caracterís
 
 \section{Evaluación comparativa}\label{sec:metodo_evaluacion}
 
-La evaluación comparativa consistió en medir, sobre los dos casos de uso descritos, el rendimiento de cada implementación y la fidelidad de sus resultados respecto a la ejecución en texto plano. A continuación se describen la orquestación de los experimentos, las fases medidas y las métricas registradas.
+La evaluación comparativa consistió en medir, sobre los dos casos de uso descritos, el rendimiento de cada implementación y la fidelidad de sus resultados respecto a la ejecución en texto plano.\footnote{El banco de pruebas con el que se ejecutaron ambos escenarios está en el directorio \repodir{sdk/bench} del repositorio \cite{SDKRepo}. Cada caso tiene su propia carpeta, \nolinkurl{mlp} y \nolinkurl{cnn}.} A continuación se describen la orquestación de los experimentos, las fases medidas y las métricas registradas.
 
 \subsection{Orquestación y aislamiento de los experimentos}
 
@@ -669,7 +669,7 @@ Además de las métricas agregadas por fase, se realizó un perfilado detallado 
 
 \section{Análisis de resultados}\label{sec:metodo_resultados}
 
-Esta sección muestra y analiza los resultados obtenidos de la evaluación comparativa expuesta anteriormente. El análisis se presenta por separado para cada caso de uso, comenzando por la red de regresión.
+Esta sección muestra y analiza los resultados obtenidos de la evaluación comparativa expuesta anteriormente.\footnote{Las métricas se consolidan y se grafican en dos cuadernos de Jupyter: \repofile{sdk/bench/mlp/analysis.ipynb} para el caso de regresión y \repofile{sdk/bench/cnn/analysis.ipynb} para el de clasificación.} El análisis se presenta por separado para cada caso de uso, comenzando por la red de regresión.
 
 \subsection{Regresión: red totalmente conectada}\label{sec:res_mlp}
 
@@ -889,6 +889,6 @@ La capa convolucional consume el 51.9\% del tiempo y la activación el 42.8\%. E
 
 De la evaluación se puede concluir que la aceleración por GPU logra una inferencia más rápida en ambos casos de uso, con ventajas de 11.7 y 1.6 veces sobre Orion, que emplea el mismo esquema sobre CPU, y de dos órdenes de magnitud sobre Concrete~ML. La generación de claves es también más rápida.
 
-Los resultados tambien muestran que la biblioteca propuesta consume más memoria, además que es menos eficiente al momento de reducir la cantidad o tamaño de las claves Galois. El conjunto de claves de Galois domina el consumo de memoria.
+Los resultados también muestran que la biblioteca propuesta consume más memoria, además que es menos eficiente al momento de reducir la cantidad o tamaño de las claves Galois. El conjunto de claves de Galois domina el consumo de memoria.
 
-La fidelidad depende de red neuronal a evaluar y la implementación de sus capas y la aproximación de las funciones de activación. La red de regresión se reproduce cifrada con un error de $6.2 \times 10^{-4}$ respecto a la salida en claro, el menor de las tres implementaciones. La red convolucional, en cambio, pierde la decisión del clasificador, que las dos bibliotecas de referencia preservan íntegramente. La causa es una decisión de diseño, expresar la convolución como una multiplicación matriz-vector de propósito general. Esto otorga flexibilidad sobre los parámetros de la convolución a costa de un número de operaciones mayor. Esto produce más operaciones a diferencia de las otras librerias, y a su vez produce más ruido. 
+La fidelidad se vio afectada por la implementación de las capas en cada red neuronal evaluada y la aproximación de las funciones de activación. La red de regresión se reproduce cifrada con un error de $6.2 \times 10^{-4}$ respecto a la salida en claro, el menor de las tres implementaciones. La red convolucional, en cambio, pierde la decisión del clasificador, que las dos bibliotecas de referencia preservan íntegramente. La causa es una decisión de diseño, expresar la convolución como una multiplicación matriz-vector de propósito general. Esto otorga flexibilidad sobre los parámetros de la convolución a costa de un número de operaciones mayor. Esto produce más operaciones a diferencia de las otras bibliotecas, y a su vez produce más ruido. 
