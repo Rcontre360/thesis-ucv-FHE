@@ -123,8 +123,8 @@ Las capas que el usuario puede componer son las siguientes:
 El \hyperref[lst:metodo_capas]{Código~\ref{lst:metodo_capas}} muestra cómo se componen estas capas para describir una red convolucional.
 
 \begin{lstlisting}[language=Python,caption={Composición de capas con la clase Sequential.},label={lst:metodo_capas}]
-from fhe_ml import Sequential
-from fhe_ml.layers import Conv2D, Linear, ReLU
+from opal_ml import Sequential
+from opal_ml.layers import Conv2D, Linear, ReLU
 
 # Los pesos provienen de un entrenamiento previo en texto plano.
 model = Sequential([
@@ -213,14 +213,14 @@ Esta sección describe cómo la biblioteca implementa internamente la red y su i
 
 \subsubsection{Clases y dependencias}\label{sec:metodo_api}
 
-La biblioteca se distribuye como el paquete \nolinkurl{fhe_ml}. El código fuente y la documentación de uso están disponibles en el repositorio público del proyecto \cite{SDKRepo}\footnote{En el repositorio, la biblioteca se encuentra en el directorio \nolinkurl{sdk/src/fhe_ml}, y el banco de pruebas empleado en la evaluación, en \nolinkurl{sdk/bench}.}.
+La biblioteca se distribuye como el paquete \nolinkurl{opal_ml}. El código fuente y la documentación de uso están disponibles en el repositorio público del proyecto \cite{SDKRepo}\footnote{En el repositorio, la biblioteca se encuentra en el directorio \nolinkurl{sdk/src/opal_ml}, y el banco de pruebas empleado en la evaluación, en \nolinkurl{sdk/bench}.}.
 
 Las clases se organizaron en forma de capas, cada una depende únicamente de las que se encuentran en capas inferiores, nunca de las que la envuelven, de modo que la complejidad criptográfica queda confinada en el núcleo y disminuye de forma progresiva hacia el exterior. La capa más externa es la que el usuario emplea directamente, y en ella \textit{Sequential} es uno de los principales puntos de entrada, junto con \textit{Client}. 
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.70\textwidth]{images/modulos_dependencias.png}
-    \caption{Dependencias entre las clases públicas del paquete \nolinkurl{fhe_ml}.}
+    \caption{Dependencias entre las clases públicas del paquete \nolinkurl{opal_ml}.}
     \label{fig:metodo_modulos}
 \end{figure}
 
@@ -245,8 +245,8 @@ El \hyperref[lst:metodo_api]{Código~\ref{lst:metodo_api}} muestra el uso comple
 
 \begin{lstlisting}[language=Python,caption={Inferencia cifrada de una red de dos capas, con las operaciones que corresponden al servidor y al cliente.},label={lst:metodo_api}]
 import numpy as np
-from fhe_ml import Client, FHEContext, Sequential
-from fhe_ml.layers import Linear, ReLU
+from opal_ml import Client, FHEContext, Sequential
+from opal_ml.layers import Linear, ReLU
 
 # datos_de_calibracion es un subset representativo de los datos
 # de entrenamiento para la calibracion de la red
