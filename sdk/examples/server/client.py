@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from fhe_ml import Client, EncryptedVector, FHEContext
+from opal_ml import Client, EncryptedVector, FHEContext
 
 
 def setup_client(context: FHEContext) -> Client:

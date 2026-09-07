@@ -9,7 +9,7 @@ def pytest_configure(config: pytest.Config) -> None:
 def built_context():
     """Server-side evaluator context (no secret key)."""
     try:
-        from fhe_ml import FHEConfig, FHEContext
+        from opal_ml import FHEConfig, FHEContext
     except ImportError as e:
         pytest.skip(f"SDK not installed: {e}")
     config = FHEConfig(
@@ -26,7 +26,7 @@ def client(built_context):
     into the server so ciphertext-ciphertext ops work. Tests that need rotation
     keys call `client.generate_rotation_keys(...)` then
     `built_context.set_client_params(client.key_params())`."""
-    from fhe_ml import Client
+    from opal_ml import Client
 
     c = Client(built_context)
     built_context.set_client_params(c.key_params())

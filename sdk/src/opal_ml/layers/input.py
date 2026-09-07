@@ -1,5 +1,5 @@
-from fhe_ml.ckks.containers.ciphertext import EncryptedVector
-from fhe_ml.client import Client
+from opal_ml.ckks.containers.ciphertext import EncryptedVector
+from opal_ml.client import Client
 
 
 class Input:

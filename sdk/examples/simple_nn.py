@@ -9,8 +9,8 @@ the result. Weights/biases are plaintext.
 
 import numpy as np
 
-from fhe_ml import Client, FHEContext, Sequential
-from fhe_ml.layers import Linear, ReLU
+from opal_ml import Client, FHEContext, Sequential
+from opal_ml.layers import Linear, ReLU
 
 # ---------------------------------------------------------------------------
 # Weights and biases (normally loaded from a trained model)

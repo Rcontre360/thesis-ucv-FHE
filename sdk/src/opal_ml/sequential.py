@@ -3,18 +3,18 @@ from collections.abc import Iterator
 import numpy as np
 import torch.nn as nn
 
-from fhe_ml.ckks.config import FHEConfig, config_for_circuit
-from fhe_ml.ckks.containers.ciphertext import EncryptedVector
-from fhe_ml.ckks.containers.tensor import PlaintextTensor
-from fhe_ml.ckks.context import FHEContext
-from fhe_ml.client import Client
-from fhe_ml.layers.base import AffineLayer, Layer
-from fhe_ml.layers.conv2d import Conv2D
-from fhe_ml.layers.input import Input
-from fhe_ml.layers.linear import Linear
-from fhe_ml.layers.relu import ReLU
-from fhe_ml.utils import to_numpy
-from fhe_ml.utils.errors import LayerConfigError
+from opal_ml.ckks.config import FHEConfig, config_for_circuit
+from opal_ml.ckks.containers.ciphertext import EncryptedVector
+from opal_ml.ckks.containers.tensor import PlaintextTensor
+from opal_ml.ckks.context import FHEContext
+from opal_ml.client import Client
+from opal_ml.layers.base import AffineLayer, Layer
+from opal_ml.layers.conv2d import Conv2D
+from opal_ml.layers.input import Input
+from opal_ml.layers.linear import Linear
+from opal_ml.layers.relu import ReLU
+from opal_ml.utils import to_numpy
+from opal_ml.utils.errors import LayerConfigError
 
 
 class Sequential:

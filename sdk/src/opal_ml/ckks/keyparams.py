@@ -2,7 +2,7 @@ import base64
 import json
 from dataclasses import dataclass
 
-from fhe_ml.backend import CKKSGaloiskey, CKKSRelinkey
+from opal_ml.backend import CKKSGaloiskey, CKKSRelinkey
 
 
 @dataclass

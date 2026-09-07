@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from fhe_ml.layers.relu import ReLU, _fn_coeffs
+from opal_ml.layers.relu import ReLU, _fn_coeffs
 
 # Exact rational coefficients for the first few f_n (ePrint 2019/417, Table 1).
 # Format: array indexed by power; even-power slots are zero.

@@ -1,10 +1,10 @@
 import numpy as np
 import torch.nn as nn
 
-from fhe_ml.ckks.containers.tensor import PlaintextTensor
-from fhe_ml.layers.base import AffineLayer
-from fhe_ml.utils.errors import LayerConfigError, ShapeError
-from fhe_ml.utils.validate import check_array
+from opal_ml.ckks.containers.tensor import PlaintextTensor
+from opal_ml.layers.base import AffineLayer
+from opal_ml.utils.errors import LayerConfigError, ShapeError
+from opal_ml.utils.validate import check_array
 
 
 class Conv2D(AffineLayer):

@@ -7,7 +7,7 @@ add ciphertexts without ever decrypting them.
 
 from collections.abc import Callable
 
-from fhe_ml import EncryptedVector, FHEContext, KeyParams
+from opal_ml import EncryptedVector, FHEContext, KeyParams
 
 WEIGHTS: list[float] = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
 SCALE: float = 2.0

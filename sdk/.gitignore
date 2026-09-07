@@ -12,3 +12,5 @@ temp
 keys
 dist
 *.ipynb_checkpoints/
+docs
+bench/playground

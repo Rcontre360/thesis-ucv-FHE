@@ -3,9 +3,9 @@ from abc import ABC, abstractmethod
 import numpy as np
 import torch.nn as nn
 
-from fhe_ml.ckks.containers.ciphertext import EncryptedVector
-from fhe_ml.ckks.containers.tensor import PlaintextTensor
-from fhe_ml.utils.errors import ShapeError
+from opal_ml.ckks.containers.ciphertext import EncryptedVector
+from opal_ml.ckks.containers.tensor import PlaintextTensor
+from opal_ml.utils.errors import ShapeError
 
 
 class Layer(ABC):

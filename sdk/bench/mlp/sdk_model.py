@@ -1,6 +1,6 @@
 import torch
 
-from fhe_ml import FHEContext, Sequential
+from opal_ml import FHEContext, Sequential
 from bench.mlp.model import N_FEATURES
 
 SCALE = 52

@@ -1,4 +1,4 @@
-from fhe_ml.backend._backend import (
+from opal_ml.backend._backend import (
     BootstrappingConfig,
     BootstrappingType,
     CKKSCiphertext,

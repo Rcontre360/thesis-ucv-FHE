@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Publish the current `pyproject.toml` version of fhe-sdk to PyPI.
+# Publish the current `pyproject.toml` version of opal-ml to PyPI.
 #
 # Workflow:
 #   1) bump `version = "x.y.z"` in pyproject.toml yourself
@@ -32,4 +32,4 @@ python -m build --sdist
 twine upload dist/*.tar.gz
 
 echo
-echo "done — view at https://pypi.org/project/fhe-sdk/"
+echo "done — view at https://pypi.org/project/opal-ml/"

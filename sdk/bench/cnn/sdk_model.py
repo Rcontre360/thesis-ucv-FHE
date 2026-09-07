@@ -1,10 +1,10 @@
 import torch
 
-from fhe_ml import FHEContext, Sequential
+from opal_ml import FHEContext, Sequential
 from bench.cnn.model import CHANNELS, IMAGE_SHAPE
 
 SCALE = 53
-RELU_DEGREES = (5,) * 10
+RELU_DEGREES = (5,) * 6  # depth 27 -> fits at scale 53 with NO bootstrap (was (5,)*10)
 
 
 def to_sdk_model(model: torch.nn.Module) -> Sequential:

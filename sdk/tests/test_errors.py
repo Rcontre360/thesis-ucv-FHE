@@ -1,13 +1,13 @@
 import pytest
 
 pytest.importorskip(
-    "fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first"
+    "opal_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first"
 )
 
-from fhe_ml.layers.conv2d import Conv2D  # noqa: E402
-from fhe_ml.layers.linear import Linear  # noqa: E402
-from fhe_ml.utils.errors import FHESDKError, LayerConfigError, ShapeError  # noqa: E402
-from fhe_ml.utils.validate import check_array  # noqa: E402
+from opal_ml.layers.conv2d import Conv2D  # noqa: E402
+from opal_ml.layers.linear import Linear  # noqa: E402
+from opal_ml.utils.errors import FHESDKError, LayerConfigError, ShapeError  # noqa: E402
+from opal_ml.utils.validate import check_array  # noqa: E402
 
 
 class TestErrorHierarchy:

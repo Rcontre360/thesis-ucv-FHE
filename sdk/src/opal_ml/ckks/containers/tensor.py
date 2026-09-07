@@ -2,11 +2,11 @@ from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
-from fhe_ml.backend._backend import CKKSPlaintext
-from fhe_ml.utils.validate import infer_shape, validate_shape
+from opal_ml.backend._backend import CKKSPlaintext
+from opal_ml.utils.validate import infer_shape, validate_shape
 
 if TYPE_CHECKING:
-    from fhe_ml.ckks.context import FHEContext
+    from opal_ml.ckks.context import FHEContext
 
 
 class TensorMeta(NamedTuple):

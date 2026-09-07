@@ -1,4 +1,4 @@
-# fhe-sdk
+# opal-ml
 
 Python library for GPU-accelerated fully homomorphic encryption (FHE) inference over neural networks. Wraps [HEonGPU](https://github.com/Alisah-Ozcan/HEonGPU) (C++/CUDA) via pybind11. Scheme is always CKKS; users never interact with raw cryptographic objects.
 
@@ -37,7 +37,7 @@ OS support: **Linux only.** Tested on Ubuntu 22.04 / 24.04. WSL2 works if CUDA i
 ### From PyPI
 
 ```bash
-pip install fhe-sdk
+pip install opal-ml
 ```
 
 This downloads the source distribution and triggers a local CMake + CUDA build (≈ 8–15 minutes on a modern desktop). HEonGPU is cloned and built as part of the install.
@@ -91,7 +91,7 @@ sudo yum install -y gmp-devel ntl-devel zlib-devel openssl-devel
 sudo apt install -y libgmp-dev libntl-dev zlib1g-dev libssl-dev
 ```
 
-Then re-run `pip install fhe-sdk`.
+Then re-run `pip install opal-ml`.
 
 If you don't have sudo (e.g. some managed notebook environments), install via conda:
 
@@ -101,10 +101,10 @@ export GMP_ROOT=$CONDA_PREFIX
 export NTL_ROOT=$CONDA_PREFIX
 export ZLIB_ROOT=$CONDA_PREFIX
 export OPENSSL_ROOT_DIR=$CONDA_PREFIX
-pip install fhe-sdk
+pip install opal-ml
 ```
 
-### `ERROR: Could not find a version that satisfies the requirement fhe-sdk`
+### `ERROR: Could not find a version that satisfies the requirement opal-ml`
 
 Your Python interpreter is older than 3.11. Check with `python --version`. Upgrade Python (or switch conda envs) to 3.11 or 3.12.
 
@@ -116,7 +116,7 @@ Your distro/container ships an older CMake. Install a newer one via pip — it l
 pip install -U cmake
 hash -r                 # refresh the shell's PATH cache
 cmake --version         # confirm >= 3.30
-pip install fhe-sdk
+pip install opal-ml
 ```
 
 ### `ImportError: libheongpu.so` (or similar) at runtime
@@ -158,7 +158,7 @@ You're on GCC 14 (or newer). The CUDA 12.x toolchain only supports GCC 11–13. 
 ```bash
 sudo apt install -y gcc-12 g++-12       # Debian/Ubuntu
 export CC=gcc-12 CXX=g++-12
-pip install fhe-sdk
+pip install opal-ml
 ```
 
 ---
@@ -168,8 +168,8 @@ pip install fhe-sdk
 ### Crypto primitives
 
 ```python
-from fhe_sdk import FHEContext
-from fhe_sdk.enums import SecurityLevel
+from opal_ml import FHEContext
+from opal_ml.enums import SecurityLevel
 
 # Build a context (fluent setter API)
 ctx = (
@@ -217,8 +217,8 @@ This example loads a pre-trained PyTorch model and runs encrypted inference.
 import torch
 import torch.nn as torch_nn
 
-from fhe_sdk import FHEContext
-from fhe_sdk.nn import Sequential, Linear, Square
+from opal_ml import FHEContext
+from opal_ml.nn import Sequential, Linear, Square
 
 # Pre-trained PyTorch model
 class SmallNet(torch_nn.Module):
@@ -261,7 +261,7 @@ result: list[float] = enc_output.decrypt()  # list[float] of length 10
 
 ```python
 import numpy as np
-from fhe_sdk.nn import Linear
+from opal_ml.nn import Linear
 
 W = np.random.randn(10, 64).astype(np.float64)
 b = np.random.randn(10).astype(np.float64)

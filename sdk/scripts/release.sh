@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Release fhe-sdk: test, bump the version, publish to PyPI, then tag + push.
+# Release opal-ml: test, bump the version, publish to PyPI, then tag + push.
 #
 # Usage:
 #   ./scripts/release.sh 0.2.0 "BSGS cached baby steps"   # run after last commit
@@ -64,4 +64,4 @@ git push
 git push origin "${TAG}"
 
 echo
-echo "released ${TAG} — https://pypi.org/project/fhe-sdk/${VERSION}/"
+echo "released ${TAG} — https://pypi.org/project/opal-ml/${VERSION}/"

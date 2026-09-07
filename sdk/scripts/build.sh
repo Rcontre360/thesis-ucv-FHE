@@ -16,7 +16,7 @@ PYBIND11_DIR="$("${PYTHON}" -m pybind11 --cmakedir)"
 CUDA_ARCH="${CUDA_ARCH:-86}"
 BUILD_JOBS="${BUILD_JOBS:-12}"
 
-echo "Building fhe-sdk Python bindings..."
+echo "Building opal-ml Python bindings..."
 $CMAKE -S "${SDK_DIR}" -B "${SDK_DIR}/build" \
     -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCH}" \
     -DCMAKE_PREFIX_PATH="${SDK_DIR}/build/heongpu" \
@@ -25,5 +25,5 @@ $CMAKE -S "${SDK_DIR}" -B "${SDK_DIR}/build" \
 $CMAKE --build "${SDK_DIR}/build" -j"${BUILD_JOBS}"
 
 echo "--------------------------------------------"
-echo "fhe-sdk built. Bindings at build/src/backend/"
+echo "opal-ml built. Bindings at build/src/backend/"
 echo "--------------------------------------------"

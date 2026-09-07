@@ -1,6 +1,6 @@
 import numpy as np
 
-from fhe_ml.utils.errors import ShapeError
+from opal_ml.utils.errors import ShapeError
 
 
 def check_array(

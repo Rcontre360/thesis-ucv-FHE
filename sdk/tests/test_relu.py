@@ -1,11 +1,11 @@
 import pytest
 
 pytest.importorskip(
-    "fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first"
+    "opal_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first"
 )
 
 
-from fhe_ml.layers.relu import ReLU  # noqa: E402
+from opal_ml.layers.relu import ReLU  # noqa: E402
 
 
 def _relu(degrees):

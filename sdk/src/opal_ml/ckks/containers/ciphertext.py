@@ -1,12 +1,12 @@
 from typing import TYPE_CHECKING, Union
 
-from fhe_ml.backend._backend import CKKSCiphertext, CKKSPlaintext
-from fhe_ml.ckks.containers.plaintext import PlaintextVector
-from fhe_ml.ckks.containers.tensor import PlaintextTensor
-from fhe_ml.utils.errors import ShapeError
+from opal_ml.backend._backend import CKKSCiphertext, CKKSPlaintext
+from opal_ml.ckks.containers.plaintext import PlaintextVector
+from opal_ml.ckks.containers.tensor import PlaintextTensor
+from opal_ml.utils.errors import ShapeError
 
 if TYPE_CHECKING:
-    from fhe_ml.ckks.context import FHEContext
+    from opal_ml.ckks.context import FHEContext
 
 class EncryptedVector:
     context: "FHEContext"

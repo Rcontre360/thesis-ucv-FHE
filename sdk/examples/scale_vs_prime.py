@@ -12,7 +12,7 @@ scaling prime, the scale grows on every rescale and the result blows up.
 
 import numpy as np
 
-from fhe_ml import Client, FHEConfig, FHEContext, SecurityLevel
+from opal_ml import Client, FHEConfig, FHEContext, SecurityLevel
 
 FIRST = 60
 SCALING = 40

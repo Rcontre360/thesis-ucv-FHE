@@ -1,8 +1,8 @@
-from fhe_ml.backend import *
-from fhe_ml.ckks.config import FHEConfig
-from fhe_ml.ckks.containers.ciphertext import EncryptedVector
-from fhe_ml.ckks.containers.plaintext import PlaintextVector
-from fhe_ml.ckks.keyparams import KeyParams
+from opal_ml.backend import *
+from opal_ml.ckks.config import FHEConfig
+from opal_ml.ckks.containers.ciphertext import EncryptedVector
+from opal_ml.ckks.containers.plaintext import PlaintextVector
+from opal_ml.ckks.keyparams import KeyParams
 
 
 class FHEContext:

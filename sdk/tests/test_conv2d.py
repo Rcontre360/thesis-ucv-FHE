@@ -2,14 +2,14 @@ import numpy as np
 import pytest
 
 pytest.importorskip(
-    "fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first"
+    "opal_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first"
 )
 
-from fhe_ml.client import Client  # noqa: E402
-from fhe_ml.layers.conv2d import Conv2D  # noqa: E402
-from fhe_ml.layers.input import Input  # noqa: E402
-from fhe_ml.layers.linear import Linear  # noqa: E402
-from fhe_ml.sequential import Sequential  # noqa: E402
+from opal_ml.client import Client  # noqa: E402
+from opal_ml.layers.conv2d import Conv2D  # noqa: E402
+from opal_ml.layers.input import Input  # noqa: E402
+from opal_ml.layers.linear import Linear  # noqa: E402
+from opal_ml.sequential import Sequential  # noqa: E402
 
 EPSILON = 1e-2
 
@@ -201,8 +201,8 @@ class TestConv2DInSequential:
         assert inp_flat.size == inp_nested.size == 9
 
     def test_activation_as_first_layer_raises(self):
-        from fhe_ml.layers.relu import ReLU
-        from fhe_ml.utils.errors import LayerConfigError
+        from opal_ml.layers.relu import ReLU
+        from opal_ml.utils.errors import LayerConfigError
 
         # an activation cannot be the first layer — rejected at construction
         with pytest.raises(

@@ -1,4 +1,4 @@
-from fhe_ml import FHEConfig, FHEContext, SecurityLevel
+from opal_ml import FHEConfig, FHEContext, SecurityLevel
 from client import send_request, setup_client
 from server import REDUCTION_SHIFTS, start_server
 

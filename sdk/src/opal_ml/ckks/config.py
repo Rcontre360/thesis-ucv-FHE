@@ -3,9 +3,9 @@ import math
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
-from fhe_ml.backend._backend import security_bit_cap
-from fhe_ml.utils.enums import SecurityLevel
-from fhe_ml.utils.errors import FHESDKError
+from opal_ml.backend._backend import security_bit_cap
+from opal_ml.utils.enums import SecurityLevel
+from opal_ml.utils.errors import FHESDKError
 
 _VALID_LOG_N = {12, 13, 14, 15, 16}
 _PRIME_BITS_MIN = 30

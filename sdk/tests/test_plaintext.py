@@ -1,7 +1,7 @@
 import pytest
 
 pytest.importorskip(
-    "fhe_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first"
+    "opal_ml.backend._backend", reason="Run scripts/run_tests.sh to build _backend first"
 )
 
 

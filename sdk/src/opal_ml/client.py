@@ -1,9 +1,9 @@
 from collections.abc import Iterable
 
-from fhe_ml.backend import *
-from fhe_ml.ckks.containers.ciphertext import EncryptedVector
-from fhe_ml.ckks.context import FHEContext
-from fhe_ml.ckks.keyparams import KeyParams
+from opal_ml.backend import *
+from opal_ml.ckks.containers.ciphertext import EncryptedVector
+from opal_ml.ckks.context import FHEContext
+from opal_ml.ckks.keyparams import KeyParams
 
 
 class Client:

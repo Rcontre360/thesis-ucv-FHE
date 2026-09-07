@@ -1,5 +1,5 @@
-from fhe_ml import BootstrapConfig, Sequential, config_for_circuit
-from fhe_ml.layers import Linear, ReLU
+from opal_ml import BootstrapConfig, Sequential, config_for_circuit
+from opal_ml.layers import Linear, ReLU
 
 
 def test_consumed_levels_is_ctos_plus_taylor_plus_7():

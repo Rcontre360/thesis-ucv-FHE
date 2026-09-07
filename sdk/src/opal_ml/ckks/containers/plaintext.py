@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING, Union
 
-from fhe_ml.backend._backend import CKKSPlaintext
+from opal_ml.backend._backend import CKKSPlaintext
 
 if TYPE_CHECKING:
-    from fhe_ml.ckks.context import FHEContext
+    from opal_ml.ckks.context import FHEContext
 
 
 class PlaintextVector:

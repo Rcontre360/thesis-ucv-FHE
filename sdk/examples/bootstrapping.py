@@ -16,8 +16,8 @@ Run: from the sdk/ dir, `/usr/bin/python3.12 examples/bootstrapping.py`.
 
 import numpy as np
 
-from fhe_ml import Client, FHEContext, Sequential
-from fhe_ml.layers import Linear
+from opal_ml import Client, FHEContext, Sequential
+from opal_ml.layers import Linear
 
 DEPTH = 40  # deeper than the auto-sized budget at N=2^16, so it must bootstrap
 

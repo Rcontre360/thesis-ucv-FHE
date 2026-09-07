@@ -2,8 +2,8 @@ import numpy as np
 import torch.nn as nn
 from numpy.polynomial import Polynomial
 
-from fhe_ml.ckks.containers.ciphertext import EncryptedVector
-from fhe_ml.layers.base import Layer
+from opal_ml.ckks.containers.ciphertext import EncryptedVector
+from opal_ml.layers.base import Layer
 
 
 def _fn_coeffs(degree: int) -> np.ndarray:
