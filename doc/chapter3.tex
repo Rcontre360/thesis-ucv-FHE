@@ -626,7 +626,7 @@ En Concrete~ML, en cambio, sí se separan dos conjuntos de muestras: las métric
 
 La ejecución de referencia en PyTorch, al operar siempre en texto plano, evalúa todas sus muestras de la misma forma.
 
-El tamaño de estos conjuntos lo dicta el costo por inferencia cifrada, prohibitivo en las implementaciones más lentas. En OpalML y en Orion el bucle cifrado recorre cinco muestras, mientras la evaluación en claro del modelo aproximado recorre cincuenta. En Concrete~ML el bucle cifrado se reduce a una sola muestra y su evaluación en claro a veinte. La ejecución de referencia en PyTorch emplea doscientas. Las métricas obtenidas bajo cifrado real quedan así referidas a conjuntos muy pequeños, algo que debe tenerse presente al interpretar los resultados.
+El tamaño de estos conjuntos lo dicta el costo por inferencia cifrada, prohibitivo en las implementaciones más lentas. En OpalML y en Orion el bucle cifrado recorre cincuenta muestras, de las que se obtienen a la vez la calidad y la latencia. En Concrete~ML el bucle cifrado se reduce a una sola muestra, mientras su evaluación en claro recorre veinte. La ejecución de referencia en PyTorch emplea doscientas. Las métricas obtenidas bajo cifrado real quedan así referidas a conjuntos reducidos, algo que debe tenerse presente al interpretar los resultados.
 
 \subsection{Métricas de rendimiento y fidelidad}\label{sec:metodo_metricas}
 
