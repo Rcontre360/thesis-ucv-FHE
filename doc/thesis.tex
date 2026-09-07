@@ -24,11 +24,11 @@
 \input{listing}
 
 % Repositorio de la biblioteca. La referencia bibliográfica es una sola
-% (\cite{SDKRepo}); \repofile enlaza a un archivo concreto dentro de ella.
-% La base apunta a una etiqueta fija, no a la rama principal, para que los
-% enlaces sigan siendo válidos aunque el repositorio cambie.
-\newcommand{\repobase}{https://github.com/Rcontre360/thesis-ucv-FHE/blob/v0.3.5}
-\newcommand{\repofile}[1]{\href{\repobase/#1}{\nolinkurl{#1}}}
+% (\cite{SDKRepo}); \repodir y \repofile enlazan a un directorio o a un
+% archivo concreto dentro de ella, sobre la rama principal.
+\newcommand{\repobase}{https://github.com/Rcontre360/thesis-ucv-FHE}
+\newcommand{\repodir}[1]{\href{\repobase/tree/main/#1}{\nolinkurl{#1}}}
+\newcommand{\repofile}[1]{\href{\repobase/blob/main/#1}{\nolinkurl{#1}}}
 
 % Nombre de una operación de la API, en monoespaciada y partible por el guion
 % bajo; \texttt no admite cortes y desborda el margen con nombres largos.
