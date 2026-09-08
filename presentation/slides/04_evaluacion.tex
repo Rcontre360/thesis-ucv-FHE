@@ -1,0 +1,233 @@
+% --- Parte 4: Escenarios de Prueba y Resultados ---
+\section{Escenarios de Prueba y Resultados}
+\SectionFrame{Escenarios de Prueba y Resultados}
+
+\begin{frame}{Diseño de la evaluación}
+    Dos casos de uso --- \textbf{regresión} (California Housing) y \textbf{clasificación} (MNIST) --- sobre cuatro implementaciones que parten de los \textbf{mismos pesos entrenados}.
+    \vspace{0.15cm}
+    \begin{center}
+        \small
+        \begin{tabular}{@{}lllll@{}}
+            \toprule
+            Implementación & Esquema & \textit{Hardware} & Tipo de dato & Papel \\
+            \midrule
+            PyTorch         & Ninguno & GPU          & Flotante          & Línea base sin cifrado \\
+            \textbf{OpalML} & CKKS    & \textbf{GPU} & Real aproximado   & Biblioteca propuesta \\
+            Orion           & CKKS    & CPU          & Real aproximado   & Mismo esquema, sobre CPU \\
+            Concrete ML     & TFHE    & GPU          & Entero cuantizado & Esquema distinto \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+    \vspace{0.15cm}
+    \begin{columns}[t]
+        \column{0.48\textwidth}
+        \small
+        \textbf{Qué se mide}
+        \begin{itemize}
+            \setlength{\itemsep}{4pt}
+            \item Dos fases por separado: \textbf{generación de claves} e \textbf{inferencia}.
+            \item Rendimiento: tiempo, VRAM y RAM.
+            \item Calidad y \textbf{fidelidad} del resultado.
+        \end{itemize}
+        \vspace{-0.1cm}
+        \begin{itemize}
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \small
+        \textbf{Cómo se mide}
+        \begin{itemize}
+            \setlength{\itemsep}{4pt}
+            \item Cada implementación en un \textbf{proceso independiente}, con su propio entorno virtual.
+            \item Aleatoriedad con semilla fija.
+            \item NVIDIA RTX 3090 y 128~GB de RAM.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Caso 1 --- Regresión: California Housing}
+    \begin{columns}[t]
+        \column{0.50\textwidth}
+        \textbf{Conjunto de datos y arquitectura}
+        \begin{itemize}
+            \setlength{\itemsep}{5pt}
+            \item 20\,640 muestras, 8 características.
+            \item Red totalmente conectada con dos capas ocultas y ReLU:
+        \end{itemize}
+        \[
+            f(x) = W_3\,\sigma\!\left(W_2\,\sigma\!\left(W_1 x + b_1\right) + b_2\right) + b_3
+        \]
+        \begin{center}
+            $8 \rightarrow 128 \rightarrow 64 \rightarrow 1$
+        \end{center}
+        \begin{itemize}
+            \item Entrenada en texto plano con PyTorch.
+        \end{itemize}
+
+        \column{0.46\textwidth}
+        \textbf{Parámetros CKKS de OpalML}
+        \vspace{0.2cm}
+        \begin{center}
+            \scriptsize
+            \begin{tabular}{@{}lr@{}}
+                \toprule
+                Parámetro & Valor \\
+                \midrule
+                Grado del polinomio ($N$)   & $65\,536$ \\
+                Cadena de módulos (bits)    & $[60,\, 52 \times 28,\, 60]$ \\
+                Factor de escala ($\Delta$) & $2^{52}$ \\
+                Nivel de seguridad          & 128 bits \\
+                Aproximación de ReLU        & 12 polinomios, grado 5 \\
+                \textit{Bootstrapping}      & SLIM \\
+                \bottomrule
+            \end{tabular}
+        \end{center}
+        \vspace{0.3cm}
+        \begin{itemize}
+            \item 28 multiplicaciones homomórficas disponibles. La activación las agota: se activa el \textit{bootstrapping}.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Regresión --- calidad y fidelidad}
+    \begin{center}
+        \includegraphics[height=0.54\textheight]{res_calidad_mlp.png}
+    \end{center}
+    \vspace{0.2cm}
+    \begin{columns}[t]
+        \column{0.48\textwidth}
+        \small
+        \textbf{Costo de la aproximación}
+        \begin{itemize}
+            \setlength{\itemsep}{2pt}
+            \item $R^2$ de \textbf{0.804} a \textbf{0.716}.
+            \item Concrete ML se degrada más: 0.165.
+        \end{itemize}
+        \column{0.48\textwidth}
+        \small
+        \textbf{Costo del cifrado}
+        \begin{itemize}
+            \setlength{\itemsep}{2pt}
+            \item $R^2$ de 0.716 a \textbf{0.478}. Orion, equivalente: 0.475.
+            \item MAE de OpalML: $\mathbf{6.2 \times 10^{-4}}$, el menor de las tres.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Regresión --- rendimiento y perfilado}
+    \begin{columns}[c]
+        \column{0.63\textwidth}
+        \includegraphics[width=\textwidth]{res_rendimiento_mlp.png}
+        \column{0.37\textwidth}
+        \includegraphics[width=\textwidth]{res_perfil_mlp.png}
+    \end{columns}
+    \vspace{0.25cm}
+    \begin{columns}[t]
+        \column{0.63\textwidth}
+        \small
+        \begin{itemize}
+            \setlength{\itemsep}{3pt}
+            \item Inferencia: \textbf{6.68~s} frente a 78.24~s y 790.03~s: \textbf{$\times$11.7} y \textbf{$\times$118}.
+            \item Generación de claves: 0.47~s, también la más rápida.
+            \item La memoria se invierte: OpalML carga la VRAM; las de CPU, la RAM.
+        \end{itemize}
+        \column{0.37\textwidth}
+        \small
+        \begin{itemize}
+            \setlength{\itemsep}{3pt}
+            \item Las activaciones: \textbf{94\%} del tiempo.
+            \item Las capas lineales: 6\%.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Caso 2 --- Clasificación: MNIST}
+    \begin{columns}[t]
+        \column{0.50\textwidth}
+        \textbf{Conjunto de datos y arquitectura}
+        \begin{itemize}
+            \setlength{\itemsep}{5pt}
+            \item 70\,000 imágenes de $28 \times 28$, 10 clases.
+            \item Red convolucional compacta:
+        \end{itemize}
+        \[
+            f(x) = W \, \operatorname{vec}\!\left(\sigma\!\left(\mathcal{C}(x)\right)\right) + b
+        \]
+        \begin{itemize}
+            \setlength{\itemsep}{5pt}
+            \item $\mathcal{C}$: 4 filtros de $7 \times 7$, paso 5. De $28\times28$ a $4\times5\times5$.
+            \item Capa lineal de salida: $100 \rightarrow 10$.
+        \end{itemize}
+
+        \column{0.46\textwidth}
+        \textbf{Parámetros CKKS de OpalML}
+        \vspace{0.2cm}
+        \begin{center}
+            \scriptsize
+            \begin{tabular}{@{}lr@{}}
+                \toprule
+                Parámetro & Valor \\
+                \midrule
+                Grado del polinomio ($N$)   & $65\,536$ \\
+                Cadena de módulos (bits)    & $[60,\, 53 \times 27,\, 60]$ \\
+                Factor de escala ($\Delta$) & $2^{53}$ \\
+                Nivel de seguridad          & 128 bits \\
+                Aproximación de ReLU        & 10 polinomios, grado 5 \\
+                \textit{Bootstrapping}      & SLIM \\
+                \bottomrule
+            \end{tabular}
+        \end{center}
+        \vspace{0.35cm}
+        \begin{itemize}
+            \item Orion y Concrete ML, con la misma configuración del caso anterior.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Clasificación --- calidad y fidelidad}
+    \begin{center}
+        \includegraphics[height=0.45\textheight]{res_calidad_cnn.png}
+    \end{center}
+    \vspace{0.2cm}
+    \begin{columns}[t]
+        \column{0.44\textwidth}
+        \small
+        \begin{itemize}
+            \setlength{\itemsep}{3pt}
+            \item Aproximación: equivalente en las tres (0.85--0.88 frente a 0.925).
+            \item Orion y Concrete ML preservan la decisión del clasificador: acuerdo \textbf{1.00}.
+        \end{itemize}
+        \column{0.54\textwidth}
+        \begin{block}{OpalML no supera esta prueba}
+            \small MAE de \textbf{91.2}, cuatro órdenes de magnitud sobre Orion. Acuerdo de \textbf{0.60}: el 40\% de las muestras cambia de clase.
+            \\[3pt]
+            Sin cifrar alcanza 0.86: la causa es el número de operaciones de la convolución.
+        \end{block}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Clasificación --- rendimiento y perfilado}
+    \begin{columns}[c]
+        \column{0.63\textwidth}
+        \includegraphics[width=\textwidth]{res_rendimiento_cnn.png}
+        \column{0.37\textwidth}
+        \includegraphics[width=\textwidth]{res_perfil_cnn.png}
+    \end{columns}
+    \vspace{0.25cm}
+    \begin{columns}[t]
+        \column{0.63\textwidth}
+        \small
+        \begin{itemize}
+            \setlength{\itemsep}{3pt}
+            \item Inferencia: \textbf{28.31~s} frente a 46.49~s y 448.88~s: \textbf{$\times$1.6} y \textbf{$\times$15.9}. La ventaja \textbf{se estrecha}.
+            \item Generación de claves: 39.93~s, por el número de claves de Galois que exige la convolución.
+        \end{itemize}
+        \column{0.37\textwidth}
+        \small
+        \begin{itemize}
+            \setlength{\itemsep}{3pt}
+            \item Convolución: \textbf{51.9\%}.
+            \item ReLU: \textbf{42.8\%}.
+        \end{itemize}
+    \end{columns}
+\end{frame}

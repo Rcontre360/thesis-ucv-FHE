@@ -1,0 +1,40 @@
+% --- Parte 5: Conclusiones ---
+\section{Conclusiones}
+\SectionFrame{Conclusiones}
+
+\begin{frame}{Conclusiones}
+    \begin{itemize}
+        \setlength{\itemsep}{12pt}
+        \item \textbf{La aceleración por GPU cumple su propósito.} La implementación cifrada más rápida en ambos casos: $\times$11.7 y $\times$1.6 sobre Orion, y dos órdenes de magnitud sobre Concrete ML.
+        \item \textbf{La abstracción funciona.} El recorrido completo es viable sin que el usuario manipule claves, niveles ni objetos del \textit{backend}. La excepción son algunos parámetros del esquema.
+        \item \textbf{La fidelidad depende del número de operaciones del circuito}, no del esquema. La red de regresión se reproduce con un error de $6.2 \times 10^{-4}$; la convolucional pierde la decisión del clasificador.
+        \item \textbf{El consumo de memoria lo domina el conjunto de claves de Galois.} Es lo que acota el tamaño de los modelos evaluables.
+        \item Publicada como paquete de \textbf{código abierto} en PyPI.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Limitaciones y trabajos futuros}
+    \begin{columns}[t]
+        \column{0.48\textwidth}
+        \textbf{Limitaciones}
+        \begin{itemize}
+            \setlength{\itemsep}{7pt}
+            \item La convolución realiza más operaciones que las bibliotecas de referencia: más ruido.
+            \item La selección de los parámetros criptográficos queda parcialmente a cargo del usuario.
+            \item Catálogo de capas: lineal, convolucional y ReLU.
+            \item El \textit{backend} reserva la tarjeta completa por adelantado.
+            \item La aproximación depende de un conjunto de calibración representativo.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \textbf{Trabajos futuros}
+        \begin{itemize}
+            \setlength{\itemsep}{7pt}
+            \item \textbf{Rediseñar la capa convolucional} con un empaquetado adaptado a CKKS.
+            \item \textbf{Mejorar la evaluación de las activaciones}: refinar la aproximación o usar tablas de búsqueda.
+            \item Ampliar el catálogo de capas hacia un \textit{framework} extensible.
+            \item Mejorar la selección automática de los parámetros del esquema.
+            \item Adoptar \textbf{ONNX} para admitir modelos de cualquier entorno.
+        \end{itemize}
+    \end{columns}
+\end{frame}

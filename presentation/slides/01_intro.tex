@@ -1,24 +1,35 @@
-% --- Part 1: Introducción y Motivación ---
+% --- Parte 1: Introducción y Motivación ---
 \section{Introducción y Motivación}
 \SectionFrame{Introducción y Motivación}
 
-\begin{frame}{Introducción y Motivación}
+\begin{frame}{El problema de la inferencia privada}
     \begin{itemize}
-        \item \textbf{Adopción Masiva:} Las redes neuronales artificiales han transformado industrias clave como la medicina, las finanzas y la ciberseguridad.
-        \item \textbf{Inferencia:} Para usar estos modelos es necesario que estos tengan acceso a los datos del usuario con los cuales realizar el proceso de inferencia.
-        \item \textbf{Datos privados:} En muchos casos, por temas de cumplimiento legal o necesidad de privacidad, el cliente no puede usar estos modelos de ML. En caso de usarlos, también se arriesga al acceso de estos datos por terceros.
-        \item \textbf{Necesidad:} Es imperativo desarrollar soluciones que permitan el cómputo de modelos complejos sin comprometer la integridad ni el secreto de la información del usuario.
+        \setlength{\itemsep}{8pt}
+        \item \textbf{Ejecución por terceros.} Los modelos de redes neuronales puede que sean ejecutados por terceros, ya sea por modelos propietarios o por facilidad operacional.
+        \item \textbf{Los datos son sensibles.} Registros médicos, información financiera o datos personales quedan expuestos a fugas o a un uso indebido.
+        \item \textbf{No siempre es posible.} Por cumplimiento legal o por necesidad de confidencialidad, muchos usuarios simplemente no pueden usar estos servicios.
     \end{itemize}
+    \vfill
+    \begin{center}
+        \begin{tikzpicture}[scale=0.9, every node/.style={font=\scriptsize}]
+            \node[draw, rounded corners, fill=UCVGrey!30, minimum width=2.2cm, minimum height=1.0cm] (cli) at (0,0) {Cliente};
+            \node[draw, rounded corners, fill=UCVGrey!30, minimum width=2.2cm, minimum height=1.0cm] (srv) at (7,0) {Servidor};
+            \node[below=1pt of cli, font=\tiny, text=UCVBlue] {datos privados};
+            \node[below=1pt of srv, font=\tiny, text=UCVBlue] {modelo entrenado};
+
+            \draw[dashed, gray] (3.5,-0.95) -- (3.5,1.35);
+            \node[gray, font=\tiny, anchor=south] at (3.5,1.4) {barrera de confianza};
+
+            \draw[->, thick, UCVOrange] ([yshift=9pt]cli.east) -- node[above, font=\tiny, text=UCVOrange, pos=0.28] {datos en claro} ([yshift=9pt]srv.west);
+            \draw[<-, thick, gray!70] ([yshift=-9pt]cli.east) -- node[below, font=\tiny, text=gray, pos=0.28] {resultado} ([yshift=-9pt]srv.west);
+        \end{tikzpicture}
+    \end{center}
 \end{frame}
 
-\begin{frame}{Cifrado Totalmente Homomórfico}
-    El Cifrado Totalmente Homomórfico (FHE) es una tecnología criptográfica que permite realizar operaciones matemáticas sobre datos cifrados sin necesidad de descifrarlos previamente.
+\begin{frame}{El cifrado homomórfico como solución}
+    El cifrado totalmente homomórfico (FHE) permite \textbf{operar sobre datos cifrados sin descifrarlos}. El servidor evalúa el modelo sin ver nunca la información del cliente, y solo este último puede descifrar el resultado.
     \vfill
-    \begin{itemize}
-        \item Permite evaluar una función sobre datos cifrados delegando el cómputo a terceros mientras se mantiene la privacidad absoluta.
-        \item Esto hace posible que un tercero procese información sensible y genere resultados útiles sin tener acceso al contenido original de los datos.
-    \end{itemize}
     \begin{center}
-        \includegraphics[width=0.6\textwidth]{fhe_on_ml.png}
+        \includegraphics[width=0.74\textwidth]{fhe_on_ml.png}
     \end{center}
 \end{frame}

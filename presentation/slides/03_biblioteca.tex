@@ -1,0 +1,224 @@
+% --- Parte 3: Desarrollo de la Biblioteca ---
+\section{Desarrollo de la Biblioteca}
+\SectionFrame{Desarrollo de la Biblioteca}
+
+\begin{frame}{OpalML}
+    Las bibliotecas de CKKS sobre GPU exponen \textbf{únicamente las primitivas del esquema}: el ruido, los niveles y las claves se gestionan a mano.
+    \vfill
+    \begin{columns}[t]
+        \column{0.50\textwidth}
+        \textbf{Lo que ofrece la biblioteca}
+        \begin{itemize}
+            \setlength{\itemsep}{7pt}
+            \item Interfaz \textbf{declarativa}, como las bibliotecas de aprendizaje profundo.
+            \item Conversión directa desde \textbf{PyTorch}.
+            \item Capas lineal, convolucional y ReLU.
+            \item Gestión \textbf{automática} de niveles, ruido y \textit{bootstrapping}.
+        \end{itemize}
+
+        \column{0.46\textwidth}
+        \textbf{Lo que el usuario nunca toca}
+        \begin{itemize}
+            \setlength{\itemsep}{7pt}
+            \item Las claves.
+            \item Los niveles de los textos cifrados.
+            \item Los objetos crudos del \textit{backend}.
+        \end{itemize}
+        \vspace{0.5cm}
+        \begin{center}
+            Publicada en \textbf{PyPI}.
+        \end{center}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{\textit{Backend}: HEonGPU y los enlaces con pybind11}
+    \begin{columns}[t]
+        \column{0.44\textwidth}
+        \small
+        \textbf{Por qué HEonGPU}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item SEAL y PALISADE, las más difundidas, ejecutan \textbf{solo sobre CPU}.
+            \item Entre las aceleradas por GPU, es la que ofrece \textbf{soporte de \textit{bootstrapping}}.
+        \end{itemize}
+        \vspace{0.3cm}
+        \textbf{Enlaces construidos con pybind11}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item Contexto, codificación, cifrado y descifrado.
+            \item Generación de claves y claves de evaluación.
+            \item Operador homomórfico y \textit{bootstrapping}.
+        \end{itemize}
+
+        \column{0.56\textwidth}
+        \vspace{0.3cm}
+        \begin{center}
+            \includegraphics[width=\textwidth]{bindings_map.png}
+        \end{center}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Clases y frontera cliente--servidor}
+    \begin{columns}[t]
+        \column{0.44\textwidth}
+        \begin{itemize}
+            \setlength{\itemsep}{8pt}
+            \item \textbf{Sequential:} compone las capas y orquesta compilación e inferencia.
+            \item \textbf{Client:} posee la clave secreta. Genera claves, cifra y descifra.
+            \item \textbf{FHEContext:} operaciones del esquema, del lado del evaluador.
+            \item \textbf{EncryptedVector:} vector cifrado; sobrecarga los operadores del lenguaje.
+        \end{itemize}
+        \vspace{0.3cm}
+        {\small Cada clase depende solo de las capas inferiores.}
+
+        \column{0.56\textwidth}
+        \begin{center}
+        \begin{tikzpicture}[
+            every node/.style={font=\scriptsize},
+            box/.style={draw=UCVBlue!60, rounded corners=2pt, fill=white, minimum height=0.5cm, inner sep=3pt},
+        ]
+            \node[draw=UCVBlue!40, rounded corners=3pt, fill=UCVBlue!8, minimum width=2.9cm, minimum height=3.1cm] (C) at (-2.1,0) {};
+            \node[anchor=north, font=\tiny\bfseries, text=UCVBlue] at ([yshift=-3pt]C.north) {CLIENTE};
+            \node[box, minimum width=2.4cm] at (-2.1,0.75) {Client};
+            \node[box, minimum width=2.4cm, fill=UCVOrange!20] at (-2.1,0.15) {clave secreta};
+            \node[box, minimum width=2.4cm] at (-2.1,-0.45) {cifrar / descifrar};
+            \node[font=\tiny, text=gray, align=center] at (-2.1,-1.15) {genera las claves\\una sola vez};
+
+            \node[draw=UCVBlue!40, rounded corners=3pt, fill=UCVGrey!25, minimum width=2.9cm, minimum height=3.1cm] (S) at (2.1,0) {};
+            \node[anchor=north, font=\tiny\bfseries, text=UCVBlue] at ([yshift=-3pt]S.north) {SERVIDOR};
+            \node[box, minimum width=2.4cm] at (2.1,0.75) {Sequential + capas};
+            \node[box, minimum width=2.4cm] at (2.1,0.15) {FHEContext};
+            \node[box, minimum width=2.4cm] at (2.1,-0.45) {pesos en claro};
+            \node[font=\tiny, text=gray, align=center] at (2.1,-1.15) {evalúa la red\\sin la clave secreta};
+
+            \draw[-{Stealth[length=4pt]}, thick, UCVBlue!70] ([yshift=8pt]C.east) -- node[above, font=\tiny, align=center] {claves de\\evaluación} ([yshift=8pt]S.west);
+            \draw[-{Stealth[length=4pt]}, thick, UCVOrange] ([yshift=-10pt]C.east) -- node[above, font=\tiny] {entrada cifrada} ([yshift=-10pt]S.west);
+            \draw[-{Stealth[length=4pt]}, thick, UCVOrange] ([yshift=-24pt]S.west) -- node[below, font=\tiny] {salida cifrada} ([yshift=-24pt]C.east);
+        \end{tikzpicture}
+        \end{center}
+    \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{La API en uso}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+from opal_ml import Client, FHEContext, Sequential
+from opal_ml.layers import Linear, ReLU
+
+# --- Servidor ---
+model = Sequential([
+    Linear(4, 8, W1, bias=b1),
+    ReLU(),
+    Linear(8, 2, W2, bias=b2),
+])
+config = model.generate_config(scale=40, relu_degrees=(3,))
+ctx = FHEContext(config)                  # sin clave secreta
+model.compile(ctx, datos_de_calibracion)  # calibra y prepara los pesos
+
+# --- Cliente ---
+client = Client(ctx)
+ctx.set_client_params(client.key_params())   # claves de evaluacion
+entrada_cifrada = client.encrypt(entrada)
+
+# --- Servidor ---
+salida_cifrada = model(entrada_cifrada)
+
+# --- Cliente ---
+resultado = client.decrypt(salida_cifrada)
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Capas lineal y convolucional}
+    \begin{columns}[t]
+        \column{0.50\textwidth}
+        \textbf{Capa lineal}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item Multiplicación matriz-vector por el \textbf{método de diagonales} de Halevi-Shoup.
+            \item Diagonales codificadas \textbf{una sola vez} en la compilación.
+        \end{itemize}
+        \vspace{0.35cm}
+        \textbf{Capa convolucional}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item Sin operador propio: \textbf{una única multiplicación matriz-vector} (\textit{im2col}).
+            \item Se construye en texto plano una matriz dispersa con los pesos del filtro.
+        \end{itemize}
+
+        \column{0.50\textwidth}
+        \begin{center}
+            \includegraphics[height=0.32\textheight]{img2conv.png}
+        \end{center}
+        \vspace{0.2cm}
+        \begin{block}{Decisión de diseño}
+            \small \textbf{Una sola ruta de cómputo} para ambas capas: flexibilidad total sobre el núcleo, el paso, el relleno y los canales, a costa de \textbf{más operaciones}.
+        \end{block}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{ReLU: aproximación y calibración}
+    \begin{columns}[t]
+        \column{0.50\textwidth}
+        \textbf{Evaluación eficiente del polinomio}
+        \vspace{0.1cm}
+        \\ Cada componente es impar, de modo que se factoriza
+        \[
+            p(x) = x \cdot q(x^2), \qquad \deg q = n
+        \]
+        y se evalúa $q$ mediante el \textbf{esquema de Horner}.
+        \begin{itemize}
+            \item Profundidad: $n + 2$ niveles, frente a $2n+1$. \textbf{La mitad.}
+        \end{itemize}
+
+        \column{0.50\textwidth}
+        \textbf{Calibración de la red}
+        \vspace{0.1cm}
+        \\ La aproximación solo es válida en $[-1,1]$.
+        \begin{enumerate}
+            \setlength{\itemsep}{5pt}
+            \item Se propaga un conjunto representativo \textbf{en claro} y se registra el máximo absoluto $B$ de cada activación.
+            \item Ese rango se \textbf{pliega en los pesos} de las capas vecinas.
+        \end{enumerate}
+    \end{columns}
+    \vspace{0.5cm}
+    \begin{center}
+    \begin{tikzpicture}[every node/.style={font=\scriptsize},
+        b/.style={draw=UCVBlue!60, rounded corners=2pt, minimum height=0.6cm, inner sep=4pt}]
+        \node[b, fill=UCVBlue!10] (w1) at (-4.4,0) {$W_i / B$};
+        \node[b, fill=UCVOrange!20] (r) at (-1.6,0) {ReLU en $[-1,1]$};
+        \node[b, fill=UCVBlue!10] (w2) at (1.6,0) {$W_{i+1} \cdot B$};
+        \draw[-{Stealth[length=4pt]}, thick, UCVBlue!70] (w1) -- (r);
+        \draw[-{Stealth[length=4pt]}, thick, UCVBlue!70] (r) -- (w2);
+        \node[anchor=west, align=left, font=\scriptsize] at (3.1,0) {$\mathrm{ReLU}(Bx) = B\,\mathrm{ReLU}(x)$\\ \textcolor{gray}{exacta, sin coste homomórfico}};
+    \end{tikzpicture}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Automatización de los parámetros y validación}
+    \begin{columns}[t]
+        \column{0.50\textwidth}
+        \textbf{Configuración derivada del circuito}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item El usuario indica el \textbf{factor de escala} y los \textbf{grados} de la aproximación de ReLU.
+            \item La biblioteca deriva el resto de la configuración.
+            \item Las \textbf{validaciones} rechazan una configuración inconsistente antes de llegar al \textit{backend}.
+        \end{itemize}
+        \vspace{0.3cm}
+        \textbf{Desarrollo guiado por pruebas}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item Primero la interfaz, luego las pruebas, después la implementación.
+            \item Cada operación cifrada reproduce su equivalente en claro.
+        \end{itemize}
+
+        \column{0.50\textwidth}
+        \textbf{Gestión de niveles y \textit{bootstrapping}}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item Cada capa reporta su \textbf{profundidad multiplicativa}.
+            \item En la compilación se suman y se comparan con los niveles disponibles.
+            \item Si no alcanzan, se habilita el \textit{bootstrapping} en su variante \textbf{SLIM}.
+            \item En inferencia el refresco se dispara \textbf{automáticamente}, incluso a mitad de una activación.
+        \end{itemize}
+    \end{columns}
+\end{frame}
