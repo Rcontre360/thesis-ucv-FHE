@@ -8,8 +8,9 @@
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage{subfigure}
+\usepackage{listings}
 \usepackage{tikz}
-\usetikzlibrary{matrix,chains,positioning,arrows,calc}
+\usetikzlibrary{matrix,chains,positioning,arrows,arrows.meta,calc,fit,backgrounds,shapes.geometric}
 
 % --- Tema Visual Personalizado (UCV basado en UASLP1) ---
 \usetheme{UCV}
@@ -27,13 +28,46 @@
     \end{frame}
 }
 
-% --- Ruta de Imágenes ---
-\graphicspath{{../doc/images/}}
+% --- Estilo para los Bloques de Código ---
+\definecolor{CodeBg}{RGB}{246,247,249}
+\definecolor{CodeComment}{RGB}{120,130,145}
+\definecolor{CodeString}{RGB}{176,88,0}
+\lstdefinestyle{opal}{
+    language=Python,
+    basicstyle=\ttfamily\scriptsize,
+    keywordstyle=\color{UCVBlue}\bfseries,
+    commentstyle=\color{CodeComment}\itshape,
+    stringstyle=\color{CodeString},
+    backgroundcolor=\color{CodeBg},
+    frame=leftline,
+    rulecolor=\color{UCVOrange},
+    framesep=6pt,
+    xleftmargin=8pt,
+    showstringspaces=false,
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1,
+}
+\lstset{style=opal}
+
+% --- Listas que son el único contenido de la lámina ---
+% El tema deja \leftmargini muy pequeño, de modo que el marcador cuelga a la
+% izquierda del párrafo que introduce la lista. Este entorno la desplaza para
+% que ambos queden alineados.
+\newenvironment{listaalineada}
+    {\setlength{\leftmargini}{1em}\begin{itemize}}
+    {\end{itemize}}
+
+% --- Rutas de Imágenes ---
+% ../doc/images/ : figuras del documento de la tesis
+% figures/       : figuras generadas para esta presentación
+\graphicspath{{../doc/images/}{figures/}}
 
 % --- Metadatos ---
-\title[Biblioteca Python CKKS GPU]{Biblioteca Python para Operaciones Tensoriales}
-\subtitle{Usando Cifrado Homomórfico CKKS Acelerado por GPU}
-\author[Rafael Contreras]{Rafael Eduardo Contreras \\ \small Tutor: Eugenio Scalise}
+\title[Biblioteca Python CKKS GPU]{Biblioteca Python para operaciones tensoriales}
+\subtitle{con cifrado homomórfico CKKS acelerado por GPU}
+\author[Rafael Contreras]{Rafael Eduardo Contreras \\ \small Tutor: Prof. Eugenio Scalise}
 \institute{Universidad Central de Venezuela \\ Facultad de Ciencias}
 \date{\today}
 
@@ -45,17 +79,16 @@
 \end{frame}
 
 % Índice Automático
-\begin{frame}{Contenido del Seminario}
+\begin{frame}{Contenido}
     \tableofcontents
 \end{frame}
 
 % --- Carga de Secciones Modulares ---
 \include{slides/01_intro}
-\include{slides/02_fundamentos}
-\include{slides/03_ckks_depth}
-\include{slides/04_nn_fundamentals}
-\include{slides/05_nn_over_ckks}
-\include{slides/06_proposed_library}
+\include{slides/02_teoria}
+\include{slides/03_biblioteca}
+\include{slides/04_evaluacion}
+\include{slides/05_conclusiones}
 
 % Diapositiva Final
 \ThankYouFrame

@@ -61,15 +61,13 @@
 \begin{frame}{El esquema CKKS}
     Esquema de FHE para el cómputo sobre \textbf{números reales}. Trata el ruido como un error de redondeo, esto facilita al esquema el manejo de ruido durante operaciones.
     \vspace{0.35cm}
-    \begin{itemize}
-        \begin{itemize}
-            \setlength{\itemsep}{10pt}
-            \item \textbf{Reales:} Permite representar numeros reales sin usar escalado.
-            \item \textbf{SIMD:} Multiples números reales por texto cifrado pueden ser operados a la vez.
-            \item \textbf{Operaciones:} Suma, multiplicación, rotación, relinearización y reescalado.
-            \item \textbf{Bootstrapping:} Permite usar bootstrapping.
-        \end{itemize}
-    \end{itemize}
+    \begin{listaalineada}
+        \setlength{\itemsep}{10pt}
+        \item \textbf{Reales:} Permite representar numeros reales sin usar escalado.
+        \item \textbf{SIMD:} Multiples números reales por texto cifrado pueden ser operados a la vez.
+        \item \textbf{Operaciones:} Suma, multiplicación, rotación, relinearización y reescalado.
+        \item \textbf{Bootstrapping:} Permite usar bootstrapping.
+    \end{listaalineada}
 \end{frame}
 
 \begin{frame}{Álgebra lineal en CKKS}

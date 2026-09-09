@@ -3,106 +3,96 @@
 \SectionFrame{Desarrollo de la Biblioteca}
 
 \begin{frame}{OpalML}
-    Las bibliotecas de CKKS sobre GPU exponen \textbf{únicamente las primitivas del esquema}: el ruido, los niveles y las claves se gestionan a mano.
+    El objetivo de la libreria es abstraer la gestión del esquema CKKS en la \textbf{definición e inferencia de redes neuronales}. Ademas de aprovechar la capacidad de la GPU para procesar la inferencia.
     \vfill
-    \begin{columns}[t]
-        \column{0.50\textwidth}
-        \textbf{Lo que ofrece la biblioteca}
-        \begin{itemize}
-            \setlength{\itemsep}{7pt}
-            \item Interfaz \textbf{declarativa}, como las bibliotecas de aprendizaje profundo.
-            \item Conversión directa desde \textbf{PyTorch}.
-            \item Capas lineal, convolucional y ReLU.
-            \item Gestión \textbf{automática} de niveles, ruido y \textit{bootstrapping}.
-        \end{itemize}
-
-        \column{0.46\textwidth}
-        \textbf{Lo que el usuario nunca toca}
-        \begin{itemize}
-            \setlength{\itemsep}{7pt}
-            \item Las claves.
-            \item Los niveles de los textos cifrados.
-            \item Los objetos crudos del \textit{backend}.
-        \end{itemize}
-        \vspace{0.5cm}
-        \begin{center}
-            Publicada en \textbf{PyPI}.
-        \end{center}
-    \end{columns}
+    \textbf{Se abstrae del usuario}
+    \begin{listaalineada}
+        \setlength{\itemsep}{10pt}
+        \item Las claves.
+        \item Los niveles de los textos cifrados.
+        \item Los objetos crudos del \textit{backend}.
+        \item Gestión de niveles, ruido y \textit{bootstrapping}.
+    \end{listaalineada}
+    \vfill
 \end{frame}
 
-\begin{frame}{\textit{Backend}: HEonGPU y los enlaces con pybind11}
+\begin{frame}{HEonGPU}
     \begin{columns}[t]
-        \column{0.44\textwidth}
-        \small
+        \column{0.48\textwidth}
         \textbf{Por qué HEonGPU}
         \begin{itemize}
-            \setlength{\itemsep}{6pt}
-            \item SEAL y PALISADE, las más difundidas, ejecutan \textbf{solo sobre CPU}.
-            \item Entre las aceleradas por GPU, es la que ofrece \textbf{soporte de \textit{bootstrapping}}.
-        \end{itemize}
-        \vspace{0.3cm}
-        \textbf{Enlaces construidos con pybind11}
-        \begin{itemize}
-            \setlength{\itemsep}{6pt}
-            \item Contexto, codificación, cifrado y descifrado.
-            \item Generación de claves y claves de evaluación.
-            \item Operador homomórfico y \textit{bootstrapping}.
-        \end{itemize}
-
-        \column{0.56\textwidth}
-        \vspace{0.3cm}
-        \begin{center}
-            \includegraphics[width=\textwidth]{bindings_map.png}
-        \end{center}
-    \end{columns}
-\end{frame}
-
-\begin{frame}{Clases y frontera cliente--servidor}
-    \begin{columns}[t]
-        \column{0.44\textwidth}
-        \begin{itemize}
             \setlength{\itemsep}{8pt}
-            \item \textbf{Sequential:} compone las capas y orquesta compilación e inferencia.
-            \item \textbf{Client:} posee la clave secreta. Genera claves, cifra y descifra.
-            \item \textbf{FHEContext:} operaciones del esquema, del lado del evaluador.
-            \item \textbf{EncryptedVector:} vector cifrado; sobrecarga los operadores del lenguaje.
+            \item La mayoria de librerias que implementan CKKS solo ejecutan sobre CPU.
+            \item Entre las que usan el GPU, esta ofrece \textit{bootstrapping}.
+            \item Esta en constante mantenimiento y con actualizaciones constantes.
+            \item Es sencilla de integrar usando pybind11.
         \end{itemize}
-        \vspace{0.3cm}
-        {\small Cada clase depende solo de las capas inferiores.}
 
-        \column{0.56\textwidth}
-        \begin{center}
-        \begin{tikzpicture}[
-            every node/.style={font=\scriptsize},
-            box/.style={draw=UCVBlue!60, rounded corners=2pt, fill=white, minimum height=0.5cm, inner sep=3pt},
-        ]
-            \node[draw=UCVBlue!40, rounded corners=3pt, fill=UCVBlue!8, minimum width=2.9cm, minimum height=3.1cm] (C) at (-2.1,0) {};
-            \node[anchor=north, font=\tiny\bfseries, text=UCVBlue] at ([yshift=-3pt]C.north) {CLIENTE};
-            \node[box, minimum width=2.4cm] at (-2.1,0.75) {Client};
-            \node[box, minimum width=2.4cm, fill=UCVOrange!20] at (-2.1,0.15) {clave secreta};
-            \node[box, minimum width=2.4cm] at (-2.1,-0.45) {cifrar / descifrar};
-            \node[font=\tiny, text=gray, align=center] at (-2.1,-1.15) {genera las claves\\una sola vez};
-
-            \node[draw=UCVBlue!40, rounded corners=3pt, fill=UCVGrey!25, minimum width=2.9cm, minimum height=3.1cm] (S) at (2.1,0) {};
-            \node[anchor=north, font=\tiny\bfseries, text=UCVBlue] at ([yshift=-3pt]S.north) {SERVIDOR};
-            \node[box, minimum width=2.4cm] at (2.1,0.75) {Sequential + capas};
-            \node[box, minimum width=2.4cm] at (2.1,0.15) {FHEContext};
-            \node[box, minimum width=2.4cm] at (2.1,-0.45) {pesos en claro};
-            \node[font=\tiny, text=gray, align=center] at (2.1,-1.15) {evalúa la red\\sin la clave secreta};
-
-            \draw[-{Stealth[length=4pt]}, thick, UCVBlue!70] ([yshift=8pt]C.east) -- node[above, font=\tiny, align=center] {claves de\\evaluación} ([yshift=8pt]S.west);
-            \draw[-{Stealth[length=4pt]}, thick, UCVOrange] ([yshift=-10pt]C.east) -- node[above, font=\tiny] {entrada cifrada} ([yshift=-10pt]S.west);
-            \draw[-{Stealth[length=4pt]}, thick, UCVOrange] ([yshift=-24pt]S.west) -- node[below, font=\tiny] {salida cifrada} ([yshift=-24pt]C.east);
-        \end{tikzpicture}
-        \end{center}
+        \column{0.48\textwidth}
+        \textbf{Enlaces con pybind11}
+        \begin{itemize}
+            \setlength{\itemsep}{9pt}
+            \item Contexto y parámetros del esquema.
+            \item Clases para codificación, cifrado y descifrado.
+            \item Clases para generación de claves.
+            \item Objetos para realizar operaciones.
+            \item Configuracion para el \textit{bootstrapping}.
+        \end{itemize}
     \end{columns}
 \end{frame}
 
-\begin{frame}[fragile]{La API en uso}
-\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+\begin{frame}{Clases y funciones expuestas}
+    El usuario solo interactúa con la interfaz pública; cada capa traduce las operaciones a las de la capa inferior hasta llegar a HEonGPU y a los núcleos CUDA.
+    \vspace{0.15cm}
+    \begin{center}
+    \begin{tikzpicture}[
+        scale=0.9, every node/.style={font=\scriptsize, transform shape},
+        grupo/.style={draw=UCVBlue!45, rounded corners=3pt},
+        caja/.style={draw=UCVBlue!60, rounded corners=2pt, fill=white, align=center,
+                     inner sep=3pt},
+        rotulo/.style={font=\tiny\bfseries, text=UCVBlue, anchor=north},
+        flecha/.style={-{Stealth[length=5pt]}, very thick, UCVBlue!70},
+    ]
+        % --- Puntos de entrada ---
+        \node[grupo, fill=UCVBlue!8, minimum width=3.4cm, minimum height=3.4cm] (ent) at (-4.85,0) {};
+        \node[rotulo] at ([yshift=-4pt]ent.north) {PUNTOS DE ENTRADA (Python)};
+        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85, 0.98) {Sequential};
+        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85, 0.25) {Client};
+        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85,-0.48) {FHEConfig};
+        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85,-1.21) {FHEContext};
+
+        % --- Componentes públicos ---
+        \node[grupo, fill=UCVBlue!8, minimum width=5.3cm, minimum height=3.4cm] (comp) at (0.15,0) {};
+        \node[rotulo] at ([yshift=-4pt]comp.north) {COMPONENTES PÚBLICOS};
+        \node[caja, minimum width=4.9cm, minimum height=0.72cm] at (0.15, 0.90)
+            {Capas\\ {\tiny Linear · Conv2D · ReLU · Square · Input}};
+        \node[caja, minimum width=4.9cm, minimum height=0.72cm] at (0.15,-0.04)
+            {Contenedores\\ {\tiny EncryptedVector · PlaintextVector · PlaintextTensor}};
+        \node[caja, minimum width=4.9cm, minimum height=0.72cm] at (0.15,-0.98)
+            {Configuración\\ {\tiny BootstrapConfig · SecurityLevel · config\_for\_circuit}};
+
+        % --- Interno ---
+        \node[grupo, fill=UCVBlue!16, minimum width=3.9cm, minimum height=3.4cm] (int) at (5.15,0) {};
+        \node[rotulo] at ([yshift=-4pt]int.north) {INTERNO};
+        \node[grupo, fill=UCVGrey!45, minimum width=3.5cm, minimum height=2.55cm] (enl) at (5.15,-0.28) {};
+        \node[rotulo] at ([yshift=-4pt]enl.north) {CAPA DE ENLACES};
+        \node[caja, minimum width=3.15cm, minimum height=0.6cm] at (5.15,-0.25)
+            {Módulo de enlaces {\tiny (pybind11)}};
+        \node[caja, minimum width=3.15cm, minimum height=0.6cm, fill=UCVGrey!75] at (5.15,-1.15)
+            {HEonGPU {\tiny (C++/CUDA)}};
+
+        \draw[flecha] (ent) -- (comp);
+        \draw[flecha] (comp) -- (int);
+    \end{tikzpicture}
+    \end{center}
+\end{frame}
+
+\begin{frame}[fragile]{OpalML en uso}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{6.5}{7.1}\selectfont]
 from opal_ml import Client, FHEContext, Sequential
 from opal_ml.layers import Linear, ReLU
+# Subconjunto representativo de los datos, del propio usuario.
+from datos import datos_de_calibracion
 
 # --- Servidor ---
 model = Sequential([
@@ -127,31 +117,61 @@ resultado = client.decrypt(salida_cifrada)
 \end{lstlisting}
 \end{frame}
 
-\begin{frame}{Capas lineal y convolucional}
-    \begin{columns}[t]
-        \column{0.50\textwidth}
-        \textbf{Capa lineal}
-        \begin{itemize}
-            \setlength{\itemsep}{6pt}
-            \item Multiplicación matriz-vector por el \textbf{método de diagonales} de Halevi-Shoup.
-            \item Diagonales codificadas \textbf{una sola vez} en la compilación.
-        \end{itemize}
-        \vspace{0.35cm}
-        \textbf{Capa convolucional}
-        \begin{itemize}
-            \setlength{\itemsep}{6pt}
-            \item Sin operador propio: \textbf{una única multiplicación matriz-vector} (\textit{im2col}).
-            \item Se construye en texto plano una matriz dispersa con los pesos del filtro.
-        \end{itemize}
+\begin{frame}{Multiplicación matriz-vector}
+    Es la operación central de las capas con pesos. Se implementa por el \textbf{método de las diagonales} de Halevi-Shoup, $y = \sum_{i} d_i \odot \mathrm{rot}(x, i)$, con la descomposición \textit{baby-step giant-step}: $i = n_1 j + k$, con $n_1 \approx \sqrt{n}$ potencia de dos.
+    \vspace{0.2cm}
+    \begin{center}
+    \begin{tikzpicture}[
+        scale=0.92, every node/.style={font=\scriptsize, transform shape},
+        caja/.style={draw=UCVBlue!60, rounded corners=2pt, fill=white, align=center,
+                     inner sep=3pt, minimum height=0.55cm},
+        flecha/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
+        nota/.style={font=\tiny, text=UCVBlue, anchor=west, align=left},
+    ]
+        % --- Baby steps ---
+        \node[caja, minimum width=1.3cm] (b0) at (-4.9, 1.15) {$x$};
+        \node[caja, minimum width=1.7cm] (b1) at (-2.9, 1.15) {$\mathrm{rot}(x,1)$};
+        \node                            (bd) at (-1.3, 1.15) {$\cdots$};
+        \node[caja, minimum width=2.1cm] (b2) at ( 0.5, 1.15) {$\mathrm{rot}(x,n_1{-}1)$};
+        \draw[flecha] (b0) -- node[above, font=\tiny] {rot 1} (b1);
+        \draw[flecha] (b1) -- (bd);
+        \draw[flecha] (bd) -- node[above, font=\tiny] {rot 1} (b2);
+        \node[nota] at (2.0, 1.15) {\textbf{Baby steps}\\ $n_1-1$ rotaciones de $1$};
 
-        \column{0.50\textwidth}
-        \begin{center}
-            \includegraphics[height=0.32\textheight]{img2conv.png}
-        \end{center}
-        \vspace{0.2cm}
-        \begin{block}{Decisión de diseño}
-            \small \textbf{Una sola ruta de cómputo} para ambas capas: flexibilidad total sobre el núcleo, el paso, el relleno y los canales, a costa de \textbf{más operaciones}.
-        \end{block}
+        % --- Bloque ---
+        \node[caja, fill=UCVBlue!10, minimum width=7.6cm] (blk) at (-2.2, 0.05)
+            {$\mathrm{bloque}_j \;=\; \sum_{k=0}^{n_1-1} \mathrm{rot}(x,k) \odot d_{\,n_1 j + k}$};
+        \node[nota] at (2.0, 0.05) {$n_1$ productos cifrado $\times$ texto plano\\ (las diagonales nulas se omiten)};
+        \draw[flecha] (-2.2,0.87) -- (-2.2,0.33);
+
+        % --- Giant steps ---
+        \node[caja, minimum width=1.9cm] (g0) at (-4.7,-1.15) {$\mathrm{bloque}_{n_2-1}$};
+        \node                            (gd) at (-2.9,-1.15) {$\cdots$};
+        \node[caja, minimum width=1.9cm] (g1) at (-1.1,-1.15) {$\oplus\,\mathrm{bloque}_0$};
+        \node[caja, fill=UCVOrange!20, minimum width=1.5cm] (gr) at ( 0.8,-1.15) {$y$};
+        \draw[flecha] (g0) -- node[above, font=\tiny] {rot $n_1$} (gd);
+        \draw[flecha] (gd) -- node[above, font=\tiny] {rot $n_1$} (g1);
+        \draw[flecha] (g1) -- (gr);
+        \node[nota] at (2.0,-1.15) {\textbf{Giant steps}\\ $n_2-1$ rotaciones de $n_1$};
+        \draw[flecha] (-2.2,-0.23) -- (-2.2,-0.87);
+    \end{tikzpicture}
+    \end{center}
+    \vspace{0.1cm}
+    \begin{columns}[t]
+        \column{0.49\textwidth}
+        \small
+        \begin{itemize}
+            \setlength{\itemsep}{4pt}
+            \item \textbf{Rotaciones:} $(n_1-1)+(n_2-1) \approx 2\sqrt{n}$, frente a $n-1$ del método directo.
+            \item \textbf{Solo dos desplazamientos distintos}, $1$ y $n_1$: bastan \textbf{dos claves de Galois}, y son las que dominan la memoria.
+        \end{itemize}
+        \column{0.49\textwidth}
+        \small
+        \begin{itemize}
+            \setlength{\itemsep}{4pt}
+            \item La rotación gigante se \textbf{pliega en la diagonal} en texto plano al compilar: no cuesta nada en inferencia.
+            \item \textbf{Profundidad: un nivel.} Todos los productos son cifrado $\times$ texto plano.
+        \end{itemize}
     \end{columns}
 \end{frame}
 

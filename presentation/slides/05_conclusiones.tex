@@ -3,14 +3,14 @@
 \SectionFrame{Conclusiones}
 
 \begin{frame}{Conclusiones}
-    \begin{itemize}
+    \begin{listaalineada}
         \setlength{\itemsep}{12pt}
         \item \textbf{La aceleración por GPU cumple su propósito.} La implementación cifrada más rápida en ambos casos: $\times$11.7 y $\times$1.6 sobre Orion, y dos órdenes de magnitud sobre Concrete ML.
         \item \textbf{La abstracción funciona.} El recorrido completo es viable sin que el usuario manipule claves, niveles ni objetos del \textit{backend}. La excepción son algunos parámetros del esquema.
         \item \textbf{La fidelidad depende del número de operaciones del circuito}, no del esquema. La red de regresión se reproduce con un error de $6.2 \times 10^{-4}$; la convolucional pierde la decisión del clasificador.
         \item \textbf{El consumo de memoria lo domina el conjunto de claves de Galois.} Es lo que acota el tamaño de los modelos evaluables.
         \item Publicada como paquete de \textbf{código abierto} en PyPI.
-    \end{itemize}
+    \end{listaalineada}
 \end{frame}
 
 \begin{frame}{Limitaciones y trabajos futuros}
