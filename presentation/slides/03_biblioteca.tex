@@ -118,61 +118,100 @@ resultado = client.decrypt(salida_cifrada)
 \end{frame}
 
 \begin{frame}{Multiplicación matriz-vector}
-    Es la operación central de las capas con pesos. Se implementa por el \textbf{método de las diagonales} de Halevi-Shoup, $y = \sum_{i} d_i \odot \mathrm{rot}(x, i)$, con la descomposición \textit{baby-step giant-step}: $i = n_1 j + k$, con $n_1 \approx \sqrt{n}$ potencia de dos.
-    \vspace{0.2cm}
-    \begin{center}
-    \begin{tikzpicture}[
-        scale=0.92, every node/.style={font=\scriptsize, transform shape},
-        caja/.style={draw=UCVBlue!60, rounded corners=2pt, fill=white, align=center,
-                     inner sep=3pt, minimum height=0.55cm},
-        flecha/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
-        nota/.style={font=\tiny, text=UCVBlue, anchor=west, align=left},
-    ]
-        % --- Baby steps ---
-        \node[caja, minimum width=1.3cm] (b0) at (-4.9, 1.15) {$x$};
-        \node[caja, minimum width=1.7cm] (b1) at (-2.9, 1.15) {$\mathrm{rot}(x,1)$};
-        \node                            (bd) at (-1.3, 1.15) {$\cdots$};
-        \node[caja, minimum width=2.1cm] (b2) at ( 0.5, 1.15) {$\mathrm{rot}(x,n_1{-}1)$};
-        \draw[flecha] (b0) -- node[above, font=\tiny] {rot 1} (b1);
-        \draw[flecha] (b1) -- (bd);
-        \draw[flecha] (bd) -- node[above, font=\tiny] {rot 1} (b2);
-        \node[nota] at (2.0, 1.15) {\textbf{Baby steps}\\ $n_1-1$ rotaciones de $1$};
-
-        % --- Bloque ---
-        \node[caja, fill=UCVBlue!10, minimum width=7.6cm] (blk) at (-2.2, 0.05)
-            {$\mathrm{bloque}_j \;=\; \sum_{k=0}^{n_1-1} \mathrm{rot}(x,k) \odot d_{\,n_1 j + k}$};
-        \node[nota] at (2.0, 0.05) {$n_1$ productos cifrado $\times$ texto plano\\ (las diagonales nulas se omiten)};
-        \draw[flecha] (-2.2,0.87) -- (-2.2,0.33);
-
-        % --- Giant steps ---
-        \node[caja, minimum width=1.9cm] (g0) at (-4.7,-1.15) {$\mathrm{bloque}_{n_2-1}$};
-        \node                            (gd) at (-2.9,-1.15) {$\cdots$};
-        \node[caja, minimum width=1.9cm] (g1) at (-1.1,-1.15) {$\oplus\,\mathrm{bloque}_0$};
-        \node[caja, fill=UCVOrange!20, minimum width=1.5cm] (gr) at ( 0.8,-1.15) {$y$};
-        \draw[flecha] (g0) -- node[above, font=\tiny] {rot $n_1$} (gd);
-        \draw[flecha] (gd) -- node[above, font=\tiny] {rot $n_1$} (g1);
-        \draw[flecha] (g1) -- (gr);
-        \node[nota] at (2.0,-1.15) {\textbf{Giant steps}\\ $n_2-1$ rotaciones de $n_1$};
-        \draw[flecha] (-2.2,-0.23) -- (-2.2,-0.87);
-    \end{tikzpicture}
-    \end{center}
-    \vspace{0.1cm}
+    Se empleó la multiplicación matriz-vector de \textbf{Halevi-Shoup} con una \textbf{descomposición} que reduce las operaciones.
+    \vfill
     \begin{columns}[t]
-        \column{0.49\textwidth}
-        \small
-        \begin{itemize}
-            \setlength{\itemsep}{4pt}
-            \item \textbf{Rotaciones:} $(n_1-1)+(n_2-1) \approx 2\sqrt{n}$, frente a $n-1$ del método directo.
-            \item \textbf{Solo dos desplazamientos distintos}, $1$ y $n_1$: bastan \textbf{dos claves de Galois}, y son las que dominan la memoria.
-        \end{itemize}
-        \column{0.49\textwidth}
-        \small
-        \begin{itemize}
-            \setlength{\itemsep}{4pt}
-            \item La rotación gigante se \textbf{pliega en la diagonal} en texto plano al compilar: no cuesta nada en inferencia.
-            \item \textbf{Profundidad: un nivel.} Todos los productos son cifrado $\times$ texto plano.
-        \end{itemize}
+        %% ================= 1. Método de las diagonales =================
+        \column{0.46\textwidth}
+        \textbf{1. Método de las diagonales}
+        \vspace{0.45cm}
+
+        \begin{tikzpicture}[
+            scale=1.28, every node/.style={font=\tiny, transform shape},
+            celda/.style={draw=UCVBlue!50, minimum width=0.30cm, minimum height=0.30cm,
+                          inner sep=0pt, font=\tiny},
+            xcelda/.style={celda, fill=white, minimum width=0.32cm},
+            flecha/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
+        ]
+            % --- Matriz W coloreada por diagonales ---
+            \foreach \r in {0,1,2} {
+                \foreach \c in {0,1,2} {
+                    \pgfmathtruncatemacro{\d}{mod(\c-\r+3,3)}
+                    \node[celda, fill={\ifcase\d UCVOrange!45\or UCVBlue!35\or UCVGrey!75\fi}]
+                         at (\c*0.30, 0.77-\r*0.30) {};
+                }
+            }
+            \node[font=\scriptsize] at (0.30, 1.12) {$W$};
+            \draw[flecha] (0.9, 0.47) -- (1.32, 0.47);
+
+            % --- Un producto por diagonal ---
+            \foreach \i/\y in {0/0.90, 1/0.47, 2/0.04} {
+                \node[anchor=east] at (1.77, \y) {$d_\i$};
+                \foreach \c in {0,1,2} {
+                    \node[celda, fill={\ifcase\i UCVOrange!45\or UCVBlue!35\or UCVGrey!75\fi}]
+                         at (1.92+\c*0.30, \y) {};
+                }
+                \node at (2.83, \y) {$\odot$};
+                \foreach \c in {0,1,2} {
+                    \pgfmathtruncatemacro{\xi}{mod(\c+\i,3)}
+                    \node[xcelda] at (3.15+\c*0.32, \y) {$x_\xi$};
+                }
+            }
+
+            % --- La suma de los productos da el resultado ---
+            \node[font=\scriptsize, anchor=east] at (1.8, -0.3) {$\sum$};
+            \draw[UCVBlue!60, semithick] (1.77,-0.3) -- (3.95,-0.3);
+            \node[anchor=east] at (1.77, -0.7) {$y$};
+            \foreach \c in {0,1,2} {
+                \node[celda, fill=UCVOrange!20] at (1.92+\c*0.30, -0.7) {};
+            }
+        \end{tikzpicture}
+
+        %% ============ 2. Descomposición baby-step giant-step ============
+        \column{0.54\textwidth}
+        \textbf{2. Descomposición \textit{baby-step giant-step}}
+        \vspace{0.5cm}
+
+        \hspace*{0.5cm}
+        \begin{tikzpicture}[
+            scale=1.18, every node/.style={font=\tiny, transform shape},
+            celda/.style={draw=UCVBlue!55, minimum width=0.80cm, minimum height=0.42cm,
+                          inner sep=0pt, font=\tiny, fill=UCVBlue!10},
+            blq/.style={draw=UCVBlue!60, rounded corners=2pt, fill=white,
+                        minimum width=1.05cm, minimum height=0.42cm, inner sep=1pt, font=\tiny},
+            flecha/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
+            giro/.style={-{Stealth[length=4pt]}, thick, UCVOrange},
+            etq/.style={font=\tiny, text=UCVOrange, inner sep=1.5pt},
+        ]
+            % --- Matriz de diagonales: filas (bloques) por columnas ---
+            \foreach \j in {0,1,2} {
+                \foreach \k in {0,1,2} {
+                    \pgfmathtruncatemacro{\idx}{3*\j+\k}
+                    \node[celda] (C\j-\k) at (\k*0.88, 1.45-\j*0.62) {$d_{\idx}$};
+                }
+            }
+
+            % --- Cada columna reutiliza una rotación más del vector ---
+            \foreach \k [evaluate=\k as \n using int(\k+1)] in {0,1} {
+                \draw[giro] (C0-\k.north) to[bend left=45] node[etq, above] {$+1$} (C0-\n.north);
+            }
+
+            % --- Cada fila da un bloque: solo productos y sumas ---
+            \foreach \j in {0,1,2} {
+                \node[blq] (B\j) at (3.30, 1.45-\j*0.62) {$\mathrm{bloque}_\j$};
+                \draw[flecha, shorten >=2pt] (2.20, 1.45-\j*0.62) -- (B\j);
+            }
+
+            % --- Acumulación de abajo arriba: siempre la misma rotación ---
+            \foreach \j [evaluate=\j as \p using int(\j-1)] in {2,1} {
+                \draw[giro] (B\j.east) to[bend right=65] node[etq, right] {$+n_1$} (B\p.east);
+            }
+
+            \node[blq, fill=UCVOrange!25, minimum width=0.7cm] (Y) at (3.30, 2.16) {$y$};
+            \draw[flecha] (B0) -- (Y);
+        \end{tikzpicture}
     \end{columns}
+    \vfill
 \end{frame}
 
 \begin{frame}{ReLU: aproximación y calibración}
