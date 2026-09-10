@@ -68,10 +68,46 @@
 
 \begin{frame}{Regresión: calidad, fidelidad y memoria}
     La aproximación polinómica reduce calidad, ademas OpalML queda al nivel de Orion en calidad, que emplea el mismo esquema. En fidelidad, OpalML es la más precisa de las tres. En memoria OpalML es mas eficiente que Orion, pero consume más que ConcreteML.
-    \vspace{0.3cm}
+    \vspace{-0.15cm}
     \begin{center}
-        \includegraphics[height=0.58\textheight]{res_calidad_mlp.png}\hspace{0.5cm}
-        \includegraphics[height=0.58\textheight]{res_memoria_mlp.png}
+    \begin{tikzpicture}
+        \begin{axis}[barras, title={Calidad ($R^2$)},
+            symbolic x coords={OpalML, Orion, Concrete ML}, xtick=data,
+            ymin=0, ymax=1.0, ytick={0,0.2,...,0.8},
+            nodes near coords={\pgfmathprintnumber[fixed, precision=3]{\pgfplotspointmeta}}]
+            \addplot[aproximado] coordinates {(OpalML,0.716) (Orion,0.716) (Concrete ML,0.165)};
+            \addplot[cifrado]    coordinates {(OpalML,0.478) (Orion,0.475)};
+            \draw[dashed, semithick, UCVOrange]
+                ({rel axis cs:0,0} |- {axis cs:OpalML,0.804}) --
+                ({rel axis cs:1,0} |- {axis cs:OpalML,0.804})
+                node[pos=0.62, above=0pt, font=\tiny, text=UCVOrange] {PyTorch 0.804};
+            \legend{sin cifrar, cifrado}
+        \end{axis}
+    \end{tikzpicture}
+    \hspace{0.25cm}
+    \begin{tikzpicture}
+        \begin{axis}[barras, title={Fidelidad frente a PyTorch},
+            symbolic x coords={OpalML, Orion, Concrete ML}, xtick=data,
+            ymode=log, ymin=1e-4, ymax=1e1, ylabel={MAE}, ylabel style={font=\tiny},
+            point meta=explicit symbolic]
+            \addplot[cifrado] coordinates {
+                (OpalML,0.00062) [$6.2\!\cdot\!10^{-4}$]
+                (Orion,0.0019)   [$1.9\!\cdot\!10^{-3}$]
+                (Concrete ML,0.51) [$0.51$]};
+        \end{axis}
+    \end{tikzpicture}
+    \hspace{0.25cm}
+    \begin{tikzpicture}
+        \begin{axis}[barras, title={Memoria},
+            symbolic x coords={PyTorch, OpalML, Orion, Concrete ML}, xtick=data,
+            ymode=log, ymin=1, ymax=1e6, ylabel={MB}, ylabel style={font=\tiny},
+            bar width=4pt, enlarge x limits=0.20, point meta=rawy,
+            nodes near coords={\pgfmathprintnumber[fixed, precision=0, 1000 sep={\,}]{\pgfplotspointmeta}}]
+            \addplot[aproximado] coordinates {(PyTorch,9) (OpalML,17996) (Orion,526) (Concrete ML,526)};
+            \addplot[alterno]    coordinates {(PyTorch,621) (OpalML,744) (Orion,48579) (Concrete ML,3465)};
+            \legend{VRAM, RAM}
+        \end{axis}
+    \end{tikzpicture}
     \end{center}
 \end{frame}
 

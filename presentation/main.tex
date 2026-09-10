@@ -11,6 +11,37 @@
 \usepackage{listings}
 \usepackage{tikz}
 \usetikzlibrary{matrix,chains,positioning,arrows,arrows.meta,calc,fit,backgrounds,shapes.geometric}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% --- Graficas de barras de los resultados ---
+% Estilo comun para que las tres laminas de una seccion compartan proporciones.
+\pgfplotsset{
+    barras/.style={
+        ybar,
+        scale only axis,
+        width=2.5cm, height=2.5cm,
+        font=\tiny,
+        bar width=4pt,
+        log origin=infty,
+        ymajorgrids, grid style={UCVGrey!70, very thin},
+        axis line style={UCVGrey!90},
+        tick style={UCVGrey!90},
+        x tick label style={rotate=25, anchor=north east, inner sep=1.5pt},
+        title style={font=\scriptsize, yshift=11pt},
+        enlarge x limits=0.28,
+        nodes near coords,
+        every node near coord/.append style={font=\tiny, inner sep=1pt},
+        legend style={draw=none, fill=none, font=\tiny, legend columns=-1,
+                      at={(0.5,1.01)}, anchor=south,
+                      /tikz/every even column/.append style={column sep=3pt}},
+        % La marca de la leyenda es solo un cuadro del color de la serie.
+        legend image code/.code={\draw[#1, draw=none] (0pt,-2pt) rectangle (6pt,4pt);},
+    },
+    aproximado/.style={draw=none, fill=UCVBlue!35},
+    cifrado/.style={draw=none, fill=UCVBlue!85},
+    alterno/.style={draw=none, fill=UCVOrange!70},
+}
 
 % --- Tema Visual Personalizado (UCV basado en UASLP1) ---
 \usetheme{UCV}
