@@ -28,7 +28,10 @@
         axis line style={UCVGrey!90},
         tick style={UCVGrey!90},
         x tick label style={rotate=25, anchor=north east, inner sep=1.5pt},
-        title style={font=\scriptsize, yshift=11pt},
+        % El eje se nombra para que las laminas puedan alinear varias graficas
+        % por el borde superior del recuadro (vease baseline=(ejes.north)).
+        name=ejes,
+        title style={font=\scriptsize, yshift=1pt},
         enlarge x limits=0.28,
         nodes near coords,
         every node near coord/.append style={font=\tiny, inner sep=1pt},
@@ -38,6 +41,8 @@
         % La marca de la leyenda es solo un cuadro del color de la serie.
         legend image code/.code={\draw[#1, draw=none] (0pt,-2pt) rectangle (6pt,4pt);},
     },
+    % La leyenda va sobre el recuadro, de modo que el titulo sube para dejarle sitio.
+    conleyenda/.style={title style={yshift=11pt}},
     aproximado/.style={draw=none, fill=UCVBlue!35},
     cifrado/.style={draw=none, fill=UCVBlue!85},
     alterno/.style={draw=none, fill=UCVOrange!70},
