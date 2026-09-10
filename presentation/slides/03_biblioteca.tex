@@ -214,70 +214,66 @@ resultado = client.decrypt(salida_cifrada)
     \vfill
 \end{frame}
 
-\begin{frame}{ReLU: aproximación y calibración}
-    \begin{columns}[t]
-        \column{0.50\textwidth}
-        \textbf{Evaluación eficiente del polinomio}
-        \vspace{0.1cm}
-        \\ Cada componente es impar, de modo que se factoriza
-        \[
-            p(x) = x \cdot q(x^2), \qquad \deg q = n
-        \]
-        y se evalúa $q$ mediante el \textbf{esquema de Horner}.
-        \begin{itemize}
-            \item Profundidad: $n + 2$ niveles, frente a $2n+1$. \textbf{La mitad.}
-        \end{itemize}
-
-        \column{0.50\textwidth}
-        \textbf{Calibración de la red}
-        \vspace{0.1cm}
-        \\ La aproximación solo es válida en $[-1,1]$.
-        \begin{enumerate}
-            \setlength{\itemsep}{5pt}
-            \item Se propaga un conjunto representativo \textbf{en claro} y se registra el máximo absoluto $B$ de cada activación.
-            \item Ese rango se \textbf{pliega en los pesos} de las capas vecinas.
-        \end{enumerate}
-    \end{columns}
-    \vspace{0.5cm}
-    \begin{center}
-    \begin{tikzpicture}[every node/.style={font=\scriptsize},
-        b/.style={draw=UCVBlue!60, rounded corners=2pt, minimum height=0.6cm, inner sep=4pt}]
-        \node[b, fill=UCVBlue!10] (w1) at (-4.4,0) {$W_i / B$};
-        \node[b, fill=UCVOrange!20] (r) at (-1.6,0) {ReLU en $[-1,1]$};
-        \node[b, fill=UCVBlue!10] (w2) at (1.6,0) {$W_{i+1} \cdot B$};
-        \draw[-{Stealth[length=4pt]}, thick, UCVBlue!70] (w1) -- (r);
-        \draw[-{Stealth[length=4pt]}, thick, UCVBlue!70] (r) -- (w2);
-        \node[anchor=west, align=left, font=\scriptsize] at (3.1,0) {$\mathrm{ReLU}(Bx) = B\,\mathrm{ReLU}(x)$\\ \textcolor{gray}{exacta, sin coste homomórfico}};
-    \end{tikzpicture}
-    \end{center}
+\begin{frame}{Aproximación y calibración}
+    \setlength{\abovedisplayskip}{5pt}\setlength{\belowdisplayskip}{5pt}
+    \setlength{\abovedisplayshortskip}{5pt}\setlength{\belowdisplayshortskip}{5pt}
+    \textbf{ReLU}
+    \vspace{0.1cm}
+    \\ ReLU se reduce a aproximar la funcion signo, componiendo $k$ veces el polinomio $f_n$. Al evaluar la aproximación se usa el \textbf{esquema de Horner}.
+    \[
+        \mathrm{ReLU}(x) = x \cdot \frac{1 + \mathrm{signo}(x)}{2},
+        \qquad
+        \mathrm{signo}(x) \approx \underbrace{(f_n \circ \cdots \circ f_n)}_{k \text{ veces}}(x)
+    \]
+    \textbf{Calibración}
+    \vspace{0.1cm}
+    \\ La aproximación solo es válida en $[-1,1]$. Para asegurar que el input de la activación en todas las capas este en este rango se usa la \textbf{calibración}. Esto consiste en medir el rango de cada activación y plegarlo en los pesos vecinos.
+    \[
+        B_i = \max_{x \in \mathcal{D}} \lVert W_i x + b_i \rVert
+    \]
+    \[
+        (W_i,\, b_i) \leftarrow (W_i,\, b_i) / B_i,
+        \qquad
+        W_{i+1} \leftarrow B_i \, W_{i+1}
+    \]
 \end{frame}
 
-\begin{frame}{Automatización de los parámetros y validación}
+\begin{frame}{Configuración}
+    \textbf{Configurado por el usuario}
+    \vspace{-0.25cm}
     \begin{columns}[t]
-        \column{0.50\textwidth}
-        \textbf{Configuración derivada del circuito}
+        \column{0.48\textwidth}
         \begin{itemize}
             \setlength{\itemsep}{6pt}
-            \item El usuario indica el \textbf{factor de escala} y los \textbf{grados} de la aproximación de ReLU.
-            \item La biblioteca deriva el resto de la configuración.
-            \item Las \textbf{validaciones} rechazan una configuración inconsistente antes de llegar al \textit{backend}.
-        \end{itemize}
-        \vspace{0.3cm}
-        \textbf{Desarrollo guiado por pruebas}
-        \begin{itemize}
-            \setlength{\itemsep}{6pt}
-            \item Primero la interfaz, luego las pruebas, después la implementación.
-            \item Cada operación cifrada reproduce su equivalente en claro.
+            \item El factor de escala.
+            \item Los grados de la aproximación de ReLU.
         \end{itemize}
 
-        \column{0.50\textwidth}
-        \textbf{Gestión de niveles y \textit{bootstrapping}}
+        \column{0.48\textwidth}
         \begin{itemize}
             \setlength{\itemsep}{6pt}
-            \item Cada capa reporta su \textbf{profundidad multiplicativa}.
-            \item En la compilación se suman y se comparan con los niveles disponibles.
-            \item Si no alcanzan, se habilita el \textit{bootstrapping} en su variante \textbf{SLIM}.
-            \item En inferencia el refresco se dispara \textbf{automáticamente}, incluso a mitad de una activación.
+            \item Si usar VRAM o RAM para las claves de Galois.
+        \end{itemize}
+    \end{columns}
+
+    \vspace{0.55cm}
+    \textbf{Derivado por OpalML}
+    \vspace{-0.25cm}
+    \begin{columns}[t]
+        \column{0.48\textwidth}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item La profundidad multiplicativa.
+            \item El grado del anillo.
+            \item La cadena de módulos.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item El número de primos auxiliares del cambio de clave.
+            \item El \textit{bootstrapping} SLIM y sus parámetros.
+            \item Los desplazamientos de rotación, y con ellos las claves de Galois.
         \end{itemize}
     \end{columns}
 \end{frame}
