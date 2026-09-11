@@ -5,11 +5,9 @@
 \begin{frame}{Conclusiones}
     \begin{listaalineada}
         \setlength{\itemsep}{12pt}
-        \item \textbf{La aceleración por GPU cumple su propósito.} La implementación cifrada más rápida en ambos casos: $\times$11.7 y $\times$1.6 sobre Orion, y dos órdenes de magnitud sobre Concrete ML.
-        \item \textbf{La abstracción funciona.} El recorrido completo es viable sin que el usuario manipule claves, niveles ni objetos del \textit{backend}. La excepción son algunos parámetros del esquema.
-        \item \textbf{La fidelidad depende del número de operaciones del circuito}, no del esquema. La red de regresión se reproduce con un error de $6.2 \times 10^{-4}$; la convolucional pierde la decisión del clasificador.
-        \item \textbf{El consumo de memoria lo domina el conjunto de claves de Galois.} Es lo que acota el tamaño de los modelos evaluables.
-        \item Publicada como paquete de \textbf{código abierto} en PyPI.
+        \item \textbf{La aceleración por GPU cumple su propósito:} OpalML es la libreria más rápida en ambos casos: $\times$11.7 y $\times$1.6 sobre Orion, y dos órdenes de magnitud sobre Concrete ML.
+        \item \textbf{La fidelidad de la inferencia depende del modelo:} A mayor cantidad de multiplicaciones y rotaciones, mas ruido se acumula. Ademas la implementacion de las capas individuales del modelo influye en el numero de operaciones.
+        \item \textbf{La libreria permite realizar inferencia en espacio cifrado:} Los dos casos de uso construidos, permitieron probar que el recorrido completo es viable. Se entrena una red neuronal, se importa a la biblioteca, se generan las claves y se realiza la inferencia cifrada.
     \end{listaalineada}
 \end{frame}
 
@@ -19,22 +17,21 @@
         \textbf{Limitaciones}
         \begin{itemize}
             \setlength{\itemsep}{7pt}
-            \item La convolución realiza más operaciones que las bibliotecas de referencia: más ruido.
-            \item La selección de los parámetros criptográficos queda parcialmente a cargo del usuario.
-            \item Catálogo de capas: lineal, convolucional y ReLU.
-            \item El \textit{backend} reserva la tarjeta completa por adelantado.
-            \item La aproximación depende de un conjunto de calibración representativo.
+            \item La convolución realiza más operaciones que las bibliotecas de referencia.
+            \item La selección de los parámetros criptográficos no es optima.
+            \item El Catálogo de capas es limitado.
+            \item La aproximación depende de un conjunto de calibración representativo de los datos.
         \end{itemize}
 
         \column{0.48\textwidth}
         \textbf{Trabajos futuros}
         \begin{itemize}
             \setlength{\itemsep}{7pt}
-            \item \textbf{Rediseñar la capa convolucional} con un empaquetado adaptado a CKKS.
-            \item \textbf{Mejorar la evaluación de las activaciones}: refinar la aproximación o usar tablas de búsqueda.
-            \item Ampliar el catálogo de capas hacia un \textit{framework} extensible.
+            \item Rediseñar la capa convolucional con un empaquetado adaptado a CKKS.
+            \item Mejorar la evaluación de las activaciones.
+            \item Ampliar el catálogo de capas y funciones de activacion hacia un framework extensible.
             \item Mejorar la selección automática de los parámetros del esquema.
-            \item Adoptar \textbf{ONNX} para admitir modelos de cualquier entorno.
+            \item Adoptar ONNX para admitir modelos de cualquier entorno.
         \end{itemize}
     \end{columns}
 \end{frame}
