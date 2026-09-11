@@ -3,7 +3,7 @@
 \SectionFrame{Escenarios de Prueba y Resultados}
 
 \begin{frame}{Diseño de la evaluación}
-    Evaluamos dos escenarios. Una red de regresión (California Housing) y una de clasificación (MNIST). Se evalua la inferencia en cuatro librerias de cifrado distintas con los mismos pesos entrenados. Se mide lo siguiente:
+    Evaluamos dos escenarios. Una red de regresión (California Housing) y una de clasificación (MNIST). Se evalúa la inferencia en cuatro librerías de cifrado distintas con los mismos pesos entrenados. Se mide lo siguiente:
     \vspace{0.1cm}
     \begin{listaalineada}
         \setlength{\itemsep}{4pt}
@@ -67,7 +67,7 @@
 \end{frame}
 
 \begin{frame}{Regresión: calidad, fidelidad y memoria}
-    La aproximación polinómica reduce calidad, ademas OpalML queda al nivel de Orion en calidad, que emplea el mismo esquema. En fidelidad, OpalML es la más precisa de las tres. En memoria OpalML es mas eficiente que Orion, pero consume más que ConcreteML.
+    La aproximación polinómica reduce calidad, además OpalML queda al nivel de Orion en calidad, que emplea el mismo esquema. En fidelidad, OpalML es la más precisa de las tres. En memoria OpalML es más eficiente que Orion, pero consume más que Concrete~ML.
     \vspace{-0.15cm}
     \begin{center}
     \begin{tikzpicture}[baseline=(ejes.north)]
@@ -195,7 +195,7 @@
 \end{frame}
 
 \begin{frame}{Clasificación: calidad, fidelidad y memoria}
-    Orion y Concrete~ML conservan la decisión del clasificador y OpalML no, pues su error crece varios órdenes de magnitud. El modelo aproximado sin usar cifrado logra un resultado similar al de Orion. En esta prueba la falta de memoria de la instancia usada nos obligo a guardar las claves de Galois en RAM.
+    Orion y Concrete~ML conservan la decisión del clasificador y OpalML no, pues su error crece varios órdenes de magnitud. El modelo aproximado sin usar cifrado logra un resultado similar al de Orion. En esta prueba la falta de memoria de la instancia usada nos obligó a guardar las claves de Galois en RAM.
     \vspace{-0.15cm}
     \begin{center}
     \begin{tikzpicture}[baseline=(ejes.north)]
@@ -244,7 +244,7 @@
 \end{frame}
 
 \begin{frame}{Clasificación: rendimiento y perfilado}
-    OpalML tambien es la más rápida. La generación de claves en OpalML tarda mas debido a la cantidad de rotaciones que exige nuestro algoritmo comparado con Orion. En este caso la capa de convolucion consume más tiempo que las activaciones.
+    OpalML también es la más rápida. La generación de claves en OpalML tarda más debido a la cantidad de rotaciones que exige nuestro algoritmo comparado con Orion. En este caso la capa de convolución consume más tiempo que las activaciones.
     \vspace{-0.15cm}
     \begin{center}
     \begin{tikzpicture}[baseline=(ejes.north)]

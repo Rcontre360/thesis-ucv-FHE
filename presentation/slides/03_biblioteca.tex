@@ -3,7 +3,7 @@
 \SectionFrame{Desarrollo de la Biblioteca}
 
 \begin{frame}{OpalML}
-    El objetivo de la libreria es abstraer la gestión del esquema CKKS en la \textbf{definición e inferencia de redes neuronales}. Ademas de aprovechar la capacidad de la GPU para procesar la inferencia.
+    El objetivo de la librería es abstraer la gestión del esquema CKKS en la \textbf{definición e inferencia de redes neuronales}. Además de aprovechar la capacidad de la GPU para procesar la inferencia.
     \vfill
     \textbf{Se abstrae del usuario}
     \begin{listaalineada}
@@ -22,9 +22,9 @@
         \textbf{Por qué HEonGPU}
         \begin{itemize}
             \setlength{\itemsep}{8pt}
-            \item La mayoria de librerias que implementan CKKS solo ejecutan sobre CPU.
+            \item La mayoría de librerías que implementan CKKS solo ejecutan sobre CPU.
             \item Entre las que usan el GPU, esta ofrece \textit{bootstrapping}.
-            \item Esta en constante mantenimiento y con actualizaciones constantes.
+            \item Está en constante mantenimiento y con actualizaciones constantes.
             \item Es sencilla de integrar usando pybind11.
         \end{itemize}
 
@@ -36,7 +36,7 @@
             \item Clases para codificación, cifrado y descifrado.
             \item Clases para generación de claves.
             \item Objetos para realizar operaciones.
-            \item Configuracion para el \textit{bootstrapping}.
+            \item Configuración para el \textit{bootstrapping}.
         \end{itemize}
     \end{columns}
 \end{frame}
@@ -219,7 +219,7 @@ resultado = client.decrypt(salida_cifrada)
     \setlength{\abovedisplayshortskip}{5pt}\setlength{\belowdisplayshortskip}{5pt}
     \textbf{ReLU}
     \vspace{0.1cm}
-    \\ ReLU se reduce a aproximar la funcion signo, componiendo $k$ veces el polinomio $f_n$. Al evaluar la aproximación se usa el \textbf{esquema de Horner}.
+    \\ ReLU se reduce a aproximar la función signo, componiendo $k$ veces el polinomio $f_n$. Al evaluar la aproximación se usa el \textbf{esquema de Horner}.
     \[
         \mathrm{ReLU}(x) = x \cdot \frac{1 + \mathrm{signo}(x)}{2},
         \qquad
@@ -227,7 +227,7 @@ resultado = client.decrypt(salida_cifrada)
     \]
     \textbf{Calibración}
     \vspace{0.1cm}
-    \\ La aproximación solo es válida en $[-1,1]$. Para asegurar que el input de la activación en todas las capas este en este rango se usa la \textbf{calibración}. Esto consiste en medir el rango de cada activación y plegarlo en los pesos vecinos.
+    \\ La aproximación solo es válida en $[-1,1]$. Para asegurar que el input de la activación en todas las capas esté en este rango se usa la \textbf{calibración}. Esto consiste en medir el rango de cada activación y plegarlo en los pesos vecinos.
     \[
         B_i = \max_{x \in \mathcal{D}} \lVert W_i x + b_i \rVert
     \]
