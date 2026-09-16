@@ -1,6 +1,6 @@
 \chapter{Marco Metodológico}
 
-En este capítulo se documentan las actividades realizadas para construir la biblioteca propuesta. Describe su desarrollo, desde la capa que comunica a Python con el \textit{backend} criptográfico hasta las capas de red neuronal que operan sobre datos cifrados. El trabajo de implementación se organiza en las siguientes actividades:
+En este capítulo se documentan las actividades realizadas para construir la biblioteca propuesta. Describe su desarrollo, desde la capa que comunica a Python con el \textit{backend} criptográfico hasta las capas de red neuronal que operan sobre datos cifrados. El trabajo de la implementación se organiza en las siguientes actividades:
 
 \begin{enumerate}
     \item Preparación de la infraestructura: se seleccionó y configuró el entorno de hardware y de software sobre el que se desarrolló la biblioteca y se ejecutaron las mediciones.
@@ -400,7 +400,7 @@ Para evaluar el rendimiento de la biblioteca propuesta se la comparó frente a t
     \item Concrete~ML: se eligió como representante de un esquema de cifrado distinto, TFHE \cite{ConcreteML}. A diferencia de CKKS, TFHE opera sobre enteros cuantizados y evalúa las funciones no lineales de forma exacta mediante \textit{bootstrapping} programable. 
 \end{itemize}
 
-La \hyperref[tab:metodo_libs]{Tabla~\ref{tab:metodo_libs}} resume las diferencias fundamentales entre la biblioteca propuesta y las implementaciones de referencia.
+La \hyperref[tab:metodo_libs]{Tabla~\ref{tab:metodo_libs}} resume las diferencias fundamentales entre OpalML y las implementaciones de referencia.
 
 \begin{table}[h]
     \centering
