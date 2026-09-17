@@ -97,3 +97,21 @@
     \end{center}
     \vspace{0.1cm}
 \end{frame}
+
+% Objetivos del trabajo, tomados textualmente de ../doc/intro.tex.
+\begin{frame}{Objetivos}
+    % El texto es literal del documento, asi que el ajuste es de tamaño y espaciado.
+    \small
+    \\ El objetivo del trabajo es que OpalML facilite la inferencia privada de modelos de aprendizaje automático. Que sea una herramienta eficiente que combine la seguridad criptográfica con el rendimiento computacional necesario.
+    \vspace{0.2cm}
+
+    \textbf{Objetivos específicos}
+    \vspace{0.1cm}
+    \begin{listaalineada}
+        \setlength{\itemsep}{4pt}
+        \item Diseñar una interfaz en Python que permita interactuar con una biblioteca de cifrado homomórfico CKKS acelerada por GPU y emplear las operaciones básicas del esquema.
+        \item Implementar las clases y módulos que permitan realizar operaciones con tensores y matrices, abstrayendo del usuario la complejidad del esquema CKKS.
+        \item Crear casos de uso que ejemplifiquen el empleo de la biblioteca para aprovechar el cifrado homomórfico durante la inferencia en modelos de aprendizaje automático.
+        \item Comparar el rendimiento de las redes neuronales implementadas con la biblioteca propuesta frente a implementaciones equivalentes construidas sobre otras bibliotecas de cifrado homomórfico.
+    \end{listaalineada}
+\end{frame}
