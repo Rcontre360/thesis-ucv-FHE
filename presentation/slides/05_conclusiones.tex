@@ -5,10 +5,20 @@
 \begin{frame}{Conclusiones}
     \begin{listaalineada}
         \setlength{\itemsep}{12pt}
-        \item \textbf{La aceleración por GPU cumple su propósito:} OpalML es la librería más rápida en ambos casos: $\times$11.7 y $\times$1.6 sobre Orion, y dos órdenes de magnitud sobre Concrete ML.
+        \item \textbf{La aceleración por GPU cumple su propósito:} OpalML es la biblioteca más rápida en ambos casos: $\times$11.7 y $\times$1.6 sobre Orion, y dos órdenes de magnitud sobre Concrete ML.
         \item \textbf{La fidelidad de la inferencia depende del modelo:} A mayor cantidad de multiplicaciones y rotaciones, más ruido se acumula. Además, la implementación de las capas individuales del modelo influye en el número de operaciones.
-        \item \textbf{La librería permite realizar inferencia en espacio cifrado:} Los dos casos de uso construidos permitieron probar que el recorrido completo es viable. Se entrena una red neuronal, se importa a la biblioteca, se generan las claves y se realiza la inferencia cifrada.
+        \item \textbf{La biblioteca permite realizar inferencia en espacio cifrado:} Los dos casos de uso construidos permitieron probar que el recorrido completo es viable. Se entrena una red neuronal, se importa a la biblioteca, se generan las claves y se realiza la inferencia cifrada.
     \end{listaalineada}
+    % Nota de disponibilidad al pie, sin marcador de llamada.
+    \begingroup
+    \let\thefootnote\relax
+    % Separa la nota de la linea inferior de la plantilla.
+    \setbeamertemplate{footnote}{\parindent 1em\noindent\raggedright
+        \insertfootnotetext\par\vspace{10pt}}
+    \footnotetext{\scriptsize El código fuente de OpalML puede encontrarse en
+        \url{https://github.com/Rcontre360/thesis-ucv-FHE}. La biblioteca está
+        publicada en PyPI en \url{https://pypi.org/project/opal-ml/}.}
+    \endgroup
 \end{frame}
 
 \begin{frame}{Limitaciones y trabajos futuros}

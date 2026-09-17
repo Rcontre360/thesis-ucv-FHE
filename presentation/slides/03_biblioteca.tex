@@ -3,7 +3,7 @@
 \SectionFrame{Desarrollo de la Biblioteca}
 
 \begin{frame}{OpalML}
-    El objetivo de la librería es abstraer la gestión del esquema CKKS en la \textbf{definición e inferencia de redes neuronales}. Además de aprovechar la capacidad de la GPU para procesar la inferencia.
+    El objetivo de la biblioteca es abstraer la gestión del esquema CKKS en la \textbf{definición e inferencia de redes neuronales}. Además de aprovechar la capacidad de la GPU para procesar la inferencia.
     \vfill
     \textbf{Se abstrae del usuario}
     \begin{listaalineada}
@@ -22,7 +22,7 @@
         \textbf{Por qué HEonGPU}
         \begin{itemize}
             \setlength{\itemsep}{8pt}
-            \item La mayoría de librerías que implementan CKKS solo ejecutan sobre CPU.
+            \item La mayoría de bibliotecas que implementan CKKS solo ejecutan sobre CPU.
             \item Entre las que usan el GPU, esta ofrece \textit{bootstrapping}.
             \item Está en constante mantenimiento y con actualizaciones constantes.
             \item Es sencilla de integrar usando pybind11.
