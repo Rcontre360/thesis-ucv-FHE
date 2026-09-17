@@ -1,0 +1,99 @@
+% --- Parte 2: Fundamentos Teóricos ---
+\section{Fundamentos Teóricos}
+\SectionFrame{Fundamentos Teóricos}
+
+\begin{frame}{FHE y el ruido}
+    La seguridad de FHE descansa en el problema de \textbf{aprendizaje con errores}: cada texto cifrado lleva incorporado un pequeño ruido aleatorio que lo hace indescifrable. Ese ruido \textbf{se acumula con cada operación}.
+    \vfill
+    \begin{columns}[c]
+        \column{0.56\textwidth}
+        \begin{center}
+            \includegraphics[width=\textwidth]{noise.png}
+        \end{center}
+        \column{0.44\textwidth}
+        \begin{itemize}
+            \setlength{\itemsep}{8pt}
+            \item \textbf{Suma:} el ruido crece de forma lineal.
+            \item \textbf{Multiplicación:} el ruido crece de forma exponencial.
+            \item Si el ruido supera un umbral, el texto cifrado \textbf{deja de ser descifrable}.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Cifrado por niveles y \textit{bootstrapping}}
+    \begin{columns}[t]
+        \column{0.40\textwidth}
+        \textbf{Cifrado por niveles}
+        \vspace{0.15cm}
+        \begin{itemize}
+            \item Se tiene una profundidad de cómputo predefinida por niveles.
+            \item Cada multiplicación consume un nivel.
+        \end{itemize}
+        \vspace{0.2cm}
+        \begin{center}
+            \begin{tikzpicture}[scale=0.7, every node/.style={font=\tiny},
+                lvl/.style={draw, rounded corners, minimum width=2.2cm, minimum height=0.42cm, inner sep=2pt}]
+                \node[lvl, fill=UCVBlue!12] (L3) at (0,3.0) {$Q_L$ (inicio)};
+                \node[lvl, fill=UCVBlue!12] (L2) at (0,2.0) {$Q_{L-1}$};
+                \node[lvl, fill=UCVBlue!12] (L1) at (0,1.0) {$\dots$};
+                \node[lvl, fill=UCVOrange!25] (L0) at (0,0) {$Q_0$ (límite)};
+                \draw[->, thick] (L3) -- (L2) node[midway, right] {$\times$};
+                \draw[->, thick] (L2) -- (L1) node[midway, right] {$\times$};
+                \draw[->, thick] (L1) -- (L0) node[midway, right] {$\times$};
+            \end{tikzpicture}
+        \end{center}
+
+        \column{0.58\textwidth}
+        \textbf{\textit{Bootstrapping}}
+        \vspace{0.15cm}
+        \begin{itemize}
+            \item Evalúa homomórficamente la propia función de descifrado.
+            \item Devuelve el texto cifrado con \textbf{ruido mínimo}, restaurando los niveles.
+            \item Habilita cómputos de profundidad indefinida.
+        \end{itemize}
+        \vspace{0.2cm}
+        \begin{center}
+            \includegraphics[width=0.95\textwidth]{bootstrap.png}
+        \end{center}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{El esquema CKKS}
+    Esquema de FHE para el cómputo sobre \textbf{números reales}. Trata el ruido como un error de redondeo, esto facilita al esquema el manejo de ruido durante operaciones.
+    \vspace{0.35cm}
+    \begin{listaalineada}
+        \setlength{\itemsep}{10pt}
+        \item \textbf{Reales:} Permite representar números reales sin usar escalado.
+        \item \textbf{SIMD:} Múltiples números reales por texto cifrado pueden ser operados a la vez.
+        \item \textbf{Operaciones:} Suma, multiplicación, rotación, relinearización y reescalado.
+        \item \textbf{Bootstrapping:} Permite usar bootstrapping.
+    \end{listaalineada}
+\end{frame}
+
+\begin{frame}{Álgebra lineal en CKKS}
+    Con solo sumas, multiplicaciones y rotaciones hay que construir las operaciones de una red neuronal.
+    \vspace{0.15cm}
+    \begin{columns}[t]
+        \column{0.46\textwidth}
+        \centering
+        \textbf{Producto punto}\\[0.15cm]
+        \includegraphics[height=0.55\textheight]{vec_vec_mult.png}
+        \\[0.15cm]
+
+        \column{0.54\textwidth}
+        \centering
+        \textbf{Multiplicación matriz-vector}\\[0.15cm]
+        \includegraphics[height=0.55\textheight]{matrix_vec_mul.png}
+        \\[0.15cm]
+    \end{columns}
+    \vspace{0.2cm}
+\end{frame}
+
+\begin{frame}{Funciones de activación}
+    CKKS solo evalúa \textbf{polinomios}. Dado esto, es necesario aproximar las funciones de activación.
+    \vspace{0.15cm}
+    \begin{center}
+        \includegraphics[width=0.92\textwidth]{sign_approx.png}
+    \end{center}
+    \vspace{0.1cm}
+\end{frame}

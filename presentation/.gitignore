@@ -10,3 +10,6 @@ build/
 *.synctex.gz
 *.pdf
 !build/*.pdf
+
+# Herramientas de generacion de figuras (no se versionan)
+figtools/

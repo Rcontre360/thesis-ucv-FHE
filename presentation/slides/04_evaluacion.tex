@@ -1,0 +1,287 @@
+% --- Parte 4: Escenarios de Prueba y Resultados ---
+\section{Escenarios de Prueba y Resultados}
+\SectionFrame{Escenarios de Prueba y Resultados}
+
+\begin{frame}{Diseño de la evaluación}
+    Evaluamos dos escenarios. Una red de regresión (California Housing) y una de clasificación (MNIST). Se evalúa la inferencia en cuatro librerías de cifrado distintas con los mismos pesos entrenados. Se mide lo siguiente:
+    \vspace{0.1cm}
+    \begin{listaalineada}
+        \setlength{\itemsep}{4pt}
+        \item Tiempo de inferencia y generación de claves de Galois.
+        \item Consumo de VRAM y RAM.
+        \item Calidad y fidelidad del resultado.
+    \end{listaalineada}
+
+    \begin{center}
+        \small
+        \begin{tabular}{@{}llll@{}}
+            \toprule
+            Implementación & Esquema & \textit{Hardware} & Tipo de dato \\
+            \midrule
+            PyTorch     & Ninguno & GPU & Flotante          \\
+            OpalML      & CKKS    & GPU & Real aproximado   \\ Orion       & CKKS    & CPU & Real aproximado   \\
+            Concrete ML & TFHE    & GPU & Entero cuantizado \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Regresión: California Housing}
+    Se empleó el conjunto \textit{California Housing}, con 20\,640 muestras de 8 características. Sobre él se entrenó en texto plano, con PyTorch, una red totalmente conectada de dos capas ocultas y activación ReLU.
+    \vspace{0.25cm}
+    \begin{center}
+    \begin{tikzpicture}[
+        every node/.style={font=\scriptsize},
+        capa/.style={draw=UCVBlue!60, rounded corners=2pt, fill=UCVBlue!10, align=center,
+                     minimum height=0.9cm, inner sep=3pt},
+        act/.style={capa, fill=UCVOrange!25},
+        io/.style={capa, fill=UCVGrey!45},
+        fl/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
+    ]
+        \node[io] (x) {$x$\\ $8$};
+        \node[capa, right=0.3cm of x]  (l1) {Lineal\\ $8 \to 128$};
+        \node[act,  right=0.3cm of l1] (r1) {ReLU};
+        \node[capa, right=0.3cm of r1] (l2) {Lineal\\ $128 \to 64$};
+        \node[act,  right=0.3cm of l2] (r2) {ReLU};
+        \node[capa, right=0.3cm of r2] (l3) {Lineal\\ $64 \to 1$};
+        \node[io,   right=0.3cm of l3] (y)  {$y$\\ $1$};
+        \foreach \a/\b in {x/l1, l1/r1, r1/l2, l2/r2, r2/l3, l3/y} { \draw[fl] (\a) -- (\b); }
+    \end{tikzpicture}
+    \end{center}
+
+    \vspace{0.35cm}
+    \textbf{Parámetros CKKS de OpalML}
+    \vspace{-0.15cm}
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lr@{\hspace{1.2cm}}lr@{}}
+            \toprule
+            Parámetro & Valor & Parámetro & Valor \\
+            \midrule
+            Grado del polinomio ($N$)   & $65\,536$                    & Nivel de seguridad   & 128 bits \\
+            Cadena de módulos (bits)    & $[60,\, 52 \times 28,\, 60]$ & Aproximación de ReLU & 12 polinomios, grado 5 \\
+            Factor de escala ($\Delta$) & $2^{52}$                     & Ranuras ($N/2$)      & $32\,768$ \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Regresión: calidad, fidelidad y memoria}
+    La aproximación polinómica reduce calidad, además OpalML queda al nivel de Orion en calidad, que emplea el mismo esquema. En fidelidad, OpalML es la más precisa de las tres. En memoria OpalML es más eficiente que Orion, pero consume más que Concrete~ML.
+    \vspace{-0.15cm}
+    \begin{center}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, conleyenda, title={Calidad ($R^2$)},
+            symbolic x coords={OpalML, Orion, Concrete ML}, xtick=data,
+            ymin=0, ymax=1.0, ytick={0,0.2,...,0.8},
+            nodes near coords={\pgfmathprintnumber[fixed, precision=3]{\pgfplotspointmeta}}]
+            \addplot[aproximado] coordinates {(OpalML,0.716) (Orion,0.716) (Concrete ML,0.165)};
+            \addplot[cifrado]    coordinates {(OpalML,0.478) (Orion,0.475)};
+            \draw[dashed, semithick, UCVOrange]
+                ({rel axis cs:0,0} |- {axis cs:OpalML,0.804}) --
+                ({rel axis cs:1,0} |- {axis cs:OpalML,0.804})
+                node[pos=0.62, above=0pt, font=\tiny, text=UCVOrange] {PyTorch 0.804};
+            \legend{sin cifrar, cifrado}
+        \end{axis}
+    \end{tikzpicture}
+    \hspace{0.25cm}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, title={Fidelidad frente a PyTorch},
+            symbolic x coords={OpalML, Orion, Concrete ML}, xtick=data,
+            ymode=log, ymin=1e-4, ymax=1e1, ylabel={MAE}, ylabel style={font=\tiny},
+            point meta=explicit symbolic]
+            \addplot[cifrado] coordinates {
+                (OpalML,0.00062) [$6.2\!\cdot\!10^{-4}$]
+                (Orion,0.0019)   [$1.9\!\cdot\!10^{-3}$]
+                (Concrete ML,0.51) [$0.51$]};
+        \end{axis}
+    \end{tikzpicture}
+    \hspace{0.25cm}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, conleyenda, title={Memoria},
+            symbolic x coords={PyTorch, OpalML, Orion, Concrete ML}, xtick=data,
+            ymode=log, ymin=1, ymax=1e6, ylabel={MB}, ylabel style={font=\tiny},
+            bar width=4pt, enlarge x limits=0.20, point meta=rawy,
+            nodes near coords={\pgfmathprintnumber[fixed, precision=0, 1000 sep={\,}]{\pgfplotspointmeta}}]
+            \addplot[aproximado] coordinates {(PyTorch,9) (OpalML,17996) (Orion,526) (Concrete ML,526)};
+            \addplot[alterno]    coordinates {(PyTorch,621) (OpalML,744) (Orion,48579) (Concrete ML,3465)};
+            \legend{VRAM, RAM}
+        \end{axis}
+    \end{tikzpicture}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Regresión: rendimiento y perfilado}
+    OpalML es la más rápida de las tres, tanto en inferencia como en generación de claves, con un orden de magnitud de ventaja sobre Orion y dos sobre Concrete~ML. La mayor parte del tiempo se consume en las activaciones.
+    \vspace{-0.15cm}
+    \begin{center}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, title={Inferencia},
+            symbolic x coords={PyTorch, OpalML, Orion, Concrete ML}, xtick=data,
+            ymode=log, ymin=1e-4, ymax=1e5, ylabel={s por muestra}, ylabel style={font=\tiny},
+            enlarge x limits=0.20, point meta=explicit symbolic]
+            \addplot[cifrado] coordinates {
+                (PyTorch,0.00064)      [$6\!\cdot\!10^{-4}$]
+                (OpalML,6.68)          [6.68]
+                (Orion,78.24)          [78.2]
+                (Concrete ML,790.03)   [790]};
+        \end{axis}
+    \end{tikzpicture}
+    \hspace{0.25cm}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, title={Generación de claves},
+            symbolic x coords={OpalML, Orion, Concrete ML}, xtick=data,
+            ymode=log, ymin=1e-1, ymax=1e3, ylabel={segundos}, ylabel style={font=\tiny},
+            point meta=explicit symbolic]
+            \addplot[cifrado] coordinates {
+                (OpalML,0.47)      [0.47]
+                (Orion,5.30)       [5.30]
+                (Concrete ML,2.99) [2.99]};
+        \end{axis}
+    \end{tikzpicture}
+    \hspace{0.25cm}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, title={Tiempo por capa},
+            symbolic x coords={Lineal, ReLU, Lineal\,2, ReLU\,2, Lineal\,3}, xtick=data,
+            ymin=0, ymax=4.9, ylabel={segundos}, ylabel style={font=\tiny},
+            bar width=4pt, enlarge x limits=0.16, point meta=explicit symbolic]
+            \addplot[cifrado] coordinates {
+                (Lineal,0.04)    [0.04]
+                (ReLU,2.20)      [2.20]
+                (Lineal\,2,0.26) [0.26]
+                (ReLU\,2,4.02)   [4.02]
+                (Lineal\,3,0.10) [0.10]};
+        \end{axis}
+    \end{tikzpicture}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Clasificación: MNIST}
+    Se empleó el conjunto MNIST, con 70\,000 imágenes de $28 \times 28$ repartidas en 10 clases. Sobre él se entrenó en texto plano, con PyTorch, una red convolucional compacta de un solo bloque y una capa lineal de salida.
+    \vspace{0.25cm}
+    \begin{center}
+    \begin{tikzpicture}[
+        every node/.style={font=\scriptsize},
+        capa/.style={draw=UCVBlue!60, rounded corners=2pt, fill=UCVBlue!10, align=center,
+                     minimum height=0.9cm, inner sep=3pt},
+        act/.style={capa, fill=UCVOrange!25},
+        io/.style={capa, fill=UCVGrey!45},
+        fl/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
+    ]
+        \node[io] (x) {$x$\\ $1 \times 28 \times 28$};
+        \node[capa, right=0.35cm of x]  (c) {Convolucional\\ 4 filtros $7\times7$, paso 5};
+        \node[act,  right=0.35cm of c]  (r) {ReLU\\ $4 \times 5 \times 5$};
+        \node[capa, right=0.35cm of r]  (l) {Lineal\\ $100 \to 10$};
+        \node[io,   right=0.35cm of l]  (y) {$y$\\ $10$};
+        \foreach \a/\b in {x/c, c/r, r/l, l/y} { \draw[fl] (\a) -- (\b); }
+    \end{tikzpicture}
+    \end{center}
+
+    \vspace{0.35cm}
+    \textbf{Parámetros CKKS de OpalML}
+    \vspace{-0.15cm}
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lr@{\hspace{1.2cm}}lr@{}}
+            \toprule
+            Parámetro & Valor & Parámetro & Valor \\
+            \midrule
+            Grado del polinomio ($N$)   & $65\,536$                    & Nivel de seguridad   & 128 bits \\
+            Cadena de módulos (bits)    & $[60,\, 53 \times 27,\, 60]$ & Aproximación de ReLU & 10 polinomios, grado 5 \\
+            Factor de escala ($\Delta$) & $2^{53}$                     & Ranuras ($N/2$)      & $32\,768$ \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Clasificación: calidad, fidelidad y memoria}
+    Orion y Concrete~ML conservan la decisión del clasificador y OpalML no, pues su error crece varios órdenes de magnitud. El modelo aproximado sin usar cifrado logra un resultado similar al de Orion. En esta prueba la falta de memoria de la instancia usada nos obligó a guardar las claves de Galois en RAM.
+    \vspace{-0.15cm}
+    \begin{center}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, conleyenda, title={Calidad (exactitud)},
+            symbolic x coords={OpalML, Orion, Concrete ML}, xtick=data,
+            ymin=0, ymax=1.15, ytick={0,0.2,...,1.0},
+            nodes near coords={\pgfmathprintnumber[fixed, precision=2]{\pgfplotspointmeta}},
+            every node near coord/.append style={fill=white, inner sep=0.8pt}]
+            \addplot[aproximado] coordinates {(OpalML,0.86) (Orion,0.88) (Concrete ML,0.85)};
+            \addplot[cifrado]    coordinates {(OpalML,0.40) (Orion,0.80)};
+            \draw[dashed, semithick, UCVOrange]
+                ({rel axis cs:0,0} |- {axis cs:OpalML,0.925}) --
+                ({rel axis cs:1,0} |- {axis cs:OpalML,0.925})
+                node[pos=0.5, above=1pt, font=\tiny, text=UCVOrange, fill=white, inner sep=0.8pt] {PyTorch 0.925};
+            \legend{sin cifrar, cifrado}
+        \end{axis}
+    \end{tikzpicture}
+    \hspace{0.25cm}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, title={Fidelidad frente a PyTorch},
+            symbolic x coords={OpalML, Orion, Concrete ML}, xtick=data,
+            ymode=log, ymin=1e-3, ymax=1e4, ylabel={MAE}, ylabel style={font=\tiny},
+            point meta=explicit symbolic]
+            \addplot[cifrado] coordinates {
+                (OpalML,91.18)     [91.2]
+                (Orion,0.0032)     [$3.2\!\cdot\!10^{-3}$]
+                (Concrete ML,0.33) [0.33]};
+        \end{axis}
+    \end{tikzpicture}
+    \hspace{0.25cm}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, conleyenda, title={Memoria},
+            symbolic x coords={PyTorch, OpalML, Orion, Concrete ML}, xtick=data,
+            ymode=log, ymin=0.1, ymax=1e6, ylabel={MB}, ylabel style={font=\tiny},
+            bar width=4pt, enlarge x limits=0.20, point meta=explicit symbolic]
+            \addplot[aproximado] coordinates {
+                (PyTorch,0.38) [0.4] (OpalML,3120) [3\,120]
+                (Orion,526) [526] (Concrete ML,528) [528]};
+            \addplot[alterno] coordinates {
+                (PyTorch,805) [805] (OpalML,44600) [44\,600]
+                (Orion,35257) [35\,257] (Concrete ML,4372) [4\,372]};
+            \legend{VRAM, RAM}
+        \end{axis}
+    \end{tikzpicture}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Clasificación: rendimiento y perfilado}
+    OpalML también es la más rápida. La generación de claves en OpalML tarda más debido a la cantidad de rotaciones que exige nuestro algoritmo comparado con Orion. En este caso la capa de convolución consume más tiempo que las activaciones.
+    \vspace{-0.15cm}
+    \begin{center}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, title={Inferencia},
+            symbolic x coords={PyTorch, OpalML, Orion, Concrete ML}, xtick=data,
+            ymode=log, ymin=1e-4, ymax=1e5, ylabel={s por muestra}, ylabel style={font=\tiny},
+            enlarge x limits=0.20, point meta=explicit symbolic]
+            \addplot[cifrado] coordinates {
+                (PyTorch,0.00145)      [$1.5\!\cdot\!10^{-3}$]
+                (OpalML,28.31)         [28.3]
+                (Orion,46.49)          [46.5]
+                (Concrete ML,448.88)   [449]};
+        \end{axis}
+    \end{tikzpicture}
+    \hspace{0.25cm}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, title={Generación de claves},
+            symbolic x coords={OpalML, Orion, Concrete ML}, xtick=data,
+            ymode=log, ymin=1e-1, ymax=1e3, ylabel={segundos}, ylabel style={font=\tiny},
+            point meta=explicit symbolic]
+            \addplot[cifrado] coordinates {
+                (OpalML,39.93)     [39.9]
+                (Orion,5.27)       [5.27]
+                (Concrete ML,3.03) [3.03]};
+        \end{axis}
+    \end{tikzpicture}
+    \hspace{0.25cm}
+    \begin{tikzpicture}[baseline=(ejes.north)]
+        \begin{axis}[barras, title={Tiempo por capa},
+            symbolic x coords={Convolucional, ReLU, Lineal}, xtick=data,
+            ymin=0, ymax=18, ylabel={segundos}, ylabel style={font=\tiny},
+            point meta=explicit symbolic]
+            \addplot[cifrado] coordinates {
+                (Convolucional,14.76) [14.8]
+                (ReLU,12.17)          [12.2]
+                (Lineal,1.52)         [1.52]};
+        \end{axis}
+    \end{tikzpicture}
+    \end{center}
+\end{frame}

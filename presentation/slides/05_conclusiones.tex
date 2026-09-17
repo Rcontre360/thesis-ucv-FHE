@@ -1,0 +1,37 @@
+% --- Parte 5: Conclusiones ---
+\section{Conclusiones}
+\SectionFrame{Conclusiones}
+
+\begin{frame}{Conclusiones}
+    \begin{listaalineada}
+        \setlength{\itemsep}{12pt}
+        \item \textbf{La aceleración por GPU cumple su propósito:} OpalML es la librería más rápida en ambos casos: $\times$11.7 y $\times$1.6 sobre Orion, y dos órdenes de magnitud sobre Concrete ML.
+        \item \textbf{La fidelidad de la inferencia depende del modelo:} A mayor cantidad de multiplicaciones y rotaciones, más ruido se acumula. Además, la implementación de las capas individuales del modelo influye en el número de operaciones.
+        \item \textbf{La librería permite realizar inferencia en espacio cifrado:} Los dos casos de uso construidos permitieron probar que el recorrido completo es viable. Se entrena una red neuronal, se importa a la biblioteca, se generan las claves y se realiza la inferencia cifrada.
+    \end{listaalineada}
+\end{frame}
+
+\begin{frame}{Limitaciones y trabajos futuros}
+    \begin{columns}[t]
+        \column{0.48\textwidth}
+        \textbf{Limitaciones}
+        \begin{itemize}
+            \setlength{\itemsep}{7pt}
+            \item La convolución realiza más operaciones que las bibliotecas de referencia.
+            \item La selección de los parámetros criptográficos no es óptima.
+            \item El catálogo de capas es limitado.
+            \item La aproximación depende de un conjunto de calibración representativo de los datos.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \textbf{Trabajos futuros}
+        \begin{itemize}
+            \setlength{\itemsep}{7pt}
+            \item Rediseñar la capa convolucional con un empaquetado adaptado a CKKS.
+            \item Mejorar la evaluación de las activaciones.
+            \item Ampliar el catálogo de capas y funciones de activación hacia un framework extensible.
+            \item Mejorar la selección automática de los parámetros del esquema.
+            \item Adoptar ONNX para admitir modelos de cualquier entorno.
+        \end{itemize}
+    \end{columns}
+\end{frame}

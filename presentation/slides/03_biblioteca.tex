@@ -1,0 +1,279 @@
+% --- Parte 3: Desarrollo de la Biblioteca ---
+\section{Desarrollo de la Biblioteca}
+\SectionFrame{Desarrollo de la Biblioteca}
+
+\begin{frame}{OpalML}
+    El objetivo de la librería es abstraer la gestión del esquema CKKS en la \textbf{definición e inferencia de redes neuronales}. Además de aprovechar la capacidad de la GPU para procesar la inferencia.
+    \vfill
+    \textbf{Se abstrae del usuario}
+    \begin{listaalineada}
+        \setlength{\itemsep}{10pt}
+        \item Las claves.
+        \item Los niveles de los textos cifrados.
+        \item Los objetos crudos del \textit{backend}.
+        \item Gestión de niveles, ruido y \textit{bootstrapping}.
+    \end{listaalineada}
+    \vfill
+\end{frame}
+
+\begin{frame}{HEonGPU}
+    \begin{columns}[t]
+        \column{0.48\textwidth}
+        \textbf{Por qué HEonGPU}
+        \begin{itemize}
+            \setlength{\itemsep}{8pt}
+            \item La mayoría de librerías que implementan CKKS solo ejecutan sobre CPU.
+            \item Entre las que usan el GPU, esta ofrece \textit{bootstrapping}.
+            \item Está en constante mantenimiento y con actualizaciones constantes.
+            \item Es sencilla de integrar usando pybind11.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \textbf{Enlaces con pybind11}
+        \begin{itemize}
+            \setlength{\itemsep}{9pt}
+            \item Contexto y parámetros del esquema.
+            \item Clases para codificación, cifrado y descifrado.
+            \item Clases para generación de claves.
+            \item Objetos para realizar operaciones.
+            \item Configuración para el \textit{bootstrapping}.
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Clases y funciones expuestas}
+    El usuario solo interactúa con la interfaz pública; cada capa traduce las operaciones a las de la capa inferior hasta llegar a HEonGPU y a los núcleos CUDA.
+    \vspace{0.15cm}
+    \begin{center}
+    \begin{tikzpicture}[
+        scale=0.9, every node/.style={font=\scriptsize, transform shape},
+        grupo/.style={draw=UCVBlue!45, rounded corners=3pt},
+        caja/.style={draw=UCVBlue!60, rounded corners=2pt, fill=white, align=center,
+                     inner sep=3pt},
+        rotulo/.style={font=\tiny\bfseries, text=UCVBlue, anchor=north},
+        flecha/.style={-{Stealth[length=5pt]}, very thick, UCVBlue!70},
+    ]
+        % --- Puntos de entrada ---
+        \node[grupo, fill=UCVBlue!8, minimum width=3.4cm, minimum height=3.4cm] (ent) at (-4.85,0) {};
+        \node[rotulo] at ([yshift=-4pt]ent.north) {PUNTOS DE ENTRADA (Python)};
+        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85, 0.98) {Sequential};
+        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85, 0.25) {Client};
+        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85,-0.48) {FHEConfig};
+        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85,-1.21) {FHEContext};
+
+        % --- Componentes públicos ---
+        \node[grupo, fill=UCVBlue!8, minimum width=5.3cm, minimum height=3.4cm] (comp) at (0.15,0) {};
+        \node[rotulo] at ([yshift=-4pt]comp.north) {COMPONENTES PÚBLICOS};
+        \node[caja, minimum width=4.9cm, minimum height=0.72cm] at (0.15, 0.90)
+            {Capas\\ {\tiny Linear · Conv2D · ReLU · Square · Input}};
+        \node[caja, minimum width=4.9cm, minimum height=0.72cm] at (0.15,-0.04)
+            {Contenedores\\ {\tiny EncryptedVector · PlaintextVector · PlaintextTensor}};
+        \node[caja, minimum width=4.9cm, minimum height=0.72cm] at (0.15,-0.98)
+            {Configuración\\ {\tiny BootstrapConfig · SecurityLevel · config\_for\_circuit}};
+
+        % --- Interno ---
+        \node[grupo, fill=UCVBlue!16, minimum width=3.9cm, minimum height=3.4cm] (int) at (5.15,0) {};
+        \node[rotulo] at ([yshift=-4pt]int.north) {INTERNO};
+        \node[grupo, fill=UCVGrey!45, minimum width=3.5cm, minimum height=2.55cm] (enl) at (5.15,-0.28) {};
+        \node[rotulo] at ([yshift=-4pt]enl.north) {CAPA DE ENLACES};
+        \node[caja, minimum width=3.15cm, minimum height=0.6cm] at (5.15,-0.25)
+            {Módulo de enlaces {\tiny (pybind11)}};
+        \node[caja, minimum width=3.15cm, minimum height=0.6cm, fill=UCVGrey!75] at (5.15,-1.15)
+            {HEonGPU {\tiny (C++/CUDA)}};
+
+        \draw[flecha] (ent) -- (comp);
+        \draw[flecha] (comp) -- (int);
+    \end{tikzpicture}
+    \end{center}
+\end{frame}
+
+\begin{frame}[fragile]{OpalML en uso}
+\begin{lstlisting}[basicstyle=\ttfamily\fontsize{6.5}{7.1}\selectfont]
+from opal_ml import Client, FHEContext, Sequential
+from opal_ml.layers import Linear, ReLU
+# Subconjunto representativo de los datos, del propio usuario.
+from datos import datos_de_calibracion
+
+# --- Servidor ---
+model = Sequential([
+    Linear(4, 8, W1, bias=b1),
+    ReLU(),
+    Linear(8, 2, W2, bias=b2),
+])
+config = model.generate_config(scale=40, relu_degrees=(3,))
+ctx = FHEContext(config)                  # sin clave secreta
+model.compile(ctx, datos_de_calibracion)  # calibra y prepara los pesos
+
+# --- Cliente ---
+client = Client(ctx)
+ctx.set_client_params(client.key_params())   # claves de evaluacion
+entrada_cifrada = client.encrypt(entrada)
+
+# --- Servidor ---
+salida_cifrada = model(entrada_cifrada)
+
+# --- Cliente ---
+resultado = client.decrypt(salida_cifrada)
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{Multiplicación matriz-vector}
+    Se empleó la multiplicación matriz-vector de \textbf{Halevi-Shoup} con una \textbf{descomposición} que reduce las operaciones.
+    \vfill
+    \begin{columns}[t]
+        %% ================= 1. Método de las diagonales =================
+        \column{0.46\textwidth}
+        \textbf{1. Método de las diagonales}
+        \vspace{0.45cm}
+
+        \begin{tikzpicture}[
+            scale=1.28, every node/.style={font=\tiny, transform shape},
+            celda/.style={draw=UCVBlue!50, minimum width=0.30cm, minimum height=0.30cm,
+                          inner sep=0pt, font=\tiny},
+            xcelda/.style={celda, fill=white, minimum width=0.32cm},
+            flecha/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
+        ]
+            % --- Matriz W coloreada por diagonales ---
+            \foreach \r in {0,1,2} {
+                \foreach \c in {0,1,2} {
+                    \pgfmathtruncatemacro{\d}{mod(\c-\r+3,3)}
+                    \node[celda, fill={\ifcase\d UCVOrange!45\or UCVBlue!35\or UCVGrey!75\fi}]
+                         at (\c*0.30, 0.77-\r*0.30) {};
+                }
+            }
+            \node[font=\scriptsize] at (0.30, 1.12) {$W$};
+            \draw[flecha] (0.9, 0.47) -- (1.32, 0.47);
+
+            % --- Un producto por diagonal ---
+            \foreach \i/\y in {0/0.90, 1/0.47, 2/0.04} {
+                \node[anchor=east] at (1.77, \y) {$d_\i$};
+                \foreach \c in {0,1,2} {
+                    \node[celda, fill={\ifcase\i UCVOrange!45\or UCVBlue!35\or UCVGrey!75\fi}]
+                         at (1.92+\c*0.30, \y) {};
+                }
+                \node at (2.83, \y) {$\odot$};
+                \foreach \c in {0,1,2} {
+                    \pgfmathtruncatemacro{\xi}{mod(\c+\i,3)}
+                    \node[xcelda] at (3.15+\c*0.32, \y) {$x_\xi$};
+                }
+            }
+
+            % --- La suma de los productos da el resultado ---
+            \node[font=\scriptsize, anchor=east] at (1.8, -0.3) {$\sum$};
+            \draw[UCVBlue!60, semithick] (1.77,-0.3) -- (3.95,-0.3);
+            \node[anchor=east] at (1.77, -0.7) {$y$};
+            \foreach \c in {0,1,2} {
+                \node[celda, fill=UCVOrange!20] at (1.92+\c*0.30, -0.7) {};
+            }
+        \end{tikzpicture}
+
+        %% ============ 2. Descomposición baby-step giant-step ============
+        \column{0.54\textwidth}
+        \textbf{2. Descomposición \textit{baby-step giant-step}}
+        \vspace{0.5cm}
+
+        \hspace*{0.5cm}
+        \begin{tikzpicture}[
+            scale=1.18, every node/.style={font=\tiny, transform shape},
+            celda/.style={draw=UCVBlue!55, minimum width=0.80cm, minimum height=0.42cm,
+                          inner sep=0pt, font=\tiny, fill=UCVBlue!10},
+            blq/.style={draw=UCVBlue!60, rounded corners=2pt, fill=white,
+                        minimum width=1.05cm, minimum height=0.42cm, inner sep=1pt, font=\tiny},
+            flecha/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
+            giro/.style={-{Stealth[length=4pt]}, thick, UCVOrange},
+            etq/.style={font=\tiny, text=UCVOrange, inner sep=1.5pt},
+        ]
+            % --- Matriz de diagonales: filas (bloques) por columnas ---
+            \foreach \j in {0,1,2} {
+                \foreach \k in {0,1,2} {
+                    \pgfmathtruncatemacro{\idx}{3*\j+\k}
+                    \node[celda] (C\j-\k) at (\k*0.88, 1.45-\j*0.62) {$d_{\idx}$};
+                }
+            }
+
+            % --- Cada columna reutiliza una rotación más del vector ---
+            \foreach \k [evaluate=\k as \n using int(\k+1)] in {0,1} {
+                \draw[giro] (C0-\k.north) to[bend left=45] node[etq, above] {$+1$} (C0-\n.north);
+            }
+
+            % --- Cada fila da un bloque: solo productos y sumas ---
+            \foreach \j in {0,1,2} {
+                \node[blq] (B\j) at (3.30, 1.45-\j*0.62) {$\mathrm{bloque}_\j$};
+                \draw[flecha, shorten >=2pt] (2.20, 1.45-\j*0.62) -- (B\j);
+            }
+
+            % --- Acumulación de abajo arriba: siempre la misma rotación ---
+            \foreach \j [evaluate=\j as \p using int(\j-1)] in {2,1} {
+                \draw[giro] (B\j.east) to[bend right=65] node[etq, right] {$+n_1$} (B\p.east);
+            }
+
+            \node[blq, fill=UCVOrange!25, minimum width=0.7cm] (Y) at (3.30, 2.16) {$y$};
+            \draw[flecha] (B0) -- (Y);
+        \end{tikzpicture}
+    \end{columns}
+    \vfill
+\end{frame}
+
+\begin{frame}{Aproximación y calibración}
+    \setlength{\abovedisplayskip}{5pt}\setlength{\belowdisplayskip}{5pt}
+    \setlength{\abovedisplayshortskip}{5pt}\setlength{\belowdisplayshortskip}{5pt}
+    \textbf{ReLU}
+    \vspace{0.1cm}
+    \\ ReLU se reduce a aproximar la función signo, componiendo $k$ veces el polinomio $f_n$. Al evaluar la aproximación se usa el \textbf{esquema de Horner}.
+    \[
+        \mathrm{ReLU}(x) = x \cdot \frac{1 + \mathrm{signo}(x)}{2},
+        \qquad
+        \mathrm{signo}(x) \approx \underbrace{(f_n \circ \cdots \circ f_n)}_{k \text{ veces}}(x)
+    \]
+    \textbf{Calibración}
+    \vspace{0.1cm}
+    \\ La aproximación solo es válida en $[-1,1]$. Para asegurar que el input de la activación en todas las capas esté en este rango se usa la \textbf{calibración}. Esto consiste en medir el rango de cada activación y plegarlo en los pesos vecinos.
+    \[
+        B_i = \max_{x \in \mathcal{D}} \lVert W_i x + b_i \rVert
+    \]
+    \[
+        (W_i,\, b_i) \leftarrow (W_i,\, b_i) / B_i,
+        \qquad
+        W_{i+1} \leftarrow B_i \, W_{i+1}
+    \]
+\end{frame}
+
+\begin{frame}{Configuración}
+    \textbf{Configurado por el usuario}
+    \vspace{-0.25cm}
+    \begin{columns}[t]
+        \column{0.48\textwidth}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item El factor de escala.
+            \item Los grados de la aproximación de ReLU.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item Si usar VRAM o RAM para las claves de Galois.
+        \end{itemize}
+    \end{columns}
+
+    \vspace{0.55cm}
+    \textbf{Derivado por OpalML}
+    \vspace{-0.25cm}
+    \begin{columns}[t]
+        \column{0.48\textwidth}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item La profundidad multiplicativa.
+            \item El grado del anillo.
+            \item El número de primos auxiliares del cambio de clave.
+        \end{itemize}
+
+        \column{0.48\textwidth}
+        \begin{itemize}
+            \setlength{\itemsep}{6pt}
+            \item La cadena de módulos.
+            \item El \textit{bootstrapping} SLIM y sus parámetros.
+            \item Los desplazamientos de rotación, y con ellos las claves de Galois.
+        \end{itemize}
+    \end{columns}
+\end{frame}
