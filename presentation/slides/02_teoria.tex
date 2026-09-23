@@ -2,13 +2,47 @@
 \section{Fundamentos Teóricos}
 \SectionFrame{Fundamentos Teóricos}
 
+% Caja de texto cifrado con su medidor de ruido encima.
+% #1 nombre del nodo, #2 posicion, #3 contenido, #4 fraccion de ruido (0..1).
+\newcommand{\cajacifrada}[4]{%
+    \node[cifrada] (#1) at #2 {#3};
+    \node[fill=white, inner sep=0.4pt, font=\tiny, text=UCVBlue]
+        at (#1.south east) {\faLock};
+    \coordinate (#1-gl) at ([yshift=3pt]#1.north west);
+    \coordinate (#1-gr) at ([yshift=6pt]#1.north east);
+    \fill[UCVOrange!85] (#1-gl) rectangle ($(#1-gl |- #1-gr)!#4!(#1-gr)$);
+    \draw[gray!55, thin] (#1-gl) rectangle (#1-gr);
+}
+
 \begin{frame}{FHE y el ruido}
     La seguridad de FHE descansa en el problema de \textbf{aprendizaje con errores}: cada texto cifrado lleva incorporado un pequeño ruido aleatorio que lo hace indescifrable. Ese ruido \textbf{se acumula con cada operación}.
     \vfill
-    \begin{columns}[c]
+    % Sube el bloque (diagrama y texto) respecto al fondo de la lamina.
+    \vspace*{-0.5cm}
+    \begin{columns}[t]
         \column{0.56\textwidth}
         \begin{center}
-            \includegraphics[width=\textwidth]{noise.png}
+            \begin{tikzpicture}[every node/.style={font=\footnotesize},
+                cifrada/.style={draw=UCVBlue, fill=UCVBlue!8, rounded corners=3pt,
+                                minimum width=1.3cm, minimum height=0.9cm},
+                op/.style={font=\normalsize, text=UCVOrange},
+                igual/.style={font=\normalsize, text=UCVBlue}]
+
+                % Suma: el ruido de los operandos apenas se acumula.
+                \cajacifrada{sx}{(0,0.85)}{$x$}{0.18}
+                \node[op] at (1.28,0.85) {$+$};
+                \cajacifrada{sy}{(2.56,0.85)}{$y$}{0.18}
+                \node[igual] at (3.84,0.85) {$=$};
+                \cajacifrada{sr}{(5.12,0.85)}{$x\,\textcolor{UCVOrange}{+}\,y$}{0.34}
+
+                % Multiplicacion: el ruido crece mucho mas.
+                \cajacifrada{mx}{(0,-0.95)}{$x$}{0.18}
+                \node[op] at (1.28,-0.95) {$\times$};
+                \cajacifrada{my}{(2.56,-0.95)}{$y$}{0.18}
+                \node[igual] at (3.84,-0.95) {$=$};
+                \cajacifrada{mr}{(5.12,-0.95)}{$x\,\textcolor{UCVOrange}{\times}\,y$}{0.82}
+
+            \end{tikzpicture}
         \end{center}
         \column{0.44\textwidth}
         \begin{itemize}
