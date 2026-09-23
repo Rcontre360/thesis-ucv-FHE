@@ -4,6 +4,23 @@
 
 % Caja de texto cifrado con su medidor de ruido encima.
 % #1 nombre del nodo, #2 posicion, #3 contenido, #4 fraccion de ruido (0..1).
+% Medidor de ruido horizontal sobre un nodo ya colocado. #1 nodo, #2 fraccion (0..1).
+\newcommand{\medidor}[2]{%
+    \coordinate (#1-gl) at ([yshift=3pt]#1.north west);
+    \coordinate (#1-gr) at ([yshift=6pt]#1.north east);
+    \fill[UCVOrange!85] (#1-gl) rectangle ($(#1-gl |- #1-gr)!#2!(#1-gr)$);
+    \draw[gray!55, thin] (#1-gl) rectangle (#1-gr);
+}
+% Marca del umbral a partir del cual el texto cifrado deja de ser descifrable.
+\newcommand{\umbral}[1]{%
+    \draw[red!65!black, line width=0.6pt]
+        ($(#1-gl)!0.93!(#1-gl -| #1-gr)$) -- ($(#1-gl |- #1-gr)!0.93!(#1-gr)$);
+}
+% Candado en la esquina inferior derecha, del color de la clave. #1 nodo, #2 color.
+\newcommand{\candado}[2]{%
+    \node[fill=white, inner sep=0.4pt, font=\tiny, text=#2] at (#1.south east) {\faLock};
+}
+
 \newcommand{\cajacifrada}[4]{%
     \node[cifrada] (#1) at #2 {#3};
     \node[fill=white, inner sep=0.4pt, font=\tiny, text=UCVBlue]
@@ -54,42 +71,84 @@
     \end{columns}
 \end{frame}
 
-\begin{frame}{Cifrado por niveles y \textit{bootstrapping}}
-    \begin{columns}[t]
-        \column{0.40\textwidth}
-        \textbf{Cifrado por niveles}
-        \vspace{0.15cm}
-        \begin{itemize}
-            \item Se tiene una profundidad de cómputo predefinida por niveles.
-            \item Cada multiplicación consume un nivel.
-        \end{itemize}
-        \vspace{0.2cm}
-        \begin{center}
-            \begin{tikzpicture}[scale=0.7, every node/.style={font=\tiny},
-                lvl/.style={draw, rounded corners, minimum width=2.2cm, minimum height=0.42cm, inner sep=2pt}]
-                \node[lvl, fill=UCVBlue!12] (L3) at (0,3.0) {$Q_L$ (inicio)};
-                \node[lvl, fill=UCVBlue!12] (L2) at (0,2.0) {$Q_{L-1}$};
-                \node[lvl, fill=UCVBlue!12] (L1) at (0,1.0) {$\dots$};
-                \node[lvl, fill=UCVOrange!25] (L0) at (0,0) {$Q_0$ (límite)};
-                \draw[->, thick] (L3) -- (L2) node[midway, right] {$\times$};
-                \draw[->, thick] (L2) -- (L1) node[midway, right] {$\times$};
-                \draw[->, thick] (L1) -- (L0) node[midway, right] {$\times$};
-            \end{tikzpicture}
-        \end{center}
+\begin{frame}{Cifrado por niveles}
+    Los esquemas de FHE modernos usan \textbf{cifrado por niveles}. Esto consiste en que se tiene una profundidad de cómputo predefinida y cada multiplicación consume un nivel. Al agotarse el último, el texto cifrado ya no admite más multiplicaciones.
+    \vfill
+    \begin{center}
+        \begin{tikzpicture}[every node/.style={font=\scriptsize},
+            lvl/.style={draw=UCVBlue, fill=UCVBlue!12, rounded corners=3pt,
+                        minimum width=1.8cm, minimum height=0.85cm}]
+            \node[lvl] (L3) at (0,0)   {$Q_L$ (inicio)};
+            \node[lvl] (L2) at (2.75,0) {$Q_{L-1}$};
+            \node[lvl] (L1) at (5.5,0) {$\dots$};
+            \node[lvl, draw=UCVOrange, fill=UCVOrange!22] (L0) at (8.25,0) {$Q_0$ (límite)};
 
-        \column{0.58\textwidth}
-        \textbf{\textit{Bootstrapping}}
-        \vspace{0.15cm}
-        \begin{itemize}
-            \item Evalúa homomórficamente la propia función de descifrado.
-            \item Devuelve el texto cifrado con \textbf{ruido mínimo}, restaurando los niveles.
-            \item Habilita cómputos de profundidad indefinida.
-        \end{itemize}
-        \vspace{0.2cm}
-        \begin{center}
-            \includegraphics[width=0.95\textwidth]{bootstrap.png}
-        \end{center}
-    \end{columns}
+            \draw[->, thick, UCVOrange] (L3)
+                -- node[above, font=\scriptsize, text=UCVOrange] {$\times$} (L2);
+            \draw[->, thick, UCVOrange] (L2)
+                -- node[above, font=\scriptsize, text=UCVOrange] {$\times$} (L1);
+            \draw[->, thick, UCVOrange] (L1)
+                -- node[above, font=\scriptsize, text=UCVOrange] {$\times$} (L0);
+
+            % Cota inferior: la cadena completa es la profundidad disponible.
+            \draw[<->, gray!70] ([yshift=-0.6cm]L3.south)
+                -- node[below, font=\tiny, text=gray] {profundidad multiplicativa}
+                   ([yshift=-0.6cm]L0.south);
+        \end{tikzpicture}
+    \end{center}
+    \vfill
+\end{frame}
+
+\begin{frame}{\textit{Bootstrapping}}
+    El \textit{bootstrapping} evalúa homomórficamente la propia función de descifrado. Devuelve el texto cifrado con \textbf{ruido mínimo}, restaurando los niveles, y con ello habilita cómputos de profundidad indefinida.
+    \vfill
+    \begin{center}
+        \begin{tikzpicture}[every node/.style={font=\scriptsize},
+            cif/.style={draw=UCVBlue, fill=UCVBlue!8, rounded corners=3pt,
+                        minimum width=1.35cm, minimum height=0.95cm},
+            cifv/.style={draw=UCVAzul2, fill=UCVAzul2!8, rounded corners=3pt,
+                         minimum width=1.35cm, minimum height=0.95cm},
+            paso/.style={->, thick, gray!70}]
+
+            % (A) Texto cifrado con la clave original: el ruido llega al umbral.
+            \node[cif] (a) at (0,0) {$x$};
+            \medidor{a}{0.89}\umbral{a}\candado{a}{UCVBlue}
+
+            % (B) Se recifra bajo la clave nueva: la capa de fuera nace sin ruido.
+            \node[cif, minimum width=1.15cm, minimum height=0.62cm, font=\tiny] (bi) at (2.5,-0.18) {$x$};
+            \medidor{bi}{0.89}\umbral{bi}\candado{bi}{UCVBlue}
+            \begin{scope}[on background layer]
+                \node[cifv, fit=(bi)(bi-gl)(bi-gr), inner sep=9pt] (bo) {};
+            \end{scope}
+            \medidor{bo}{0.1}\candado{bo}{UCVAzul2}
+
+            % (C) Se evalua el descifrado con la clave azul, cifrada bajo la verde.
+            \node[draw=gray!70, fill=gray!8, rounded corners=3pt,
+                  minimum width=2.5cm, minimum height=1.45cm] (c) at (5.6,0) {};
+            \node[font=\tiny, text=gray!90, anchor=north] at ([yshift=-3pt]c.north) {Descifrado};
+            \node[cif, minimum width=0.85cm, minimum height=0.48cm, font=\tiny]
+                 (ci) at ([xshift=-7pt,yshift=-6pt]c.center) {$x$};
+            \candado{ci}{UCVBlue}
+            \node[font=\scriptsize, text=UCVBlue] at ([xshift=20pt]ci.east) {\faKey};
+
+            % La llave de bootstrapping: la clave original cifrada con la nueva.
+            \node[cifv, minimum width=1.25cm, minimum height=0.8cm] (bk) at (5.6,-2.2)
+                 {\textcolor{UCVBlue}{\faKey}};
+            \medidor{bk}{0.1}\candado{bk}{UCVAzul2}
+            \draw[paso] ([yshift=2pt]$(bk-gl |- bk-gr)!0.5!(bk-gr)$) -- (c.south);
+            \node[font=\tiny, text=UCVAzul2, align=right, anchor=east]
+                 at ([xshift=-10pt]bk.west) {Llave de \textit{bootstrapping}\\ (pública)};
+
+            % (D) Mismo dato, ahora bajo la clave nueva y con ruido bajo.
+            \node[cifv] (d) at (8.5,0) {$x$};
+            \medidor{d}{0.14}\umbral{d}\candado{d}{UCVAzul2}
+
+            \draw[paso] (a.east)      -- (bo.west |- a);
+            \draw[paso] (bo.east |- a) -- (c.west);
+            \draw[paso] (c.east)      -- (d.west);
+        \end{tikzpicture}
+    \end{center}
+    \vfill
 \end{frame}
 
 \begin{frame}{El esquema CKKS}
