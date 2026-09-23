@@ -30,6 +30,43 @@
     El cifrado totalmente homomórfico (FHE) permite \textbf{operar sobre datos cifrados sin descifrarlos}. El servidor evalúa el modelo sin ver nunca la información del cliente, y solo este último puede descifrar el resultado.
     \vfill
     \begin{center}
-        \includegraphics[width=0.74\textwidth]{fhe_on_ml.png}
+        \begin{tikzpicture}[scale=0.8, every node/.style={font=\scriptsize},
+            actor/.style={draw, rounded corners, fill=UCVGrey!30,
+                          minimum width=2.1cm, minimum height=1.0cm, align=center},
+            dato/.style={draw, rounded corners, fill=UCVBlue!12,
+                         minimum width=1.7cm, minimum height=0.6cm, align=center, font=\tiny},
+            cifra/.style={draw, rounded corners, fill=UCVOrange!22,
+                          minimum width=2.0cm, minimum height=0.6cm, align=center, font=\tiny},
+            rotulo/.style={font=\tiny, inner sep=2pt}]
+
+            % Columna del cliente: datos privados arriba, resultado abajo.
+            \node[actor] (cli) at (0,0) {\faUser\\ Cliente};
+            \node[dato]  (dat) at (0,1.7) {Datos privados};
+            \node[dato]  (res) at (0,-1.7) {Resultado};
+            \draw[gray!60] (cli.north) -- (dat.south);
+            \draw[gray!60] (res.north) -- (cli.south);
+
+            % Textos cifrados: lo unico que llega a cruzar la barrera.
+            \node[cifra] (ct1) at (6.2,1.7) {\faLock~ Datos cifrados};
+            \node[cifra] (ct2) at (6.2,-1.7) {\faLock~ Resultado cifrado};
+
+            % Servidor de terceros, del otro lado de la barrera.
+            \node[actor] (srv) at (10.2,0) {\faServer\\ Servidor};
+            \node[below=2pt of srv, rotulo, text=UCVBlue, align=center]
+                {evalúa el modelo\\ sobre datos cifrados};
+
+            \draw[dashed, gray] (8.0,-2.6) -- (8.0,2.5);
+            \node[gray, rotulo, anchor=south] at (8.0,2.5) {barrera de confianza};
+
+            % Ida: se codifica y cifra antes de cruzar la barrera.
+            \draw[->, thick, UCVOrange] (dat.east)
+                -- node[rotulo, above, text=UCVOrange] {codificado y cifrado} (ct1.west);
+            \draw[->, thick, UCVOrange] (ct1.east) -| (srv.north);
+
+            % Vuelta: sale por el oeste para no pisar el rotulo del servidor.
+            \draw[->, thick, gray!70] (srv.west) -- (8.45,0) |- (ct2.east);
+            \draw[->, thick, gray!70] (ct2.west)
+                -- node[rotulo, below, text=gray] {descifrado y decodificado} (res.east);
+        \end{tikzpicture}
     \end{center}
 \end{frame}
