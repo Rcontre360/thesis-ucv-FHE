@@ -53,35 +53,49 @@
         rotulo/.style={font=\tiny\bfseries, text=UCVBlue, anchor=north},
         flecha/.style={-{Stealth[length=5pt]}, very thick, UCVBlue!70},
     ]
-        % --- Puntos de entrada ---
-        \node[grupo, fill=UCVBlue!8, minimum width=3.4cm, minimum height=3.4cm] (ent) at (-4.85,0) {};
-        \node[rotulo] at ([yshift=-4pt]ent.north) {PUNTOS DE ENTRADA (Python)};
-        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85, 0.98) {Sequential};
-        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85, 0.25) {Client};
-        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85,-0.48) {FHEConfig};
-        \node[caja, minimum width=2.9cm, minimum height=0.55cm] at (-4.85,-1.21) {FHEContext};
+        % --- Componentes públicos: dos columnas dentro de un solo recuadro ---
+        % Se colocan rotulo y cajas, y el recuadro se ajusta con fit e inner sep=5pt,
+        % de modo que borde-rotulo, rotulo-cajas y borde-cajas miden lo mismo.
+        \coordinate (ctop) at (-1.9,1.11);
 
-        % --- Componentes públicos ---
-        \node[grupo, fill=UCVBlue!8, minimum width=5.3cm, minimum height=3.4cm] (comp) at (0.15,0) {};
-        \node[rotulo] at ([yshift=-4pt]comp.north) {COMPONENTES PÚBLICOS};
-        \node[caja, minimum width=4.9cm, minimum height=0.72cm] at (0.15, 0.90)
-            {Capas\\ {\tiny Linear · Conv2D · ReLU · Square · Input}};
-        \node[caja, minimum width=4.9cm, minimum height=0.72cm] at (0.15,-0.04)
-            {Contenedores\\ {\tiny EncryptedVector · PlaintextVector · PlaintextTensor}};
-        \node[caja, minimum width=4.9cm, minimum height=0.72cm] at (0.15,-0.98)
-            {Configuración\\ {\tiny BootstrapConfig · SecurityLevel · config\_for\_circuit}};
+        \node[caja, anchor=north, minimum width=2.9cm, minimum height=0.55cm]
+            (e1) at (-4.525,0 |- ctop) {Sequential};
+        \node[caja, anchor=north, minimum width=2.9cm, minimum height=0.55cm, below=5pt of e1]
+            (e2) {Client};
+        \node[caja, anchor=north, minimum width=2.9cm, minimum height=0.55cm, below=5pt of e2]
+            (e3) {FHEConfig};
+        \node[caja, anchor=north, minimum width=2.9cm, minimum height=0.55cm, below=5pt of e3]
+            (e4) {FHEContext};
 
-        % --- Interno ---
-        \node[grupo, fill=UCVBlue!16, minimum width=3.9cm, minimum height=3.4cm] (int) at (5.15,0) {};
-        \node[rotulo] at ([yshift=-4pt]int.north) {INTERNO};
-        \node[grupo, fill=UCVGrey!45, minimum width=3.5cm, minimum height=2.55cm] (enl) at (5.15,-0.28) {};
-        \node[rotulo] at ([yshift=-4pt]enl.north) {CAPA DE ENLACES};
-        \node[caja, minimum width=3.15cm, minimum height=0.6cm] at (5.15,-0.25)
-            {Módulo de enlaces {\tiny (pybind11)}};
-        \node[caja, minimum width=3.15cm, minimum height=0.6cm, fill=UCVGrey!75] at (5.15,-1.15)
-            {HEonGPU {\tiny (C++/CUDA)}};
+        \node[caja, anchor=north, minimum width=4.9cm, minimum height=0.72cm]
+            (p1) at (-0.275,0 |- ctop) {Capas\\ {\tiny Linear · Conv2D · ReLU · Square · Input}};
+        \node[caja, anchor=north, minimum width=4.9cm, minimum height=0.72cm, below=8pt of p1]
+            (p2) {Contenedores\\ {\tiny EncryptedVector · PlaintextVector · PlaintextTensor}};
+        \node[caja, anchor=north, minimum width=4.9cm, minimum height=0.72cm, below=8pt of p2]
+            (p3) {Configuración\\ {\tiny BootstrapConfig · SecurityLevel}};
 
-        \draw[flecha] (ent) -- (comp);
+        \node[rotulo, anchor=south] (tcomp) at ([yshift=5pt]ctop) {COMPONENTES PÚBLICOS};
+        \begin{scope}[on background layer]
+            \node[grupo, fill=UCVBlue!8, inner sep=5pt,
+                  fit=(tcomp)(e1)(e4)(p1)(p3)] (comp) {};
+        \end{scope}
+
+        % --- Interno: la capa de enlaces arranca pegada a su rotulo ---
+        \coordinate (etop) at (5.15,0.404);
+        \node[caja, anchor=north, minimum width=3.15cm, minimum height=0.85cm]
+            (l1) at (5.15,0 |- etop) {Módulo de enlaces};
+        \node[caja, anchor=north, minimum width=3.15cm, minimum height=0.85cm,
+              fill=UCVGrey!75, below=5pt of l1] (l2) {HEonGPU {\tiny (C++/CUDA)}};
+        \node[rotulo, anchor=south] (tenl) at ([yshift=5pt]etop) {CAPA DE ENLACES};
+        \begin{scope}[on background layer]
+            \node[grupo, fill=UCVGrey!45, inner sep=5pt, fit=(tenl)(l1)(l2)] (enl) {};
+        \end{scope}
+        \node[rotulo, anchor=south] (tint) at ([yshift=5pt]enl.north) {INTERNO};
+        % Va en la capa inferior para no tapar el recuadro de la capa de enlaces.
+        \begin{pgfonlayer}{fondo}
+            \node[grupo, fill=UCVBlue!16, inner sep=5pt, fit=(tint)(enl)] (int) {};
+        \end{pgfonlayer}
+
         \draw[flecha] (comp) -- (int);
     \end{tikzpicture}
     \end{center}

@@ -15,6 +15,9 @@
 \usetikzlibrary{matrix,chains,positioning,arrows,arrows.meta,calc,fit,backgrounds,shapes.geometric}
 % Segunda clave en el diagrama de bootstrapping: un azul mas claro que UCVBlue.
 \definecolor{UCVAzul2}{RGB}{0,122,204}
+% Capa extra: permite que un recuadro fit quede por debajo de otro recuadro fit.
+\pgfdeclarelayer{fondo}
+\pgfsetlayers{fondo,background,main}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 
