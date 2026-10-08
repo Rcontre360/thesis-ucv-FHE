@@ -10,7 +10,14 @@
 \usepackage{subfigure}
 \usepackage{listings}
 \usepackage{tikz}
+% Iconos vectoriales (usuario, candado, servidor) para los diagramas.
+\usepackage{fontawesome5}
 \usetikzlibrary{matrix,chains,positioning,arrows,arrows.meta,calc,fit,backgrounds,shapes.geometric}
+% Segunda clave en el diagrama de bootstrapping: un azul mas claro que UCVBlue.
+\definecolor{UCVAzul2}{RGB}{0,122,204}
+% Capa extra: permite que un recuadro fit quede por debajo de otro recuadro fit.
+\pgfdeclarelayer{fondo}
+\pgfsetlayers{fondo,background,main}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 
@@ -20,7 +27,7 @@
     barras/.style={
         ybar,
         scale only axis,
-        width=2.5cm, height=2.5cm,
+        width=3.9cm, height=2.85cm,
         font=\tiny,
         bar width=4pt,
         log origin=infty,

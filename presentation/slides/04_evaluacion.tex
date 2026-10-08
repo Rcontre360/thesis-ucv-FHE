@@ -32,10 +32,11 @@
     \begin{center}
     \begin{tikzpicture}[
         every node/.style={font=\scriptsize},
-        capa/.style={draw=UCVBlue!60, rounded corners=2pt, fill=UCVBlue!10, align=center,
+        % Cajas sin relleno: lo unico que distingue a la activacion es el trazo naranja.
+        capa/.style={draw=UCVBlue!60, rounded corners=2pt, align=center,
                      minimum height=0.9cm, inner sep=3pt},
-        act/.style={capa, fill=UCVOrange!25},
-        io/.style={capa, fill=UCVGrey!45},
+        act/.style={capa, draw=UCVOrange},
+        io/.style={capa},
         fl/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
     ]
         \node[io] (x) {$x$\\ $8$};
@@ -66,8 +67,10 @@
     \end{center}
 \end{frame}
 
-\begin{frame}{Regresión: calidad, fidelidad y memoria}
-    La aproximación polinómica reduce calidad, además OpalML queda al nivel de Orion en calidad, que emplea el mismo esquema. En fidelidad, OpalML es la más precisa de las tres. En memoria OpalML es más eficiente que Orion, pero consume más que Concrete~ML.
+\begin{frame}{Regresión: calidad y fidelidad}
+    % Separa el texto del borde superior; el par de vspace mantiene la altura.
+    \vspace*{0.3cm}
+    La aproximación polinómica reduce calidad, además OpalML queda al nivel de Orion en calidad, que emplea el mismo esquema. En fidelidad, OpalML es la más precisa de las tres.
     \vspace{-0.15cm}
     \begin{center}
     \begin{tikzpicture}[baseline=(ejes.north)]
@@ -96,7 +99,14 @@
                 (Concrete ML,0.51) [$0.51$]};
         \end{axis}
     \end{tikzpicture}
-    \hspace{0.25cm}
+    \end{center}
+    \vspace*{-0.3cm}
+\end{frame}
+
+\begin{frame}{Regresión: memoria y rendimiento}
+    OpalML es la más rápida de las tres en inferencia, con un orden de magnitud de ventaja sobre Orion y dos sobre Concrete~ML. En memoria OpalML es más eficiente que Orion, pero consume más que Concrete~ML.
+    \vspace{-0.15cm}
+    \begin{center}
     \begin{tikzpicture}[baseline=(ejes.north)]
         \begin{axis}[barras, conleyenda, title={Memoria},
             symbolic x coords={PyTorch, OpalML, Orion, Concrete ML}, xtick=data,
@@ -108,13 +118,7 @@
             \legend{VRAM, RAM}
         \end{axis}
     \end{tikzpicture}
-    \end{center}
-\end{frame}
-
-\begin{frame}{Regresión: rendimiento y perfilado}
-    OpalML es la más rápida de las tres, tanto en inferencia como en generación de claves, con un orden de magnitud de ventaja sobre Orion y dos sobre Concrete~ML. La mayor parte del tiempo se consume en las activaciones.
-    \vspace{-0.15cm}
-    \begin{center}
+    \hspace{0.25cm}
     \begin{tikzpicture}[baseline=(ejes.north)]
         \begin{axis}[barras, title={Inferencia},
             symbolic x coords={PyTorch, OpalML, Orion, Concrete ML}, xtick=data,
@@ -127,7 +131,13 @@
                 (Concrete ML,790.03)   [790]};
         \end{axis}
     \end{tikzpicture}
-    \hspace{0.25cm}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Regresión: claves y perfilado}
+    OpalML es la más rápida de las tres en generación de claves. Medimos además el tiempo de ejecución por capa para entender mejor dónde la biblioteca tarda más en ejecutar la inferencia y los puntos de mejora.
+    \vspace{-0.15cm}
+    \begin{center}
     \begin{tikzpicture}[baseline=(ejes.north)]
         \begin{axis}[barras, title={Generación de claves},
             symbolic x coords={OpalML, Orion, Concrete ML}, xtick=data,
@@ -162,10 +172,11 @@
     \begin{center}
     \begin{tikzpicture}[
         every node/.style={font=\scriptsize},
-        capa/.style={draw=UCVBlue!60, rounded corners=2pt, fill=UCVBlue!10, align=center,
+        % Cajas sin relleno: lo unico que distingue a la activacion es el trazo naranja.
+        capa/.style={draw=UCVBlue!60, rounded corners=2pt, align=center,
                      minimum height=0.9cm, inner sep=3pt},
-        act/.style={capa, fill=UCVOrange!25},
-        io/.style={capa, fill=UCVGrey!45},
+        act/.style={capa, draw=UCVOrange},
+        io/.style={capa},
         fl/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
     ]
         \node[io] (x) {$x$\\ $1 \times 28 \times 28$};
@@ -194,8 +205,10 @@
     \end{center}
 \end{frame}
 
-\begin{frame}{Clasificación: calidad, fidelidad y memoria}
-    Orion y Concrete~ML conservan la decisión del clasificador y OpalML no, pues su error crece varios órdenes de magnitud. El modelo aproximado sin usar cifrado logra un resultado similar al de Orion. En esta prueba la falta de memoria de la instancia usada nos obligó a guardar las claves de Galois en RAM.
+\begin{frame}{Clasificación: calidad y fidelidad}
+    % Separa el texto del borde superior; el par de vspace mantiene la altura.
+    \vspace*{0.3cm}
+    Orion y Concrete~ML conservan la decisión del clasificador y OpalML no, pues su error crece varios órdenes de magnitud. El modelo aproximado sin usar cifrado logra un resultado similar al de Orion.
     \vspace{-0.15cm}
     \begin{center}
     \begin{tikzpicture}[baseline=(ejes.north)]
@@ -225,7 +238,14 @@
                 (Concrete ML,0.33) [0.33]};
         \end{axis}
     \end{tikzpicture}
-    \hspace{0.25cm}
+    \end{center}
+    \vspace*{-0.3cm}
+\end{frame}
+
+\begin{frame}{Clasificación: memoria y rendimiento}
+    En esta prueba la falta de memoria de la instancia usada nos obligó a guardar las claves de Galois en RAM. OpalML también es la más rápida.
+    \vspace{-0.15cm}
+    \begin{center}
     \begin{tikzpicture}[baseline=(ejes.north)]
         \begin{axis}[barras, conleyenda, title={Memoria},
             symbolic x coords={PyTorch, OpalML, Orion, Concrete ML}, xtick=data,
@@ -240,13 +260,7 @@
             \legend{VRAM, RAM}
         \end{axis}
     \end{tikzpicture}
-    \end{center}
-\end{frame}
-
-\begin{frame}{Clasificación: rendimiento y perfilado}
-    OpalML también es la más rápida. La generación de claves en OpalML tarda más debido a la cantidad de rotaciones que exige nuestro algoritmo comparado con Orion. En este caso la capa de convolución consume más tiempo que las activaciones.
-    \vspace{-0.15cm}
-    \begin{center}
+    \hspace{0.25cm}
     \begin{tikzpicture}[baseline=(ejes.north)]
         \begin{axis}[barras, title={Inferencia},
             symbolic x coords={PyTorch, OpalML, Orion, Concrete ML}, xtick=data,
@@ -259,7 +273,13 @@
                 (Concrete ML,448.88)   [449]};
         \end{axis}
     \end{tikzpicture}
-    \hspace{0.25cm}
+    \end{center}
+\end{frame}
+
+\begin{frame}{Clasificación: claves y perfilado}
+    Debido a la necesidad de realizar más rotaciones en el algoritmo de convolución, hay que generar más claves de Galois y por esto su generación tarda más en nuestra biblioteca. Observamos a su vez que en las redes convolucionales las capas de convolución toman más tiempo que la aproximación de las funciones de activación.
+    \vspace{-0.15cm}
+    \begin{center}
     \begin{tikzpicture}[baseline=(ejes.north)]
         \begin{axis}[barras, title={Generación de claves},
             symbolic x coords={OpalML, Orion, Concrete ML}, xtick=data,
