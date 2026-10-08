@@ -673,7 +673,7 @@ Esta sección muestra y analiza los resultados obtenidos de la evaluación compa
 
 \subsection{Regresión: red totalmente conectada}\label{sec:res_mlp}
 
-La red alcanza en texto plano un $R^2$ de 0.793 sobre el conjunto de prueba completo, y de 0.804 sobre el subconjunto que evalúa la ejecución de referencia. Este es el valor que la inferencia cifrada debería reproducir. La \hyperref[tab:res_calidad_mlp]{Tabla~\ref{tab:res_calidad_mlp}} recoge la calidad y la fidelidad obtenidas, separando el modelo aproximado sin cifrar del mismo modelo bajo cifrado real, para distinguir el costo de la aproximación del costo del cifrado. La \hyperref[fig:res_calidad_mlp]{Figura~\ref{fig:res_calidad_mlp}} muestra de forma gráfica los resultados obtenidos, además del valor de referencia en texto plano.
+La red alcanza en texto plano un $R^2$ de 0,793 sobre el conjunto de prueba completo, y de 0,804 sobre el subconjunto que evalúa la ejecución de referencia. Este es el valor que la inferencia cifrada debería reproducir. La \hyperref[tab:res_calidad_mlp]{Tabla~\ref{tab:res_calidad_mlp}} recoge la calidad y la fidelidad obtenidas, separando el modelo aproximado sin cifrar del mismo modelo bajo cifrado real, para distinguir el costo de la aproximación del costo del cifrado. La \hyperref[fig:res_calidad_mlp]{Figura~\ref{fig:res_calidad_mlp}} muestra de forma gráfica los resultados obtenidos, además del valor de referencia en texto plano.
 
 \begin{table}[h]
     \centering
@@ -686,22 +686,22 @@ La red alcanza en texto plano un $R^2$ de 0.793 sobre el conjunto de prueba comp
         \cline{2-3}
         Implementación & Aproximado & Cifrado & MAE \\
         \hline
-        PyTorch (texto plano) & 0.804 & --- & --- \\
+        PyTorch (texto plano) & 0,804 & --- & --- \\
         \hline
-        OpalML & 0.716 & 0.478 & $6.2 \times 10^{-4}$ \\
+        OpalML & 0,716 & 0,478 & $6{,}2 \times 10^{-4}$ \\
         \hline
-        Orion & 0.716 & 0.475 & $1.9 \times 10^{-3}$ \\
+        Orion & 0,716 & 0,475 & $1{,}9 \times 10^{-3}$ \\
         \hline
-        Concrete~ML & 0.165 & --- & $5.1 \times 10^{-1}$ \\
+        Concrete~ML & 0,165 & --- & $5{,}1 \times 10^{-1}$ \\
         \hline
     \end{tabular}
 \end{table}
 
-El costo de la aproximación se lee comparando la columna del modelo aproximado con la ejecución en texto plano. Sustituir ReLU por una composición de polinomios lleva el $R^2$ de 0.804 a 0.716. La cuantización de Concrete~ML provoca un deterioro mayor, con un $R^2$ de 0.165.
+El costo de la aproximación se lee comparando la columna del modelo aproximado con la ejecución en texto plano. Sustituir ReLU por una composición de polinomios lleva el $R^2$ de 0,804 a 0,716. La cuantización de Concrete~ML provoca un deterioro mayor, con un $R^2$ de 0,165.
 
-El costo del cifrado se aprecia mejor en las métricas de fidelidad. OpalML reproduce la salida en texto plano con un error absoluto medio de $6.2 \times 10^{-4}$, el menor de las tres implementaciones.
+El costo del cifrado se aprecia mejor en las métricas de fidelidad. OpalML reproduce la salida en texto plano con un error absoluto medio de $6{,}2 \times 10^{-4}$, el menor de las tres implementaciones.
 
-La caída del $R^2$ de 0.716 a 0.478 es atribuible al cifrado. En CKKS cada operación homomórfica, y en particular cada multiplicación, añade ruido al texto cifrado. La aproximación polinómica de ReLU es intensiva en multiplicaciones, pues cada una de las composiciones que la forman exige varias. La biblioteca propuesta y Orion obtienen valores prácticamente iguales, 0.478 y 0.475. Ambas emplean el mismo esquema de cifrado y una profundidad multiplicativa comparable. 
+La caída del $R^2$ de 0,716 a 0,478 es atribuible al cifrado. En CKKS cada operación homomórfica, y en particular cada multiplicación, añade ruido al texto cifrado. La aproximación polinómica de ReLU es intensiva en multiplicaciones, pues cada una de las composiciones que la forman exige varias. La biblioteca propuesta y Orion obtienen valores prácticamente iguales, 0,478 y 0,475. Ambas emplean el mismo esquema de cifrado y una profundidad multiplicativa comparable. 
 
 Concrete~ML no muestra una caída equivalente porque su esquema pierde precisión en la cuantización y aproximación de las funciones, no en operaciones en el espacio cifrado.
 
@@ -725,20 +725,20 @@ La \hyperref[tab:res_rend_mlp]{Tabla~\ref{tab:res_rend_mlp}} recoge el rendimien
         \cline{2-5}
         Implementación & Claves & Infer. & VRAM & RAM \\
         \hline
-        PyTorch (texto plano) & --- & 0.0006 & 9 & 621 \\
+        PyTorch (texto plano) & --- & 0,0006 & 9 & 621 \\
         \hline
-        OpalML & 0.47 & 6.68 & 17\,996 & 744 \\
+        OpalML & 0,47 & 6,68 & 17\,996 & 744 \\
         \hline
-        Orion & 5.30 & 78.24 & 526 & 48\,579 \\
+        Orion & 5,30 & 78,24 & 526 & 48\,579 \\
         \hline
-        Concrete~ML & 2.99 & 790.03 & 526 & 3\,465 \\
+        Concrete~ML & 2,99 & 790,03 & 526 & 3\,465 \\
         \hline
     \end{tabular}
 \end{table}
 
-OpalML resuelve una inferencia en 6.68 segundos, frente a los 78.24 de Orion y los 790.03 de Concrete~ML, lo que supone una aceleración de 11.7 veces sobre la primera y de 118 veces sobre la segunda. Respecto de la ejecución en texto plano, la inferencia cifrada resulta unas $1.0 \times 10^{4}$ veces más lenta. La generación de claves es también la más rápida de las tres, con 0.47 segundos frente a los 5.30 de Orion y los 2.99 de Concrete~ML.
+OpalML resuelve una inferencia en 6,68 segundos, frente a los 78,24 de Orion y los 790,03 de Concrete~ML, lo que supone una aceleración de 11,7 veces sobre la primera y de 118 veces sobre la segunda. Respecto de la ejecución en texto plano, la inferencia cifrada resulta unas $1{,}0 \times 10^{4}$ veces más lenta. La generación de claves es también la más rápida de las tres, con 0,47 segundos frente a los 5,30 de Orion y los 2,99 de Concrete~ML.
 
-En cuanto a la memoria, el conjunto de trabajo de la biblioteca alcanza 17.6~GB durante la compilación, con apenas 744~MB de memoria principal. Las dos implementaciones sobre CPU invierten esa relación, y Orion resulta la más costosa de todas con 48.6~GB de memoria principal. Las claves de Galois son guardadas en VRAM para el caso de regresión.
+En cuanto a la memoria, el conjunto de trabajo de la biblioteca alcanza 17,6~GB durante la compilación, con apenas 744~MB de memoria principal. Las dos implementaciones sobre CPU invierten esa relación, y Orion resulta la más costosa de todas con 48,6~GB de memoria principal. Las claves de Galois son guardadas en VRAM para el caso de regresión.
 
 \begin{figure}[H]
     \centering
@@ -757,15 +757,15 @@ El perfilado capa por capa, en la \hyperref[tab:res_perfil_mlp]{Tabla~\ref{tab:r
         \hline
         Capa & Tiempo (s) & Porcentaje \\
         \hline
-        Lineal & 0.04 & 0.5 \\
+        Lineal & 0,04 & 0,5 \\
         \hline
-        ReLU & 2.20 & 33.3 \\
+        ReLU & 2,20 & 33,3 \\
         \hline
-        Lineal & 0.26 & 4.0 \\
+        Lineal & 0,26 & 4,0 \\
         \hline
-        ReLU & 4.02 & 60.7 \\
+        ReLU & 4,02 & 60,7 \\
         \hline
-        Lineal & 0.10 & 1.5 \\
+        Lineal & 0,10 & 1,5 \\
         \hline
     \end{tabular}
 \end{table}
@@ -781,7 +781,7 @@ Las dos activaciones consumen el 94\% del tiempo, mientras las tres capas lineal
 
 \subsection{Clasificación: red convolucional}\label{sec:res_cnn}
 
-La red en PyTorch alcanza en texto plano una exactitud de 0.939 sobre el conjunto de prueba completo, y de 0.925 sobre el subconjunto que evalúa la ejecución de referencia. La \hyperref[tab:res_calidad_cnn]{Tabla~\ref{tab:res_calidad_cnn}} recoge la calidad y la fidelidad obtenidas, con la misma separación entre el modelo aproximado sin cifrar y el mismo modelo bajo cifrado real. La \hyperref[fig:res_calidad_cnn]{Figura~\ref{fig:res_calidad_cnn}} muestra de forma gráfica los resultados obtenidos, además del valor de referencia en texto plano.
+La red en PyTorch alcanza en texto plano una exactitud de 0,939 sobre el conjunto de prueba completo, y de 0,925 sobre el subconjunto que evalúa la ejecución de referencia. La \hyperref[tab:res_calidad_cnn]{Tabla~\ref{tab:res_calidad_cnn}} recoge la calidad y la fidelidad obtenidas, con la misma separación entre el modelo aproximado sin cifrar y el mismo modelo bajo cifrado real. La \hyperref[fig:res_calidad_cnn]{Figura~\ref{fig:res_calidad_cnn}} muestra de forma gráfica los resultados obtenidos, además del valor de referencia en texto plano.
 
 \begin{table}[h]
     \centering
@@ -794,26 +794,26 @@ La red en PyTorch alcanza en texto plano una exactitud de 0.939 sobre el conjunt
         \cline{2-3}
         Implementación & Aproximado & Cifrado & Acuerdo & MAE \\
         \hline
-        PyTorch (texto plano) & 0.925 & --- & --- & --- \\
+        PyTorch (texto plano) & 0,925 & --- & --- & --- \\
         \hline
-        OpalML & 0.86 & 0.40 & 0.60 & $9.1 \times 10^{1}$ \\
+        OpalML & 0,86 & 0,40 & 0,60 & $9{,}1 \times 10^{1}$ \\
         \hline
-        Orion & 0.88 & 0.80 & 1.00 & $3.2 \times 10^{-3}$ \\
+        Orion & 0,88 & 0,80 & 1,00 & $3{,}2 \times 10^{-3}$ \\
         \hline
-        Concrete~ML & 0.85 & --- & 1.00 & $3.3 \times 10^{-1}$ \\
+        Concrete~ML & 0,85 & --- & 1,00 & $3{,}3 \times 10^{-1}$ \\
         \hline
     \end{tabular}
 \end{table}
 
-Aquí el costo de la aproximación es equivalente en las tres implementaciones, entre 0.85 y 0.88 frente a 0.925, porque la decisión del clasificador solo depende de cuál puntuación es la mayor y no de su valor exacto.
+Aquí el costo de la aproximación es equivalente en las tres implementaciones, entre 0,85 y 0,88 frente a 0,925, porque la decisión del clasificador solo depende de cuál puntuación es la mayor y no de su valor exacto.
 
-El costo del cifrado, en cambio, separa a las implementaciones. Orion preserva íntegramente la decisión del clasificador, con un acuerdo de 1.00 y un error de $3.2 \times 10^{-3}$ sobre las puntuaciones. Concrete~ML también la preserva pese a un error de 0.33.
+El costo del cifrado, en cambio, separa a las implementaciones. Orion preserva íntegramente la decisión del clasificador, con un acuerdo de 1,00 y un error de $3{,}2 \times 10^{-3}$ sobre las puntuaciones. Concrete~ML también la preserva pese a un error de 0,33.
 
-OpalML no supera esta prueba. Su error absoluto medio sobre las puntuaciones es de 91.2, cuatro órdenes de magnitud por encima del de Orion, y su acuerdo de 0.60 indica que en el 40\% de las muestras la clase predicha bajo cifrado difiere de la que produce el modelo en claro. Como el mismo modelo, ejecutado sin cifrar pero con sus aproximaciones polinómicas y su calibración, alcanza una exactitud de 0.86, la degradación no proviene de la aproximación de las activaciones.
+OpalML no supera esta prueba. Su error absoluto medio sobre las puntuaciones es de 91,2, cuatro órdenes de magnitud por encima del de Orion, y su acuerdo de 0,60 indica que en el 40\% de las muestras la clase predicha bajo cifrado difiere de la que produce el modelo en claro. Como el mismo modelo, ejecutado sin cifrar pero con sus aproximaciones polinómicas y su calibración, alcanza una exactitud de 0,86, la degradación no proviene de la aproximación de las activaciones.
 
 La degradación se atribuye a la implementación de la capa convolucional y a la configuración del esquema con la que se ejecutó. Tal como se describió anteriormente, la biblioteca reduce la convolución a una única multiplicación matriz-vector, la misma rutina que emplean las capas lineales, construyendo en texto plano la matriz que representa el filtro. Esta decisión, tomada al inicio del desarrollo, privilegia la flexibilidad: admite cualquier combinación de tamaño del núcleo, paso, relleno y número de canales sin necesidad de un tratamiento específico para cada caso. Orion, en cambio, implementa un esquema propio de la convolución que reordena las operaciones para obtener el mismo resultado con un número menor de ellas, a cambio de admitir un conjunto más restringido de configuraciones.
 
-Cada multiplicación y cada rotación homomórfica añade ruido al texto cifrado y consume niveles de la cadena de módulos, de manera que el error se acumula a lo largo del circuito. Una ruta de cómputo con más operaciones llega al final con un error mayor. La ejecución del mismo modelo aproximado sin cifrar no manifiesta el problema porque en aritmética de punto flotante las operaciones adicionales no acumulan error de forma apreciable, y por eso su exactitud se mantiene en 0.86. A ello se suma la configuración del esquema, cuyo factor de escala y cadena de módulos se fijaron para acomodar la profundidad multiplicativa del circuito y dejan un margen ajustado para el error que este acumula. La red de regresión no presenta esta dificultad porque sus capas lineales emplean la misma multiplicación matriz-vector eficiente que las bibliotecas de referencia, sin la expansión de operaciones que introduce la convolución.
+Cada multiplicación y cada rotación homomórfica añade ruido al texto cifrado y consume niveles de la cadena de módulos, de manera que el error se acumula a lo largo del circuito. Una ruta de cómputo con más operaciones llega al final con un error mayor. La ejecución del mismo modelo aproximado sin cifrar no manifiesta el problema porque en aritmética de punto flotante las operaciones adicionales no acumulan error de forma apreciable, y por eso su exactitud se mantiene en 0,86. A ello se suma la configuración del esquema, cuyo factor de escala y cadena de módulos se fijaron para acomodar la profundidad multiplicativa del circuito y dejan un margen ajustado para el error que este acumula. La red de regresión no presenta esta dificultad porque sus capas lineales emplean la misma multiplicación matriz-vector eficiente que las bibliotecas de referencia, sin la expansión de operaciones que introduce la convolución.
 
 \begin{figure}[H]
     \centering
@@ -833,22 +833,22 @@ Cada multiplicación y cada rotación homomórfica añade ruido al texto cifrado
         \cline{2-5}
         Implementación & Claves & Infer. & VRAM & RAM \\
         \hline
-        PyTorch (texto plano) & --- & 0.0015 & 0.4 & 805 \\
+        PyTorch (texto plano) & --- & 0,0015 & 0,4 & 805 \\
         \hline
-        OpalML & 39.93 & 28.31 & 3\,120 & 44\,600 \\
+        OpalML & 39,93 & 28,31 & 3\,120 & 44\,600 \\
         \hline
-        Orion & 5.27 & 46.49 & 526 & 35\,257 \\
+        Orion & 5,27 & 46,49 & 526 & 35\,257 \\
         \hline
-        Concrete~ML & 3.03 & 448.88 & 528 & 4\,372 \\
+        Concrete~ML & 3,03 & 448,88 & 528 & 4\,372 \\
         \hline
     \end{tabular}
 \end{table}
 
-La \hyperref[tab:res_rend_cnn]{Tabla~\ref{tab:res_rend_cnn}} muestra el rendimiento en este caso. OpalML sigue siendo la más rápida, con 28.31 segundos por inferencia frente a los 46.49 de Orion y los 448.88 de Concrete~ML, esto es 1.6 y 15.9 veces respectivamente. La distancia con la ejecución en texto plano sube a $1.9 \times 10^{4}$ veces. La generación de claves, en cambio, pasa a costar 39.93 segundos, dos órdenes de magnitud más que en la red de regresión, debido al número de claves de Galois que exige el empaquetado de la convolución.
+La \hyperref[tab:res_rend_cnn]{Tabla~\ref{tab:res_rend_cnn}} muestra el rendimiento en este caso. OpalML sigue siendo la más rápida, con 28,31 segundos por inferencia frente a los 46,49 de Orion y los 448,88 de Concrete~ML, esto es 1,6 y 15,9 veces respectivamente. La distancia con la ejecución en texto plano sube a $1{,}9 \times 10^{4}$ veces. La generación de claves, en cambio, pasa a costar 39,93 segundos, dos órdenes de magnitud más que en la red de regresión, debido al número de claves de Galois que exige el empaquetado de la convolución.
 
-Ese mismo conjunto de claves obligó a activar la opción de mantenerlas en la memoria del anfitrión, descrita en la \hyperref[sec:metodo_config]{sección de configuración}. El conjunto de trabajo en la GPU baja así a 3.0~GB, a cambio de 43.6~GB de memoria principal. Este intercambio es lo que permite evaluar la red en una tarjeta de 24~GB, y confirma que el conjunto de claves de Galois constituye la mayor parte del consumo de memoria del esquema.
+Ese mismo conjunto de claves obligó a activar la opción de mantenerlas en la memoria del anfitrión, descrita en la \hyperref[sec:metodo_config]{sección de configuración}. El conjunto de trabajo en la GPU baja así a 3,0~GB, a cambio de 43,6~GB de memoria principal. Este intercambio es lo que permite evaluar la red en una tarjeta de 24~GB, y confirma que el conjunto de claves de Galois constituye la mayor parte del consumo de memoria del esquema.
 
-Conviene distinguir esas cifras del pico a nivel de dispositivo, que en la biblioteca propuesta asciende a 21.4~GB tanto aquí como en la red de regresión, prácticamente la totalidad de la tarjeta. Ese valor mide la memoria que el gestor de la GPU reserva por adelantado para su reservorio, y por eso permanece constante aunque el conjunto de trabajo varíe entre 17.6 y 3.0~GB. Esto es debido a que HEonGPU ocupa la tarjeta completa con independencia de la configuración. Las gráficas de la \hyperref[fig:res_rend_cnn]{Figura~\ref{fig:res_rend_cnn}} muestran esas mismas variables de forma más visual.
+Conviene distinguir esas cifras del pico a nivel de dispositivo, que en la biblioteca propuesta asciende a 21,4~GB tanto aquí como en la red de regresión, prácticamente la totalidad de la tarjeta. Ese valor mide la memoria que el gestor de la GPU reserva por adelantado para su reservorio, y por eso permanece constante aunque el conjunto de trabajo varíe entre 17,6 y 3,0~GB. Esto es debido a que HEonGPU ocupa la tarjeta completa con independencia de la configuración. Las gráficas de la \hyperref[fig:res_rend_cnn]{Figura~\ref{fig:res_rend_cnn}} muestran esas mismas variables de forma más visual.
 
 \begin{figure}[H]
     \centering
@@ -867,16 +867,16 @@ Conviene distinguir esas cifras del pico a nivel de dispositivo, que en la bibli
         \hline
         Capa & Tiempo (s) & Porcentaje \\
         \hline
-        Convolucional & 14.76 & 51.9 \\
+        Convolucional & 14,76 & 51,9 \\
         \hline
-        ReLU & 12.17 & 42.8 \\
+        ReLU & 12,17 & 42,8 \\
         \hline
-        Lineal & 1.52 & 5.4 \\
+        Lineal & 1,52 & 5,4 \\
         \hline
     \end{tabular}
 \end{table}
 
-La capa convolucional consume el 51.9\% del tiempo y la activación el 42.8\%. Esto identifica las dos operaciones sobre las que conviene concentrar cualquier esfuerzo de optimización futuro: la evaluación de los polinomios de activación y la implementación de la convolución.
+La capa convolucional consume el 51,9\% del tiempo y la activación el 42,8\%. Esto identifica las dos operaciones sobre las que conviene concentrar cualquier esfuerzo de optimización futuro: la evaluación de los polinomios de activación y la implementación de la convolución.
 
 \begin{figure}[H]
     \centering
@@ -887,8 +887,8 @@ La capa convolucional consume el 51.9\% del tiempo y la activación el 42.8\%. E
 
 \subsection{Síntesis}
 
-De la evaluación se puede concluir que la aceleración por GPU logra una inferencia más rápida en ambos casos de uso, con ventajas de 11.7 y 1.6 veces sobre Orion, que emplea el mismo esquema sobre CPU, y de dos órdenes de magnitud sobre Concrete~ML. La generación de claves es también más rápida.
+De la evaluación se puede concluir que la aceleración por GPU logra una inferencia más rápida en ambos casos de uso, con ventajas de 11,7 y 1,6 veces sobre Orion, que emplea el mismo esquema sobre CPU, y de dos órdenes de magnitud sobre Concrete~ML. La generación de claves es también más rápida.
 
 Los resultados también muestran que la biblioteca propuesta consume más memoria, además que es menos eficiente al momento de reducir la cantidad o tamaño de las claves Galois. El conjunto de claves de Galois domina el consumo de memoria.
 
-La fidelidad se vio afectada por la implementación de las capas en cada red neuronal evaluada y la aproximación de las funciones de activación. La red de regresión se reproduce cifrada con un error de $6.2 \times 10^{-4}$ respecto a la salida en claro, el menor de las tres implementaciones. La red convolucional, en cambio, pierde la decisión del clasificador, que las dos bibliotecas de referencia preservan íntegramente. La causa es una decisión de diseño, expresar la convolución como una multiplicación matriz-vector de propósito general. Esto otorga flexibilidad sobre los parámetros de la convolución a costa de un número de operaciones mayor. Esto produce más operaciones a diferencia de las otras bibliotecas, y a su vez produce más ruido. 
+La fidelidad se vio afectada por la implementación de las capas en cada red neuronal evaluada y la aproximación de las funciones de activación. La red de regresión se reproduce cifrada con un error de $6{,}2 \times 10^{-4}$ respecto a la salida en claro, el menor de las tres implementaciones. La red convolucional, en cambio, pierde la decisión del clasificador, que las dos bibliotecas de referencia preservan íntegramente. La causa es una decisión de diseño, expresar la convolución como una multiplicación matriz-vector de propósito general. Esto otorga flexibilidad sobre los parámetros de la convolución a costa de un número de operaciones mayor. Esto produce más operaciones a diferencia de las otras bibliotecas, y a su vez produce más ruido. 
