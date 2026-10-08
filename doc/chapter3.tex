@@ -1,6 +1,6 @@
 \chapter{Marco Metodológico}
 
-En este capítulo se documentan las actividades realizadas para construir la biblioteca propuesta. Describe su desarrollo, desde la capa que comunica a Python con el \textit{backend} criptográfico hasta las capas de red neuronal que operan sobre datos cifrados. El trabajo de la implementación se organiza en las siguientes actividades:
+En este capítulo se documentan las actividades realizadas para construir OpalML. Describe su desarrollo, desde la capa que comunica a Python con el \textit{backend} criptográfico hasta las capas de red neuronal que operan sobre datos cifrados. El trabajo de la implementación se organiza en las siguientes actividades:
 
 \begin{enumerate}
     \item Preparación de la infraestructura: se seleccionó y configuró el entorno de hardware y de software sobre el que se desarrolló la biblioteca y se ejecutaron las mediciones.
@@ -73,7 +73,7 @@ Esta sección documenta la construcción de OpalML, la biblioteca desarrollada e
 
 \subsection{Diseño de la biblioteca}\label{sec:metodo_diseno}
 
-La biblioteca desarrollada expone una interfaz de alto nivel en Python para construir redes neuronales y ejecutar su inferencia sobre datos cifrados, ocultando al usuario la complejidad del esquema CKKS y la gestión de la memoria de la GPU. Su diseño se inspira en la forma de trabajar de las bibliotecas de aprendizaje profundo de uso común: el usuario describe la red como una secuencia de capas y la biblioteca se encarga de traducir esa descripción a operaciones homomórficas. A continuación se describe la organización del código, las estructuras de datos sobre las que opera y la interfaz que se ofrece al usuario.
+OpalML expone una interfaz de alto nivel en Python para construir redes neuronales y ejecutar su inferencia sobre datos cifrados, ocultando al usuario la complejidad del esquema CKKS y la gestión de la memoria de la GPU. Su diseño se inspira en la forma de trabajar de las bibliotecas de aprendizaje profundo de uso común: el usuario describe la red como una secuencia de capas y la biblioteca se encarga de traducir esa descripción a operaciones homomórficas. A continuación se describe la organización del código, las estructuras de datos sobre las que opera y la interfaz que se ofrece al usuario.
 
 \subsubsection{Estructura del código}
 
