@@ -131,6 +131,12 @@ resultado = client.decrypt(salida_cifrada)
 \end{lstlisting}
 \end{frame}
 
+% Tono de cada una de las ocho diagonales: gris, azul y naranja en claro y oscuro.
+\newcommand{\tonodiagonal}[1]{%
+    % UCVGrey es casi blanco, asi que los grises se mezclan con negro.
+    \ifcase#1 UCVOrange!100\or UCVBlue!25\or black!40\or UCVOrange!40\or
+    UCVBlue!75\or black!15\or UCVOrange!70\or UCVBlue!45\fi}
+
 \begin{frame}{Multiplicación matriz-vector}
     Se empleó la multiplicación matriz-vector de \textbf{Halevi-Shoup} con una \textbf{descomposición} que reduce las operaciones.
     \vfill
@@ -141,43 +147,44 @@ resultado = client.decrypt(salida_cifrada)
         \vspace{0.45cm}
 
         \begin{tikzpicture}[
-            scale=1.28, every node/.style={font=\tiny, transform shape},
-            celda/.style={draw=UCVBlue!50, minimum width=0.30cm, minimum height=0.30cm,
-                          inner sep=0pt, font=\tiny},
-            xcelda/.style={celda, fill=white, minimum width=0.32cm},
+            every node/.style={font=\tiny},
+            celda/.style={draw=UCVBlue!50, minimum width=0.185cm, minimum height=0.185cm,
+                          inner sep=0pt},
+            xcelda/.style={celda, fill=white, font=\fontsize{4}{4.5}\selectfont},
             flecha/.style={-{Stealth[length=4pt]}, thick, UCVBlue!70},
         ]
-            % --- Matriz W coloreada por diagonales ---
-            \foreach \r in {0,1,2} {
-                \foreach \c in {0,1,2} {
-                    \pgfmathtruncatemacro{\d}{mod(\c-\r+3,3)}
-                    \node[celda, fill={\ifcase\d UCVOrange!45\or UCVBlue!35\or UCVGrey!75\fi}]
-                         at (\c*0.30, 0.77-\r*0.30) {};
+            % --- Matriz W 8x8 coloreada por diagonales ---
+            \foreach \r in {0,...,7} {
+                \foreach \c in {0,...,7} {
+                    \pgfmathtruncatemacro{\d}{mod(\c-\r+8,8)}
+                    \node[celda, fill={\tonodiagonal{\d}}]
+                         at (\c*0.185, 0.3675-\r*0.185) {};
                 }
             }
-            \node[font=\scriptsize] at (0.30, 1.12) {$W$};
-            \draw[flecha] (0.9, 0.47) -- (1.32, 0.47);
+            \node[font=\scriptsize] at (0.6475, 0.61) {$W$};
+            \draw[flecha] (1.45,-0.28) -- (1.90,-0.28);
 
-            % --- Un producto por diagonal ---
-            \foreach \i/\y in {0/0.90, 1/0.47, 2/0.04} {
-                \node[anchor=east] at (1.77, \y) {$d_\i$};
-                \foreach \c in {0,1,2} {
-                    \node[celda, fill={\ifcase\i UCVOrange!45\or UCVBlue!35\or UCVGrey!75\fi}]
-                         at (1.92+\c*0.30, \y) {};
+            % --- Un producto por diagonal: d_i contra la rotacion i-esima de x ---
+            \node[font=\scriptsize] at (4.7875, 1.26) {$x$};
+            \foreach \i in {0,...,7} {
+                \pgfmathsetmacro{\y}{0.98-\i*0.28}
+                \node[anchor=east] at (2.22, \y) {$d_\i$};
+                \foreach \c in {0,...,7} {
+                    \node[celda, fill={\tonodiagonal{\i}}] at (2.32+\c*0.185, \y) {};
                 }
-                \node at (2.83, \y) {$\odot$};
-                \foreach \c in {0,1,2} {
-                    \pgfmathtruncatemacro{\xi}{mod(\c+\i,3)}
-                    \node[xcelda] at (3.15+\c*0.32, \y) {$x_\xi$};
+                \node at (3.93, \y) {$\odot$};
+                \foreach \c in {0,...,7} {
+                    \pgfmathtruncatemacro{\xi}{mod(\c+\i,8)}
+                    \node[xcelda] at (4.14+\c*0.185, \y) {\xi};
                 }
             }
 
             % --- La suma de los productos da el resultado ---
-            \node[font=\scriptsize, anchor=east] at (1.8, -0.3) {$\sum$};
-            \draw[UCVBlue!60, semithick] (1.77,-0.3) -- (3.95,-0.3);
-            \node[anchor=east] at (1.77, -0.7) {$y$};
-            \foreach \c in {0,1,2} {
-                \node[celda, fill=UCVOrange!20] at (1.92+\c*0.30, -0.7) {};
+            \node[font=\scriptsize, anchor=east] at (2.19, -1.26) {$\sum$};
+            \draw[UCVBlue!60, semithick] (2.2275,-1.26) -- (5.5275,-1.26);
+            \node[anchor=east] at (2.22, -1.54) {$y$};
+            \foreach \c in {0,...,7} {
+                \node[celda, fill=UCVOrange!20] at (2.32+\c*0.185, -1.54) {};
             }
         \end{tikzpicture}
 
