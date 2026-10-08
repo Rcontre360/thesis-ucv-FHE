@@ -761,7 +761,7 @@ El perfilado capa por capa, en la \hyperref[tab:res_perfil_mlp]{Tabla~\ref{tab:r
         \hline
         ReLU & 2,20 & 33,3 \\
         \hline
-        Lineal & 0,26 & 4,0 \\
+        Lineal & 0,26 & 3,9 \\
         \hline
         ReLU & 4,02 & 60,7 \\
         \hline
@@ -770,7 +770,7 @@ El perfilado capa por capa, en la \hyperref[tab:res_perfil_mlp]{Tabla~\ref{tab:r
     \end{tabular}
 \end{table}
 
-Las dos activaciones consumen el 94\% del tiempo, mientras las tres capas lineales apenas suman el 6\%. La aproximación de ReLU es la operación más costosa del circuito. La explicación de que la segunda activación tarde casi el doble que la primera, pese a operar sobre un vector menor, es el número de operaciones de \textit{bootstrapping} que cada una desencadena.
+Las dos activaciones consumen el 94\,\% del tiempo, mientras las tres capas lineales apenas suman el 6\,\%. La aproximación de ReLU es la operación más costosa del circuito. La explicación de que la segunda activación tarde casi el doble que la primera, pese a operar sobre un vector menor, es el número de operaciones de \textit{bootstrapping} que cada una desencadena.
 
 \begin{figure}[H]
     \centering
@@ -809,7 +809,7 @@ Aquí el costo de la aproximación es equivalente en las tres implementaciones, 
 
 El costo del cifrado, en cambio, separa a las implementaciones. Orion preserva íntegramente la decisión del clasificador, con un acuerdo de 1,00 y un error de $3{,}2 \times 10^{-3}$ sobre las puntuaciones. Concrete~ML también la preserva pese a un error de 0,33.
 
-OpalML no supera esta prueba. Su error absoluto medio sobre las puntuaciones es de 91,2, cuatro órdenes de magnitud por encima del de Orion, y su acuerdo de 0,60 indica que en el 40\% de las muestras la clase predicha bajo cifrado difiere de la que produce el modelo en claro. Como el mismo modelo, ejecutado sin cifrar pero con sus aproximaciones polinómicas y su calibración, alcanza una exactitud de 0,86, la degradación no proviene de la aproximación de las activaciones.
+OpalML no supera esta prueba. Su error absoluto medio sobre las puntuaciones es de 91,2, cuatro órdenes de magnitud por encima del de Orion, y su acuerdo de 0,60 indica que en el 40\,\% de las muestras la clase predicha bajo cifrado difiere de la que produce el modelo en claro. Como el mismo modelo, ejecutado sin cifrar pero con sus aproximaciones polinómicas y su calibración, alcanza una exactitud de 0,86, la degradación no proviene de la aproximación de las activaciones.
 
 La degradación se atribuye a la implementación de la capa convolucional y a la configuración del esquema con la que se ejecutó. Tal como se describió anteriormente, la biblioteca reduce la convolución a una única multiplicación matriz-vector, la misma rutina que emplean las capas lineales, construyendo en texto plano la matriz que representa el filtro. Esta decisión, tomada al inicio del desarrollo, privilegia la flexibilidad: admite cualquier combinación de tamaño del núcleo, paso, relleno y número de canales sin necesidad de un tratamiento específico para cada caso. Orion, en cambio, implementa un esquema propio de la convolución que reordena las operaciones para obtener el mismo resultado con un número menor de ellas, a cambio de admitir un conjunto más restringido de configuraciones.
 
@@ -876,7 +876,7 @@ Conviene distinguir esas cifras del pico a nivel de dispositivo, que en la bibli
     \end{tabular}
 \end{table}
 
-La capa convolucional consume el 51,9\% del tiempo y la activación el 42,8\%. Esto identifica las dos operaciones sobre las que conviene concentrar cualquier esfuerzo de optimización futuro: la evaluación de los polinomios de activación y la implementación de la convolución.
+La capa convolucional consume el 51,9\,\% del tiempo y la activación el 42,8\,\%. Esto identifica las dos operaciones sobre las que conviene concentrar cualquier esfuerzo de optimización futuro: la evaluación de los polinomios de activación y la implementación de la convolución.
 
 \begin{figure}[H]
     \centering
