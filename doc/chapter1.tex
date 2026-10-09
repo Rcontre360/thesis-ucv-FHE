@@ -104,12 +104,12 @@ El proceso se puede desglosar en los siguientes pasos:
     \end{itemize}
 \end{enumerate}
 
-Este procedimiento transforma cualquier esquema parcialmente homomorfico, capaz de evaluar su propio descifrado, en un esquema completamente homomórfico (FHE, Fully Homomorphic Encryption). La Figura \ref{fig:bootstrapping} muestra un diagrama general del proceso de bootstrapping.
+Este procedimiento transforma cualquier esquema parcialmente homomorfico, capaz de evaluar su propio descifrado, en un esquema completamente homomórfico (FHE, Fully Homomorphic Encryption). La Figura \ref{fig:bootstrapping} recorre el procedimiento sobre un dato $X$: el texto cifrado parte con el ruido próximo a su límite, se recifra bajo una clave nueva, se evalúa sobre él el circuito de descifrado y se obtiene un texto cifrado del mismo dato con el ruido restablecido.
 
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.8\textwidth]{images/bootstrap.png}
-    \caption{Diagrama esquemático del proceso de \textit{Bootstrapping}.}
+    \caption[Diagrama esquemático del proceso de \textit{bootstrapping}.]{Diagrama esquemático del proceso de \textit{bootstrapping}. El color del contorno y del candado indica la clave bajo la que está cifrado cada dato: azul la clave original, verde la nueva. El termómetro representa el ruido acumulado, que avanza de verde a rojo conforme se agota el margen disponible. La llave de \textit{bootstrapping} es la clave secreta original cifrada bajo la nueva clave, y es lo que permite evaluar el descifrado de forma homomórfica sin revelar el dato.}
     \label{fig:bootstrapping}
 \end{figure}
 
