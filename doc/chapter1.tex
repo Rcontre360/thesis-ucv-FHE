@@ -104,12 +104,12 @@ El proceso se puede desglosar en los siguientes pasos:
     \end{itemize}
 \end{enumerate}
 
-Este procedimiento transforma cualquier esquema parcialmente homomorfico, capaz de evaluar su propio descifrado, en un esquema completamente homomórfico (FHE, Fully Homomorphic Encryption). La Figura \ref{fig:bootstrapping} muestra un diagrama general del proceso de bootstrapping.
+Este procedimiento transforma cualquier esquema parcialmente homomorfico, capaz de evaluar su propio descifrado, en un esquema completamente homomórfico (FHE, Fully Homomorphic Encryption). La Figura \ref{fig:bootstrapping} recorre el procedimiento sobre un dato $X$: el texto cifrado parte con el ruido próximo a su límite, se recifra bajo una clave nueva, se evalúa sobre él el circuito de descifrado y se obtiene un texto cifrado del mismo dato con el ruido restablecido.
 
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.8\textwidth]{images/bootstrap.png}
-    \caption{Diagrama esquemático del proceso de \textit{Bootstrapping}.}
+    \caption[Diagrama esquemático del proceso de \textit{bootstrapping}.]{Diagrama esquemático del proceso de \textit{bootstrapping}. El color del contorno y del candado indica la clave bajo la que está cifrado cada dato: azul la clave original, verde la nueva. El termómetro representa el ruido acumulado, que avanza de verde a rojo conforme se agota el margen disponible. La llave de \textit{bootstrapping} es la clave secreta original cifrada bajo la nueva clave, y es lo que permite evaluar el descifrado de forma homomórfica sin revelar el dato.}
     \label{fig:bootstrapping}
 \end{figure}
 
@@ -119,7 +119,7 @@ Aunque el esquema original de Gentry fue un hito teórico, era demasiado lento p
 
 Los esquemas modernos basan su seguridad en el problema de Aprendizaje con Errores (LWE) y su variante más eficiente, el Aprendizaje con Errores en Anillos (RLWE). La formulación del problema LWE, introducida por Oded Regev \cite{Regev05}, es la siguiente.
 
-Denotemos como $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ al grupo aditivo de los números reales módulo uno. Intuitivamente, se puede pensar en el toro como el conjunto de los números reales en el intervalo `[0, 1)`. Por ejemplo, si sumamos $0.7 + 0.5 = 1.2$, en $\mathbb{T}$ el resultado es equivalente a $0.2$.
+Denotemos como $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ al grupo aditivo de los números reales módulo uno. Intuitivamente, se puede pensar en el toro como el conjunto de los números reales en el intervalo `[0, 1)`. Por ejemplo, si sumamos $0{,}7 + 0{,}5 = 1{,}2$, en $\mathbb{T}$ el resultado es equivalente a $0{,}2$.
 
 \begin{itemize}
     \item Parámetros:
@@ -135,7 +135,7 @@ Denotemos como $\mathbb{T} = \mathbb{R}/\mathbb{Z}$ al grupo aditivo de los núm
         \begin{equation}
             t = \langle \mathbf{a}, \mathbf{s} \rangle / q + e
         \end{equation}
-        donde $\langle \mathbf{a}, \mathbf{s} \rangle = \sum_{i=1}^{n} a_i s_i$ es el producto interno estándar en $\mathbb{Z}_q^n$. La operación de división por $q$ es crucial, ya que convierte el resultado del producto interno (un entero en $\mathbb{Z}_q$) a un punto en el toro $\mathbb{T}$. Por ejemplo, si $q=100$ y el producto interno es $57$, la operación $/q$ lo convierte en el número real $0.57 \in \mathbb{T}$. A este valor se le suma el pequeño error $e$ (que también es un número en $\mathbb{T}$), y la suma final se realiza en $\mathbb{T}$.
+        donde $\langle \mathbf{a}, \mathbf{s} \rangle = \sum_{i=1}^{n} a_i s_i$ es el producto interno estándar en $\mathbb{Z}_q^n$. La operación de división por $q$ es crucial, ya que convierte el resultado del producto interno (un entero en $\mathbb{Z}_q$) a un punto en el toro $\mathbb{T}$. Por ejemplo, si $q=100$ y el producto interno es $57$, la operación $/q$ lo convierte en el número real $0{,}57 \in \mathbb{T}$. A este valor se le suma el pequeño error $e$ (que también es un número en $\mathbb{T}$), y la suma final se realiza en $\mathbb{T}$.
         \item La muestra generada es el par $(\mathbf{a}, t)$.
     \end{enumerate}
 \end{itemize}
@@ -358,7 +358,7 @@ El rendimiento y la seguridad del esquema CKKS están intrínsecamente ligados a
    
    \item Módulo de Coeficientes ($q$ y $P$): En CKKS, el módulo total $q$ suele ser un producto de varios primos. La magnitud de $q$ determina la cantidad de multiplicaciones que se pueden realizar. El parámetro $P$ es un módulo adicional utilizado en la generación de claves de evaluación. El producto $P \cdot q$ representa el módulo más grande en el esquema. A mayor $q$, mayor capacidad de cómputo, pero aumentar $q$ sin aumentar $N$ reduce la seguridad.
    
-   \item Distribución del Error ($\sigma$ y $h$): La desviación estándar $\sigma$ de la distribución Gaussiana discreta (DG($\sigma^2$)) utilizada para muestrear los errores $e$ y $e'$, y el peso de Hamming $h$ para la clave secreta $s$. Estos valores impactan el nivel de ruido inicial y su crecimiento. En la implementación de Cheon et al. \cite{CKKS17}, se utilizó una desviación estándar $\sigma = 3.2$ y un peso de Hamming $h = 64$.
+   \item Distribución del Error ($\sigma$ y $h$): La desviación estándar $\sigma$ de la distribución Gaussiana discreta (DG($\sigma^2$)) utilizada para muestrear los errores $e$ y $e'$, y el peso de Hamming $h$ para la clave secreta $s$. Estos valores impactan el nivel de ruido inicial y su crecimiento. En la implementación de Cheon et al. \cite{CKKS17}, se utilizó una desviación estándar $\sigma = 3{,}2$ y un peso de Hamming $h = 64$.
    
    \item Nivel de Seguridad ($\lambda$): Se mide en bits. Este parámetro define la resistencia del esquema a los ataques criptoanalíticos. La selección de $N$, $q_L$ y $\sigma$ debe ser consistente con el nivel de seguridad deseado.
 
@@ -464,4 +464,6 @@ Para solucionar esto se propuso un algoritmo \cite{CKKS17-Boot} que sigue los si
 \end{enumerate}
 
 El resultado final es un nuevo texto cifrado, en un nivel de módulo alto, que contiene el mismo mensaje original pero con el ruido inicial. Aunque este proceso es computacionalmente costoso, permite realizar cómputos de profundidad arbitraria, algo indispensable para algoritmos iterativos o redes neuronales muy profundas.
+
+Las cuatro etapas anteriores corresponden a la variante regular del \textit{bootstrapping} CKKS. Nuestra biblioteca emplea la variante SLIM \cite{ChenHan18}, que ofrece mensajes restringidos a números reales \cite{HEonGPU}. Al prescindir de la parte imaginaria, SLIM evalúa la función modular una sola vez donde la regular la evalúa dos, que es el paso más costoso del refresco.
 
