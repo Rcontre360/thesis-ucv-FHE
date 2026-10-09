@@ -465,3 +465,5 @@ Para solucionar esto se propuso un algoritmo \cite{CKKS17-Boot} que sigue los si
 
 El resultado final es un nuevo texto cifrado, en un nivel de módulo alto, que contiene el mismo mensaje original pero con el ruido inicial. Aunque este proceso es computacionalmente costoso, permite realizar cómputos de profundidad arbitraria, algo indispensable para algoritmos iterativos o redes neuronales muy profundas.
 
+Las cuatro etapas anteriores corresponden a la variante regular del \textit{bootstrapping} CKKS. Nuestra biblioteca emplea la variante SLIM \cite{ChenHan18}, que ofrece mensajes restringidos a números reales \cite{HEonGPU}. Al prescindir de la parte imaginaria, SLIM evalúa la función modular una sola vez donde la regular la evalúa dos, que es el paso más costoso del refresco.
+
